@@ -1,0 +1,426 @@
+"""
+Log generation engine - core algorithm for building radio logs
+"""
+
+from typing import List, Dict, Any, Optional, Tuple
+from datetime import datetime, date, time, timedelta
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_
+from backend.models.clock_template import ClockTemplate
+from backend.models.campaign import Campaign
+from backend.models.track import Track
+from backend.models.voice_track import VoiceTrack
+from backend.models.daily_log import DailyLog
+from backend.services.campaign_service import CampaignService
+from backend.services.clock_service import ClockTemplateService
+import structlog
+import json
+import random
+
+logger = structlog.get_logger()
+
+
+class LogGenerator:
+    """Core log generation engine"""
+    
+    def __init__(self, db: AsyncSession):
+        self.db = db
+        self.campaign_service = CampaignService(db)
+        self.clock_service = ClockTemplateService(db)
+    
+    async def generate_daily_log(
+        self,
+        target_date: date,
+        clock_template_id: int,
+        user_id: int
+    ) -> Dict[str, Any]:
+        """Generate a complete daily log for a specific date"""
+        
+        # Get clock template
+        clock_template = await self.clock_service.get_template(clock_template_id)
+        if not clock_template:
+            raise ValueError("Clock template not found")
+        
+        # Generate hourly logs
+        hourly_logs = {}
+        total_duration = 0
+        
+        for hour in range(24):
+            hour_str = f"{hour:02d}:00"
+            hour_log = await self._generate_hour_log(target_date, hour_str, clock_template)
+            hourly_logs[hour_str] = hour_log
+            total_duration += hour_log.get("total_duration", 0)
+        
+        # Create daily log entry
+        daily_log_data = {
+            "date": target_date.isoformat(),
+            "clock_template_id": clock_template_id,
+            "clock_template_name": clock_template.name,
+            "hourly_logs": hourly_logs,
+            "total_duration": total_duration,
+            "generated_at": datetime.now().isoformat(),
+            "generated_by": user_id
+        }
+        
+        # Save to database
+        daily_log = DailyLog(
+            date=target_date,
+            generated_by=user_id,
+            json_data=daily_log_data,
+            published=False
+        )
+        
+        self.db.add(daily_log)
+        await self.db.commit()
+        await self.db.refresh(daily_log)
+        
+        logger.info("Daily log generated", log_id=daily_log.id, date=target_date)
+        
+        return {
+            "log_id": daily_log.id,
+            "date": target_date.isoformat(),
+            "total_duration": total_duration,
+            "hourly_logs": hourly_logs,
+            "message": "Daily log generated successfully"
+        }
+    
+    async def _generate_hour_log(
+        self,
+        target_date: date,
+        hour: str,
+        clock_template: ClockTemplate
+    ) -> Dict[str, Any]:
+        """Generate log for a specific hour"""
+        
+        layout = clock_template.json_layout
+        elements = layout.get("elements", [])
+        
+        hour_log = {
+            "hour": hour,
+            "elements": [],
+            "total_duration": 0,
+            "timeline": []
+        }
+        
+        current_time = 0
+        
+        for element_config in elements:
+            element_type = element_config.get("type")
+            count = element_config.get("count", 1)
+            fallback = element_config.get("fallback")
+            
+            # Generate elements for this configuration
+            for i in range(count):
+                element = await self._select_element(
+                    element_type=element_type,
+                    target_date=target_date,
+                    target_hour=hour,
+                    fallback=fallback
+                )
+                
+                if element:
+                    element_log = {
+                        "type": element_type,
+                        "title": element.get("title", ""),
+                        "artist": element.get("artist", ""),
+                        "duration": element.get("duration", 180),
+                        "start_time": current_time,
+                        "end_time": current_time + element.get("duration", 180),
+                        "file_path": element.get("file_path", ""),
+                        "fallback_used": element.get("fallback_used", False)
+                    }
+                    
+                    hour_log["elements"].append(element_log)
+                    hour_log["total_duration"] += element_log["duration"]
+                    
+                    # Add to timeline
+                    hour_log["timeline"].append({
+                        "time": f"{current_time // 60:02d}:{current_time % 60:02d}",
+                        "element": element_log
+                    })
+                    
+                    current_time += element_log["duration"]
+        
+        return hour_log
+    
+    async def _select_element(
+        self,
+        element_type: str,
+        target_date: date,
+        target_hour: str,
+        fallback: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Select appropriate element based on type and availability"""
+        
+        if element_type == "MUS":
+            return await self._select_music_track()
+        elif element_type == "ADV":
+            return await self._select_advertisement(target_date, target_hour)
+        elif element_type == "PSA":
+            return await self._select_psa()
+        elif element_type == "LIN":
+            return await self._select_liner()
+        elif element_type == "INT":
+            return await self._select_interview()
+        elif element_type == "PRO":
+            return await self._select_promo()
+        elif element_type == "BED":
+            return await self._select_bed()
+        else:
+            return None
+    
+    async def _select_music_track(self) -> Optional[Dict[str, Any]]:
+        """Select a music track"""
+        result = await self.db.execute(
+            select(Track).where(
+                and_(
+                    Track.type == "MUS",
+                    Track.filepath.isnot(None)
+                )
+            ).order_by(Track.last_played.asc().nullsfirst())
+        )
+        tracks = result.scalars().all()
+        
+        if tracks:
+            track = random.choice(tracks)
+            return {
+                "title": track.title,
+                "artist": track.artist,
+                "duration": track.duration or 180,
+                "file_path": track.filepath,
+                "fallback_used": False
+            }
+        
+        return None
+    
+    async def _select_advertisement(
+        self,
+        target_date: date,
+        target_hour: str
+    ) -> Optional[Dict[str, Any]]:
+        """Select advertisement using campaign service"""
+        try:
+            schedule = await self.campaign_service.generate_ad_schedule(target_date, target_hour)
+            ads = schedule.get("ads", [])
+            
+            # Find first ADV ad
+            for ad in ads:
+                if ad["type"] == "ADV":
+                    return {
+                        "title": ad["campaign_name"],
+                        "artist": ad["advertiser"],
+                        "duration": ad["duration"],
+                        "file_path": ad["file_path"],
+                        "fallback_used": ad["fallback"]
+                    }
+            
+            # If no ADV ads, try PRO
+            for ad in ads:
+                if ad["type"] == "PRO":
+                    return {
+                        "title": ad["campaign_name"],
+                        "artist": ad["advertiser"],
+                        "duration": ad["duration"],
+                        "file_path": ad["file_path"],
+                        "fallback_used": ad["fallback"]
+                    }
+            
+            # If no PRO ads, try PSA
+            for ad in ads:
+                if ad["type"] == "PSA":
+                    return {
+                        "title": ad["campaign_name"],
+                        "artist": ad["advertiser"],
+                        "duration": ad["duration"],
+                        "file_path": ad["file_path"],
+                        "fallback_used": ad["fallback"]
+                    }
+            
+        except Exception as e:
+            logger.error("Failed to select advertisement", error=str(e))
+        
+        return None
+    
+    async def _select_psa(self) -> Optional[Dict[str, Any]]:
+        """Select a PSA track"""
+        result = await self.db.execute(
+            select(Track).where(Track.type == "PSA").order_by(Track.last_played.asc().nullsfirst())
+        )
+        tracks = result.scalars().all()
+        
+        if tracks:
+            track = random.choice(tracks)
+            return {
+                "title": track.title,
+                "artist": track.artist or "PSA",
+                "duration": track.duration or 45,
+                "file_path": track.filepath,
+                "fallback_used": False
+            }
+        
+        return None
+    
+    async def _select_liner(self) -> Optional[Dict[str, Any]]:
+        """Select a liner"""
+        result = await self.db.execute(
+            select(Track).where(Track.type == "LIN").order_by(Track.last_played.asc().nullsfirst())
+        )
+        tracks = result.scalars().all()
+        
+        if tracks:
+            track = random.choice(tracks)
+            return {
+                "title": track.title,
+                "artist": track.artist or "Station ID",
+                "duration": track.duration or 30,
+                "file_path": track.filepath,
+                "fallback_used": False
+            }
+        
+        return None
+    
+    async def _select_interview(self) -> Optional[Dict[str, Any]]:
+        """Select an interview segment"""
+        result = await self.db.execute(
+            select(Track).where(Track.type == "INT").order_by(Track.last_played.asc().nullsfirst())
+        )
+        tracks = result.scalars().all()
+        
+        if tracks:
+            track = random.choice(tracks)
+            return {
+                "title": track.title,
+                "artist": track.artist or "Interview",
+                "duration": track.duration or 300,
+                "file_path": track.filepath,
+                "fallback_used": False
+            }
+        
+        return None
+    
+    async def _select_promo(self) -> Optional[Dict[str, Any]]:
+        """Select a promo"""
+        result = await self.db.execute(
+            select(Track).where(Track.type == "PRO").order_by(Track.last_played.asc().nullsfirst())
+        )
+        tracks = result.scalars().all()
+        
+        if tracks:
+            track = random.choice(tracks)
+            return {
+                "title": track.title,
+                "artist": track.artist or "Promo",
+                "duration": track.duration or 30,
+                "file_path": track.filepath,
+                "fallback_used": False
+            }
+        
+        return None
+    
+    async def _select_bed(self) -> Optional[Dict[str, Any]]:
+        """Select a bed/music bed"""
+        result = await self.db.execute(
+            select(Track).where(Track.type == "BED").order_by(Track.last_played.asc().nullsfirst())
+        )
+        tracks = result.scalars().all()
+        
+        if tracks:
+            track = random.choice(tracks)
+            return {
+                "title": track.title,
+                "artist": track.artist or "Music Bed",
+                "duration": track.duration or 15,
+                "file_path": track.filepath,
+                "fallback_used": False
+            }
+        
+        return None
+    
+    async def preview_log(
+        self,
+        target_date: date,
+        clock_template_id: int,
+        preview_hours: List[str] = None
+    ) -> Dict[str, Any]:
+        """Generate a preview of the log without saving"""
+        
+        if preview_hours is None:
+            preview_hours = ["06:00", "12:00", "18:00"]  # Default preview hours
+        
+        clock_template = await self.clock_service.get_template(clock_template_id)
+        if not clock_template:
+            raise ValueError("Clock template not found")
+        
+        preview = {
+            "date": target_date.isoformat(),
+            "clock_template_name": clock_template.name,
+            "preview_hours": preview_hours,
+            "hourly_previews": {},
+            "total_duration": 0
+        }
+        
+        for hour in preview_hours:
+            hour_log = await self._generate_hour_log(target_date, hour, clock_template)
+            preview["hourly_previews"][hour] = hour_log
+            preview["total_duration"] += hour_log.get("total_duration", 0)
+        
+        return preview
+    
+    async def publish_log(self, log_id: int) -> bool:
+        """Publish a generated log to LibreTime"""
+        
+        # Get the log
+        result = await self.db.execute(
+            select(DailyLog).where(DailyLog.id == log_id)
+        )
+        log = result.scalar_one_or_none()
+        
+        if not log:
+            return False
+        
+        try:
+            # Convert to LibreTime format
+            libretime_data = self._convert_to_libretime_format(log.json_data)
+            
+            # TODO: Push to LibreTime API
+            # success = await libretime_client.publish_schedule(libretime_data)
+            
+            # For now, just mark as published
+            log.published = True
+            await self.db.commit()
+            
+            logger.info("Log published", log_id=log_id)
+            return True
+            
+        except Exception as e:
+            logger.error("Failed to publish log", log_id=log_id, error=str(e))
+            return False
+    
+    def _convert_to_libretime_format(self, log_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert LibreLog format to LibreTime schedule format"""
+        
+        libretime_schedule = {
+            "date": log_data["date"],
+            "shows": []
+        }
+        
+        for hour, hour_data in log_data["hourly_logs"].items():
+            show = {
+                "start_time": hour,
+                "end_time": f"{int(hour[:2]) + 1:02d}:00",
+                "tracks": []
+            }
+            
+            for element in hour_data["elements"]:
+                track = {
+                    "title": element["title"],
+                    "artist": element["artist"],
+                    "duration": element["duration"],
+                    "file_path": element["file_path"],
+                    "type": element["type"]
+                }
+                show["tracks"].append(track)
+            
+            libretime_schedule["shows"].append(show)
+        
+        return libretime_schedule
