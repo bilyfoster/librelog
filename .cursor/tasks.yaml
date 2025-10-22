@@ -1,0 +1,154 @@
+
+
+project: LibreLog – GayPHX Radio
+version: 1.0
+
+epics:
+  - name: Music Library & Metadata Control
+    tasks:
+      - id: LIB-101
+        title: Create Track Metadata Model
+        status: todo
+        priority: high
+        file: backend/models/track_metadata.py
+      - id: LIB-102
+        title: Build Library Tagging UI
+        status: todo
+        priority: medium
+        file: frontend/src/pages/library/TagEditor.tsx
+      - id: LIB-103
+        title: Implement Nightly Sync Job
+        status: todo
+        priority: low
+        file: backend/services/sync_job.py
+
+  - name: Daypart Templates (Radio Clocks)
+    tasks:
+      - id: CLK-201
+        title: Clock Template Schema
+        status: todo
+        priority: high
+        file: backend/models/clock_template.py
+      - id: CLK-202
+        title: Clock Builder UI
+        status: todo
+        priority: high
+        file: frontend/src/pages/clocks/ClockBuilder.tsx
+      - id: CLK-203
+        title: Export to LibreTime API
+        status: todo
+        priority: medium
+        file: backend/services/libretime_exporter.py
+
+  - name: Traffic & Commercial Management
+    tasks:
+      - id: TRF-301
+        title: Implement Campaign Model
+        status: todo
+        priority: high
+        file: backend/models/campaign.py
+      - id: TRF-302
+        title: Build Traffic Manager UI
+        status: todo
+        priority: high
+        file: frontend/src/pages/traffic/TrafficManager.tsx
+      - id: TRF-303
+        title: Ad Fallback Logic (ADV > PRO > PSA)
+        status: todo
+        priority: high
+        file: backend/services/ad_fallback.py
+      - id: TRF-304
+        title: Generate Hourly Ad Logs
+        status: todo
+        priority: medium
+        file: backend/services/ad_log_generator.py
+
+  - name: Voice Tracking Integration
+    tasks:
+      - id: VOX-401
+        title: Build Web Voice Recorder
+        status: todo
+        priority: high
+        file: frontend/src/pages/voice/Recorder.tsx
+      - id: VOX-402
+        title: Add Upload to LibreTime API
+        status: todo
+        priority: medium
+        file: backend/services/upload_voice.py
+      - id: VOX-403
+        title: Integrate LibreTalk Socket Endpoint
+        status: todo
+        priority: low
+        file: backend/integrations/libretalk_socket.py
+
+  - name: Log Builder (Automation Scheduler)
+    tasks:
+      - id: LOG-501
+        title: Implement Log Generator Engine
+        status: todo
+        priority: high
+        file: backend/services/log_generator.py
+      - id: LOG-502
+        title: Build Log Preview UI
+        status: todo
+        priority: high
+        file: frontend/src/pages/logs/LogPreview.tsx
+      - id: LOG-503
+        title: Publish Logs to LibreTime
+        status: todo
+        priority: medium
+        file: backend/services/log_publisher.py
+
+  - name: Reporting & Compliance
+    tasks:
+      - id: REP-601
+        title: Pull Playback History
+        status: todo
+        priority: high
+        file: backend/services/playback_history.py
+      - id: REP-602
+        title: Match Scheduled vs. Aired
+        status: todo
+        priority: high
+        file: backend/services/reconciliation.py
+      - id: REP-603
+        title: Generate CSV/PDF Reports
+        status: todo
+        priority: medium
+        file: backend/reports/generate_reports.py
+
+  - name: Integration Layer
+    tasks:
+      - id: INT-701
+        title: Implement API Connector Library
+        status: todo
+        priority: high
+        file: backend/integrations/api_connector.py
+      - id: INT-702
+        title: Sync Now Playing Data
+        status: todo
+        priority: medium
+        file: backend/integrations/azuracast_sync.py
+      - id: INT-703
+        title: Handle Authentication Tokens
+        status: todo
+        priority: medium
+        file: backend/auth/token_manager.py
+
+  - name: Admin & Security
+    tasks:
+      - id: ADM-801
+        title: User Role Model
+        status: todo
+        priority: high
+        file: backend/models/user_roles.py
+      - id: ADM-802
+        title: OAuth2 / JWT Authentication
+        status: todo
+        priority: high
+        file: backend/auth/oauth2.py
+      - id: ADM-803
+        title: Audit Trail
+        status: todo
+        priority: medium
+        file: backend/logging/audit.py

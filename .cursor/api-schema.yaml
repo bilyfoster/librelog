@@ -1,0 +1,126 @@
+
+
+openapi: 3.0.0
+info:
+  title: LibreLog API
+  version: 1.0.0
+  description: |
+    REST API for LibreLog — the GayPHX Radio traffic and automation manager.
+    Handles scheduling, metadata, voice tracking, and LibreTime/AzuraCast integration.
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+  - url: https://studio.gayphx.com/api/librelog
+    description: Production endpoint
+
+paths:
+  /tracks:
+    get:
+      summary: List all tracks
+      description: Retrieve all tracks from LibreLog’s media library with metadata.
+      responses:
+        "200":
+          description: List of tracks
+    post:
+      summary: Upload a new track
+      description: Uploads an audio file and tags it for LibreTime.
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                type:
+                  type: string
+                  enum: [MUS, ADV, PSA, LIN, INT, PRO, BED]
+      responses:
+        "201":
+          description: Track uploaded successfully
+
+  /logs/generate:
+    post:
+      summary: Generate a daily log
+      description: Builds a 24-hour schedule based on clock templates, campaigns, and Smart Blocks.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date:
+                  type: string
+                  format: date
+                  example: "2025-10-21"
+      responses:
+        "200":
+          description: Generated log structure
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  log:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        time:
+                          type: string
+                        title:
+                          type: string
+                        type:
+                          type: string
+                        duration:
+                          type: string
+
+  /campaigns:
+    get:
+      summary: List all active ad campaigns
+      responses:
+        "200":
+          description: Active campaigns list
+    post:
+      summary: Create or update a campaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                advertiser:
+                  type: string
+                start_date:
+                  type: string
+                  format: date
+                end_date:
+                  type: string
+                  format: date
+                priority:
+                  type: integer
+                file_url:
+                  type: string
+      responses:
+        "201":
+          description: Campaign saved successfully
+
+  /reports/reconciliation:
+    get:
+      summary: Generate reconciliation report
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Playback vs. schedule report

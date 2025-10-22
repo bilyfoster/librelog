@@ -1,0 +1,102 @@
+
+
+{
+  "project": "LibreLog – GayPHX Radio Traffic System",
+  "version": "1.0",
+  "description": "A professional radio traffic, scheduling, and automation system built to integrate LibreTime and AzuraCast for GayPHX Radio.",
+  "epics": [
+    {
+      "id": "E1",
+      "name": "Music Library & Metadata Control",
+      "goal": "Enable metadata tagging, track type management, and nightly synchronization between LibreTime and LibreLog.",
+      "tasks": [
+        {"id": "LIB-101", "title": "Create Track Metadata Model", "status": "todo"},
+        {"id": "LIB-102", "title": "Build Library Tagging UI", "status": "todo"},
+        {"id": "LIB-103", "title": "Implement Nightly Sync Job", "status": "todo"}
+      ]
+    },
+    {
+      "id": "E2",
+      "name": "Daypart Templates (Radio Clocks)",
+      "goal": "Allow producers to build and manage clock templates for different parts of the day.",
+      "tasks": [
+        {"id": "CLK-201", "title": "Clock Template Schema", "status": "todo"},
+        {"id": "CLK-202", "title": "Clock Builder UI", "status": "todo"},
+        {"id": "CLK-203", "title": "Export to LibreTime API", "status": "todo"}
+      ]
+    },
+    {
+      "id": "E3",
+      "name": "Traffic & Commercial Management",
+      "goal": "Handle ad campaigns, PSAs, and rotation logic for local advertisers and sponsors.",
+      "tasks": [
+        {"id": "TRF-301", "title": "Implement Campaign Model", "status": "todo"},
+        {"id": "TRF-302", "title": "Build Traffic Manager UI", "status": "todo"},
+        {"id": "TRF-303", "title": "Ad Fallback Logic (ADV > PRO > PSA)", "status": "todo"},
+        {"id": "TRF-304", "title": "Generate Hourly Ad Logs", "status": "todo"}
+      ]
+    },
+    {
+      "id": "E4",
+      "name": "Voice Tracking Integration",
+      "goal": "Integrate short-form voice breaks and future live-tracking support via LibreTalk.",
+      "tasks": [
+        {"id": "VOX-401", "title": "Build Web Voice Recorder", "status": "todo"},
+        {"id": "VOX-402", "title": "Add Upload to LibreTime API", "status": "todo"},
+        {"id": "VOX-403", "title": "Integrate LibreTalk Socket Endpoint", "status": "todo"}
+      ]
+    },
+    {
+      "id": "E5",
+      "name": "Log Builder (Automation Scheduler)",
+      "goal": "Automatically build and export 24-hour broadcast logs with proper spacing and fallback.",
+      "tasks": [
+        {"id": "LOG-501", "title": "Implement Log Generator Engine", "status": "todo"},
+        {"id": "LOG-502", "title": "Build Log Preview UI", "status": "todo"},
+        {"id": "LOG-503", "title": "Publish Logs to LibreTime", "status": "todo"}
+      ]
+    },
+    {
+      "id": "E6",
+      "name": "Reporting & Compliance",
+      "goal": "Provide reconciled playback and schedule data for reporting and licensing compliance.",
+      "tasks": [
+        {"id": "REP-601", "title": "Pull Playback History", "status": "todo"},
+        {"id": "REP-602", "title": "Match Scheduled vs. Aired", "status": "todo"},
+        {"id": "REP-603", "title": "Generate CSV/PDF Reports", "status": "todo"}
+      ]
+    },
+    {
+      "id": "E7",
+      "name": "Integration Layer",
+      "goal": "Centralize API and authentication logic for LibreTime, AzuraCast, and LibreTalk.",
+      "tasks": [
+        {"id": "INT-701", "title": "Implement API Connector Library", "status": "todo"},
+        {"id": "INT-702", "title": "Sync Now Playing Data", "status": "todo"},
+        {"id": "INT-703", "title": "Handle Authentication Tokens", "status": "todo"}
+      ]
+    },
+    {
+      "id": "E8",
+      "name": "Admin & Security",
+      "goal": "Implement secure authentication, authorization, and auditing features.",
+      "tasks": [
+        {"id": "ADM-801", "title": "User Role Model", "status": "todo"},
+        {"id": "ADM-802", "title": "OAuth2 / JWT Authentication", "status": "todo"},
+        {"id": "ADM-803", "title": "Audit Trail", "status": "todo"}
+      ]
+    }
+  ],
+  "deliverables": [
+    "Web dashboard for scheduling and automation control",
+    "Daily log generation for LibreTime",
+    "API integration with AzuraCast",
+    "Report export (CSV, PDF)",
+    "Voice tracking module"
+  ],
+  "milestones": [
+    {"phase": "Alpha", "target": "Q4 2025", "scope": "Basic scheduling, logs, API sync"},
+    {"phase": "Beta", "target": "Q1 2026", "scope": "Clock templates, campaigns, voice tracking"},
+    {"phase": "Launch", "target": "Q2 2026", "scope": "Public integration, reports, full release"}
+  ]
+}
