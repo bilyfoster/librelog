@@ -1,0 +1,113 @@
+
+
+epics:
+  - id: submission_flow
+    title: Artist Submission Flow
+    description: >
+      Public-facing form for artists to upload songs and request ISRCs.
+    stories:
+      - id: form_upload
+        title: Create Submission Form
+        acceptance:
+          - Capture artist, contact, pronouns, song title, genre, bio, socials.
+          - Upload MP3/WAV file (validate size < 150MB).
+          - Checkboxes: ISRC Request, Radio Permission.
+          - Confirmation email with tracking ID.
+      - id: file_validation
+        title: Validate Audio Files
+        acceptance:
+          - Verify file type, bitrate, and duration.
+          - Store metadata (duration, LUFS, peak) in DB.
+
+  - id: admin_dashboard
+    title: Admin Review & ISRC Assignment
+    description: >
+      Dashboard for GayPHX staff to manage submissions, approvals, and ISRC codes.
+    stories:
+      - id: dashboard_ui
+        title: Build Admin Dashboard
+        acceptance:
+          - List submissions with sortable filters.
+          - Playback audio; approve/reject/needs-info buttons.
+      - id: assign_isrc
+        title: ISRC Assignment Engine
+        acceptance:
+          - Generate ISRC format ${ISRC_COUNTRY}-${ISRC_REGISTRANT}-${YEAR}-${SEQ}.
+          - Prevent duplicates using DB counter.
+          - Send email to artist when ISRC is assigned.
+      - id: export_catalog
+        title: Export Metadata for Radio
+        acceptance:
+          - Export CSV with artist, title, ISRC, status.
+          - JSON feed endpoint for integration with AzuraCast/LibreTime.
+
+  - id: artist_dashboard
+    title: Artist Portal & ISRC Visibility
+    description: >
+      Authenticated dashboard for artists to view their submissions and assigned ISRCs.
+    stories:
+      - id: artist_login
+        title: Artist Authentication
+        acceptance:
+          - Email magic-link login.
+          - Artists only see their own submissions.
+      - id: view_isrcs
+        title: Show Assigned ISRCs
+        acceptance:
+          - Table listing songs, statuses, ISRCs, and notes.
+          - Download ISRC certificate (PDF).
+          - CSV export of catalog.
+
+  - id: rights_qc
+    title: Rights, Quality, and Compliance
+    description: >
+      Ensure all tracks meet legal, rights, and broadcast readiness standards.
+    stories:
+      - id: rights_attestation
+        title: Rights Declaration
+        acceptance:
+          - Required checkbox to attest ownership/licensing.
+          - Fields for PRO, writer splits, publisher info.
+      - id: loudness_check
+        title: Loudness Normalization
+        acceptance:
+          - Run LUFS scan and true peak check.
+          - Show pass/fail with adjustment tips.
+
+  - id: public_gallery
+    title: Public Artist Showcase
+    description: >
+      Optional public gallery of approved songs and artists.
+    stories:
+      - id: gallery_page
+        title: Create Gallery Page
+        acceptance:
+          - Show artist name, bio, social links, and preview.
+          - Badge for “Featured on GayPHX Radio.”
+          - Honor “Public Display” toggle from artist settings.
+
+tasks:
+  - id: setup_db
+    title: Database Schema
+    details: >
+      Define tables for artists, submissions, ISRCs, collaborators, and audit logs.
+  - id: setup_storage
+    title: File Storage (S3/MinIO)
+    details: >
+      Configure secure bucket and signed upload/download URLs.
+  - id: setup_auth
+    title: Authentication System
+    details: >
+      Implement Clerk or Auth.js for magic link login.
+  - id: setup_email
+    title: Email Notification Templates
+    details: >
+      Templates: Submission Received, Needs Info, Approved + ISRC, Rejected, Takedown.
+  - id: setup_api_docs
+    title: OpenAPI Documentation
+    details: >
+      Auto-generate API documentation for admin and artist endpoints.
+  - id: setup_deployment
+    title: Docker Compose Deployment
+    details: >
+      Define Docker services for web, API, DB, and storage.

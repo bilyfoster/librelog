@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GayPHX Music - API Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin: 5px;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-success {
+            background: #059669;
+        }
+        .btn-danger {
+            background: #dc2626;
+        }
+        .result {
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            background: #d1fae5;
+            border-color: #a7f3d0;
+            color: #065f46;
+        }
+        .error {
+            background: #fee2e2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+        .loading {
+            background: #dbeafe;
+            border-color: #bfdbfe;
+            color: #1e40af;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 5px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            margin: 0 10px;
+        }
+        .links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 API Test Center</h1>
+            <p>Test all GayPHX Music API endpoints</p>
+        </div>
+
+        <!-- Health Check -->
+        <div class="card">
+            <h3>🏥 Health Check</h3>
+            <button class="btn" onclick="testHealth()">Test API Health</button>
+            <div id="healthResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Admin Login Test -->
+        <div class="card">
+            <h3>🔐 Admin Login Test</h3>
+            <div class="form-group">
+                <label for="adminEmail">Email:</label>
+                <input type="email" id="adminEmail" value="admin@gayphx.com">
+            </div>
+            <div class="form-group">
+                <label for="adminPassword">Password:</label>
+                <input type="password" id="adminPassword" value="admin123">
+            </div>
+            <button class="btn" onclick="testAdminLogin()">Test Admin Login</button>
+            <div id="adminLoginResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Artist Signup Test -->
+        <div class="card">
+            <h3>👤 Artist Signup Test</h3>
+            <div class="form-group">
+                <label for="artistName">Name:</label>
+                <input type="text" id="artistName" value="Test Artist">
+            </div>
+            <div class="form-group">
+                <label for="artistEmail">Email:</label>
+                <input type="email" id="artistEmail" value="test@example.com">
+            </div>
+            <button class="btn" onclick="testArtistSignup()">Test Artist Signup</button>
+            <div id="artistSignupResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- ISRC Key Test -->
+        <div class="card">
+            <h3>🔑 ISRC Key Management Test</h3>
+            <button class="btn" onclick="testGetISRCKey()">Get ISRC Key</button>
+            <button class="btn btn-success" onclick="testSetISRCKey()">Set ISRC Key</button>
+            <button class="btn btn-danger" onclick="testDeleteISRCKey()">Delete ISRC Key</button>
+            <div id="isrcKeyResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- User Management Test -->
+        <div class="card">
+            <h3>👥 User Management Test</h3>
+            <button class="btn" onclick="testGetUsers()">Get Users</button>
+            <button class="btn" onclick="testGetSubmissions()">Get Submissions</button>
+            <div id="userManagementResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Magic Link Test -->
+        <div class="card">
+            <h3>🔗 Magic Link Test</h3>
+            <div class="form-group">
+                <label for="magicLinkEmail">Email for Magic Link:</label>
+                <input type="email" id="magicLinkEmail" value="test@example.com">
+            </div>
+            <button class="btn" onclick="testRequestMagicLink()">Request Magic Link</button>
+            <div id="magicLinkResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="links">
+            <a href="simple-admin.html">Admin Login</a>
+            <a href="simple-signup.html">Artist Signup</a>
+            <a href="simple-admin-dashboard.html">Admin Dashboard</a>
+        </div>
+    </div>
+
+    <script>
+        let adminToken = null;
+
+        // Test API health
+        async function testHealth() {
+            const resultDiv = document.getElementById('healthResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Testing API health...';
+
+            try {
+                const response = await fetch('http://localhost:8000/api/health');
+                const data = await response.json();
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ API Health Check\nStatus: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Health Check Failed\nError: ${error.message}`;
+            }
+        }
+
+        // Test admin login
+        async function testAdminLogin() {
+            const resultDiv = document.getElementById('adminLoginResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Testing admin login...';
+
+            try {
+                const response = await fetch('http://localhost:8000/api/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: document.getElementById('adminEmail').value,
+                        password: document.getElementById('adminPassword').value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    adminToken = data.access_token;
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Admin Login Successful\nStatus: ${response.status}\nToken: ${data.access_token.substring(0, 50)}...\nAdmin: ${JSON.stringify(data.admin, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Admin Login Failed\nStatus: ${response.status}\nError: ${data.detail || 'Unknown error'}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Admin Login Error\nError: ${error.message}`;
+            }
+        }
+
+        // Test artist signup
+        async function testArtistSignup() {
+            const resultDiv = document.getElementById('artistSignupResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Testing artist signup...';
+
+            try {
+                const response = await fetch('http://localhost:8000/api/auth/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: document.getElementById('artistName').value,
+                        email: document.getElementById('artistEmail').value,
+                        pronouns: 'they/them',
+                        bio: 'Test artist bio',
+                        social_links: {
+                            instagram: '@testartist',
+                            twitter: '@testartist'
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Artist Signup Successful\nStatus: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Artist Signup Failed\nStatus: ${response.status}\nError: ${data.detail || 'Unknown error'}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Artist Signup Error\nError: ${error.message}`;
+            }
+        }
+
+        // Test get ISRC key
+        async function testGetISRCKey() {
+            if (!adminToken) {
+                alert('Please login as admin first');
+                return;
+            }
+
+            const resultDiv = document.getElementById('isrcKeyResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Getting ISRC key...';
+
+            try {
+                const response = await fetch('http://localhost:8000/api/admin/isrc-key', {
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Get ISRC Key Successful\nStatus: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Get ISRC Key Failed\nStatus: ${response.status}\nError: ${data.detail || 'Unknown error'}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Get ISRC Key Error\nError: ${error.message}`;
+            }
+        }
+
+        // Test set ISRC key
+        async function testSetISRCKey() {
+            if (!adminToken) {
+                alert('Please login as admin first');
+                return;
+            }
+
+            const resultDiv = document.getElementById('isrcKeyResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Setting ISRC key...';
+
+            try {
+                const response = await fetch('http://localhost:8000/api/admin/isrc-key', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${adminToken}`
+                    },
+                    body: JSON.stringify({
+                        isrc_registration_key: 'TEST-ISRC-KEY-12345'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Set ISRC Key Successful\nStatus: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Set ISRC Key Failed\nStatus: ${response.status}\nError: ${data.detail || 'Unknown error'}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Set ISRC Key Error\nError: ${error.message}`;
+            }
+        }
+
+        // Test delete ISRC key
+        async function testDeleteISRCKey() {
+            if (!adminToken) {
+                alert('Please login as admin first');
+                return;
+            }
+
+            const resultDiv = document.getElementById('isrcKeyResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Deleting ISRC key...';
+
+            try {
+                const response = await fetch('http://localhost:8000/api/admin/isrc-key', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Delete ISRC Key Successful\nStatus: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Delete ISRC Key Failed\nStatus: ${response.status}\nError: ${data.detail || 'Unknown error'}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Delete ISRC Key Error\nError: ${error.message}`;
+            }
+        }
+
+        // Test get users
+        async function testGetUsers() {
+            if (!adminToken) {
+                alert('Please login as admin first');
+                return;
+            }
+
+            const resultDiv = document.getElementById('userManagementResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Getting users...';
+
+            try {
+                const response = await fetch('http://localhost:8000/api/admin/users', {
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Get Users Successful\nStatus: ${response.status}\nUsers: ${data.length}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Get Users Failed\nStatus: ${response.status}\nError: ${data.detail || 'Unknown error'}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Get Users Error\nError: ${error.message}`;
+            }
+        }
+
+        // Test get submissions
+        async function testGetSubmissions() {
+            if (!adminToken) {
+                alert('Please login as admin first');
+                return;
+            }
+
+            const resultDiv = document.getElementById('userManagementResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Getting submissions...';
+
+            try {
+                const response = await fetch('http://localhost:8000/api/admin/submissions', {
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Get Submissions Successful\nStatus: ${response.status}\nSubmissions: ${data.length}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Get Submissions Failed\nStatus: ${response.status}\nError: ${data.detail || 'Unknown error'}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Get Submissions Error\nError: ${error.message}`;
+            }
+        }
+
+        // Test request magic link
+        async function testRequestMagicLink() {
+            const resultDiv = document.getElementById('magicLinkResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Requesting magic link...';
+
+            try {
+                const response = await fetch('http://localhost:8000/api/auth/request-magic-link', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: document.getElementById('magicLinkEmail').value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Magic Link Request Successful\nStatus: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Magic Link Request Failed\nStatus: ${response.status}\nError: ${data.detail || 'Unknown error'}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Magic Link Request Error\nError: ${error.message}`;
+            }
+        }
+
+        // Auto-run health check on page load
+        window.onload = function() {
+            testHealth();
+        };
+    </script>
+</body>
+</html>

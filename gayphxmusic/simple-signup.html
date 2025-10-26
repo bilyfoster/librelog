@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GayPHX Music - Artist Signup</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #6b7280;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .loading {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+        .social-links {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Join GayPHX Music</h1>
+        <p class="subtitle">Create your artist account</p>
+        
+        <form id="signupForm">
+            <div class="form-group">
+                <label for="name">Artist Name *</label>
+                <input type="text" id="name" name="name" required placeholder="Your stage name or real name">
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email Address *</label>
+                <input type="email" id="email" name="email" required placeholder="your@email.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="pronouns">Pronouns</label>
+                <input type="text" id="pronouns" name="pronouns" placeholder="they/them, she/her, he/him, etc.">
+            </div>
+            
+            <div class="form-group">
+                <label for="bio">Bio</label>
+                <textarea id="bio" name="bio" rows="3" placeholder="Tell us about yourself and your music..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Social Links (Optional)</label>
+                <div class="social-links">
+                    <input type="text" name="instagram" placeholder="Instagram @username">
+                    <input type="text" name="twitter" placeholder="Twitter @username">
+                    <input type="text" name="tiktok" placeholder="TikTok @username">
+                    <input type="text" name="spotify" placeholder="Spotify Artist URL">
+                </div>
+            </div>
+            
+            <button type="submit" class="btn" id="submitBtn">
+                Create Account
+            </button>
+        </form>
+        
+        <div id="message"></div>
+        
+        <div class="links">
+            <p>Already have an account? <a href="simple-login.html">Sign in here</a></p>
+            <p><a href="simple-admin.html">Admin Login</a> | <a href="simple-test.html">API Test</a></p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('signupForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const messageDiv = document.getElementById('message');
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating Account...';
+            messageDiv.innerHTML = '<div class="message loading">Creating your account...</div>';
+            
+            // Collect form data
+            const formData = new FormData(e.target);
+            const socialLinks = {};
+            
+            // Collect social links
+            ['instagram', 'twitter', 'tiktok', 'spotify'].forEach(platform => {
+                const value = formData.get(platform);
+                if (value && value.trim()) {
+                    socialLinks[platform] = value.trim();
+                }
+            });
+            
+            const data = {
+                name: formData.get('name'),
+                email: formData.get('email'),
+                pronouns: formData.get('pronouns') || null,
+                bio: formData.get('bio') || null,
+                social_links: socialLinks
+            };
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/auth/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = `
+                        <div class="message success">
+                            ✅ Account created successfully!<br>
+                            Check your email for a magic link to sign in.
+                        </div>
+                    `;
+                    e.target.reset();
+                } else {
+                    messageDiv.innerHTML = `
+                        <div class="message error">
+                            ❌ Error: ${result.detail || 'Failed to create account'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = `
+                    <div class="message error">
+                        ❌ Network error: ${error.message}
+                    </div>
+                `;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Account';
+            }
+        });
+    </script>
+</body>
+</html>
