@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db
 from backend.models.user import User
-from backend.auth.oauth2 import get_password_hash, get_current_user
+from backend.auth.oauth2 import get_password_hash
+from backend.routers.auth import get_current_user
 from backend.scripts.setup import create_initial_admin, check_api_keys
 from pydantic import BaseModel
 import os

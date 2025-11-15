@@ -36,12 +36,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // Check if user is logged in on app start
-    const token = localStorage.getItem('token')
-    if (token) {
-      // TODO: Validate token and get user info
-      setUser({ id: 1, username: 'admin', role: 'admin' })
+    const validateToken = async () => {
+      const token = localStorage.getItem('token')
+      if (token) {
+        try {
+          // Validate token and get user info
+          // Token is automatically added by api interceptor
+          const userResponse = await api.get('/auth/me')
+          setUser({
+            id: userResponse.data.id,
+            username: userResponse.data.username,
+            role: userResponse.data.role,
+          })
+        } catch (error: any) {
+          // Token is invalid or expired, clear it
+          console.warn('Token validation failed:', error)
+          localStorage.removeItem('token')
+          setUser(null)
+        }
+      }
+      setIsLoading(false)
     }
-    setIsLoading(false)
+    
+    validateToken()
   }, [])
 
   const login = async (username: string, password: string) => {
@@ -49,17 +66,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await api.post('/auth/login', {
         username,
         password,
+      }, {
+        timeout: 10000, // 10 second timeout for login
       })
       
       const { access_token } = response.data
+      if (!access_token) {
+        throw new Error('No access token received')
+      }
+      
       localStorage.setItem('token', access_token)
       
-      // TODO: Get user info from token or API
-      setUser({ id: 1, username, role: 'admin' })
+      // Get user info from token or API
+      try {
+        const userResponse = await api.get('/auth/me')
+        setUser({
+          id: userResponse.data.id,
+          username: userResponse.data.username,
+          role: userResponse.data.role,
+        })
+      } catch (err) {
+        // Fallback if /auth/me fails
+        console.warn('Could not fetch user info, using defaults:', err)
+        setUser({ id: 1, username, role: 'admin' })
+      }
+      
       navigate('/dashboard')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login failed:', error)
-      throw error
+      const errorMessage = error.response?.data?.detail || error.message || 'Login failed. Please check your credentials.'
+      throw new Error(errorMessage)
     }
   }
 

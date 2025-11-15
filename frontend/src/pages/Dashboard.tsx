@@ -1,4 +1,5 @@
 import React from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   Box,
   Card,
@@ -10,6 +11,8 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
+  CircularProgress,
+  Alert,
 } from '@mui/material'
 import {
   MusicNote,
@@ -17,21 +20,114 @@ import {
   Schedule,
   Assessment,
 } from '@mui/icons-material'
+import { getDashboardStats, getRecentActivity, checkApiHealth } from '../utils/api'
+import api from '../utils/api'
+import APIDiagnostics from '../components/APIDiagnostics'
 
 const Dashboard: React.FC = () => {
+  // Check API health first
+  const { data: healthData, error: healthError } = useQuery({
+    queryKey: ['api-health'],
+    queryFn: () => checkApiHealth(),
+    retry: false,
+    refetchInterval: 30000, // Check every 30 seconds
+  })
+
+  // Fetch dashboard stats using count endpoints
+  const { data: statsData, isLoading: statsLoading, error: statsError } = useQuery({
+    queryKey: ['dashboardStats'],
+    queryFn: () => getDashboardStats(),
+    retry: 1,
+    retryDelay: 1000,
+    staleTime: 60000, // Cache for 1 minute
+  })
+
+  // Fetch recent activity
+  const { data: activityData, isLoading: activityLoading } = useQuery({
+    queryKey: ['recentActivity'],
+    queryFn: () => getRecentActivity(20),
+    retry: false, // Don't retry - getRecentActivity already handles errors
+    staleTime: 30000, // Cache for 30 seconds
+  })
+
   const stats = [
-    { title: 'Total Tracks', value: '1,234', icon: <MusicNote /> },
-    { title: 'Active Campaigns', value: '12', icon: <Campaign /> },
-    { title: 'Clock Templates', value: '8', icon: <Schedule /> },
-    { title: 'Reports Generated', value: '45', icon: <Assessment /> },
+    { title: 'Total Tracks', value: statsData?.totalTracks || '0', icon: <MusicNote /> },
+    { title: 'Active Campaigns', value: statsData?.activeCampaigns || '0', icon: <Campaign /> },
+    { title: 'Clock Templates', value: statsData?.clockTemplates || '0', icon: <Schedule /> },
+    { title: 'Reports Generated', value: statsData?.reportsGenerated || '0', icon: <Assessment /> },
   ]
 
-  const recentActivity = [
-    { text: 'New track uploaded: "Morning Show Intro"', time: '2 hours ago' },
-    { text: 'Campaign "Local Business" published', time: '4 hours ago' },
-    { text: 'Daily log generated for 2024-01-15', time: '6 hours ago' },
-    { text: 'Voice track recorded for Evening Show', time: '8 hours ago' },
-  ]
+  const recentActivity = activityData?.activities || []
+
+  // Show API connectivity issue first
+  if (healthError) {
+    return (
+      <Box p={3}>
+        <Typography variant="h4" gutterBottom>Dashboard</Typography>
+        <Alert severity="error" sx={{ mt: 2, mb: 2 }}>
+          <Typography variant="h6" gutterBottom>API Connection Failed</Typography>
+          <Typography variant="body2">
+            Cannot reach the backend API. The backend may be down or unreachable.
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            Error: {healthError instanceof Error ? healthError.message : 'Unknown error'}
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 2, fontWeight: 'bold' }}>
+            Troubleshooting Steps:
+          </Typography>
+          <Box component="ol" sx={{ mt: 1, mb: 2, pl: 3 }}>
+            <li>Check if backend container is running: <code>docker-compose ps | grep api</code></li>
+            <li>Check backend logs: <code>docker-compose logs api</code></li>
+            <li>Verify backend is listening on port 8000</li>
+            <li>Check Traefik routing configuration (if in production)</li>
+            <li>Verify network connectivity between frontend and backend containers</li>
+            <li>Check browser Network tab for actual HTTP status codes</li>
+            <li>Verify CORS configuration allows requests from this origin</li>
+          </Box>
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            <strong>Common Issues:</strong>
+          </Typography>
+          <Box component="ul" sx={{ mt: 1, mb: 2, pl: 3 }}>
+            <li>Backend container not started → Start with <code>docker-compose up -d api</code></li>
+            <li>Backend crashed → Check logs for Python errors</li>
+            <li>Network isolation → Containers may not be on same Docker network</li>
+            <li>Port conflict → Another service may be using port 8000</li>
+            <li>Traefik misconfiguration → Backend service not registered with Traefik</li>
+          </Box>
+        </Alert>
+        <APIDiagnostics />
+      </Box>
+    )
+  }
+
+  if (statsLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+        {healthData && (
+          <Typography variant="body2" sx={{ ml: 2 }}>
+            API Status: {healthData.status}
+          </Typography>
+        )}
+      </Box>
+    )
+  }
+
+  if (statsError) {
+    return (
+      <Box p={3}>
+        <Typography variant="h4" gutterBottom>Dashboard</Typography>
+        {healthData && (
+          <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
+            API is reachable (Status: {healthData.status}), but some endpoints are failing.
+          </Alert>
+        )}
+        <Alert severity="error" sx={{ mt: healthData ? 0 : 2 }}>
+          Failed to load dashboard data: {statsError instanceof Error ? statsError.message : 'Unknown error'}
+        </Alert>
+      </Box>
+    )
+  }
 
   return (
     <Box>
@@ -61,16 +157,26 @@ const Dashboard: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               Recent Activity
             </Typography>
-            <List>
-              {recentActivity.map((activity, index) => (
-                <ListItem key={index}>
-                  <ListItemText
-                    primary={activity.text}
-                    secondary={activity.time}
-                  />
-                </ListItem>
-              ))}
-            </List>
+            {activityLoading ? (
+              <Box display="flex" justifyContent="center" p={2}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : recentActivity.length > 0 ? (
+              <List>
+                {recentActivity.map((activity, index) => (
+                  <ListItem key={index}>
+                    <ListItemText
+                      primary={activity.text}
+                      secondary={activity.time}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Typography color="textSecondary" sx={{ p: 2 }}>
+                No recent activity
+              </Typography>
+            )}
           </Paper>
         </Grid>
         

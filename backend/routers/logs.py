@@ -4,17 +4,37 @@ Daily log management router
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from backend.database import get_db
 from backend.models.daily_log import DailyLog
+from backend.models.spot import Spot
 from backend.services.log_generator import LogGenerator
+from backend.services.log_editor import LogEditor
 from backend.routers.auth import get_current_user
 from backend.models.user import User
 from pydantic import BaseModel
-from typing import Optional, List
-from datetime import date
+from typing import Optional, List, Dict, Any
+from datetime import date, datetime, timezone
 
 router = APIRouter()
+
+
+@router.get("/count")
+async def get_logs_count(
+    published_only: bool = Query(False),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get total count of daily logs"""
+    query = select(func.count(DailyLog.id))
+    
+    if published_only:
+        query = query.where(DailyLog.published == True)
+    
+    result = await db.execute(query)
+    count = result.scalar() or 0
+    
+    return {"count": count}
 
 
 class LogGenerateRequest(BaseModel):
@@ -223,3 +243,178 @@ async def get_log_timeline(
                 for hour, data in json_data.get("hourly_logs", {}).items()
             }
         }
+
+
+@router.post("/{log_id}/lock")
+async def lock_log(
+    log_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Lock a log to prevent further edits"""
+    result = await db.execute(select(DailyLog).where(DailyLog.id == log_id))
+    log = result.scalar_one_or_none()
+    
+    if not log:
+        raise HTTPException(status_code=404, detail="Daily log not found")
+    
+    if log.locked:
+        raise HTTPException(status_code=400, detail="Log is already locked")
+    
+    log.locked = True
+    log.locked_at = datetime.now(timezone.utc)
+    log.locked_by = current_user.id
+    
+    await db.commit()
+    await db.refresh(log)
+    
+    return {"message": "Log locked successfully", "locked": True, "locked_at": log.locked_at.isoformat()}
+
+
+@router.post("/{log_id}/unlock")
+async def unlock_log(
+    log_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Unlock a log to allow edits"""
+    result = await db.execute(select(DailyLog).where(DailyLog.id == log_id))
+    log = result.scalar_one_or_none()
+    
+    if not log:
+        raise HTTPException(status_code=404, detail="Daily log not found")
+    
+    if not log.locked:
+        raise HTTPException(status_code=400, detail="Log is not locked")
+    
+    log.locked = False
+    log.locked_at = None
+    log.locked_by = None
+    
+    await db.commit()
+    
+    return {"message": "Log unlocked successfully", "locked": False}
+
+
+@router.get("/{log_id}/conflicts")
+async def get_log_conflicts(
+    log_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get conflicts for a log"""
+    result = await db.execute(select(DailyLog).where(DailyLog.id == log_id))
+    log = result.scalar_one_or_none()
+    
+    if not log:
+        raise HTTPException(status_code=404, detail="Daily log not found")
+    
+    return {
+        "log_id": log_id,
+        "conflicts": log.conflicts or [],
+        "conflict_count": len(log.conflicts) if log.conflicts else 0
+    }
+
+
+@router.get("/{log_id}/avails")
+async def get_log_avails(
+    log_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get available inventory for a log"""
+    from backend.services.spot_scheduler import SpotScheduler
+    
+    result = await db.execute(select(DailyLog).where(DailyLog.id == log_id))
+    log = result.scalar_one_or_none()
+    
+    if not log:
+        raise HTTPException(status_code=404, detail="Daily log not found")
+    
+    scheduler = SpotScheduler(db)
+    avails = await scheduler.calculate_avails(log.date)
+    
+    return {
+        "log_id": log_id,
+        "date": log.date.isoformat(),
+        "avails": avails
+    }
+
+
+@router.post("/{log_id}/spots")
+async def add_spot_to_log(
+    log_id: int,
+    spot_data: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Add a spot to a log"""
+    result = await db.execute(select(DailyLog).where(DailyLog.id == log_id))
+    log = result.scalar_one_or_none()
+    
+    if not log:
+        raise HTTPException(status_code=404, detail="Daily log not found")
+    
+    if log.locked:
+        raise HTTPException(status_code=400, detail="Log is locked and cannot be edited")
+    
+    editor = LogEditor(db)
+    success = await editor.add_spot_to_log(log_id, spot_data)
+    
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to add spot to log")
+    
+    return {"message": "Spot added to log successfully"}
+
+
+@router.put("/{log_id}/spots/{spot_id}")
+async def update_spot_in_log(
+    log_id: int,
+    spot_id: int,
+    spot_update: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Update a spot in a log (for drag-drop)"""
+    result = await db.execute(select(DailyLog).where(DailyLog.id == log_id))
+    log = result.scalar_one_or_none()
+    
+    if not log:
+        raise HTTPException(status_code=404, detail="Daily log not found")
+    
+    if log.locked:
+        raise HTTPException(status_code=400, detail="Log is locked and cannot be edited")
+    
+    editor = LogEditor(db)
+    success = await editor.move_spot(log_id, spot_id, spot_update)
+    
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to update spot in log")
+    
+    return {"message": "Spot updated in log successfully"}
+
+
+@router.delete("/{log_id}/spots/{spot_id}")
+async def remove_spot_from_log(
+    log_id: int,
+    spot_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Remove a spot from a log"""
+    result = await db.execute(select(DailyLog).where(DailyLog.id == log_id))
+    log = result.scalar_one_or_none()
+    
+    if not log:
+        raise HTTPException(status_code=404, detail="Daily log not found")
+    
+    if log.locked:
+        raise HTTPException(status_code=400, detail="Log is locked and cannot be edited")
+    
+    editor = LogEditor(db)
+    success = await editor.remove_spot(log_id, spot_id)
+    
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to remove spot from log")
+    
+    return {"message": "Spot removed from log successfully"}

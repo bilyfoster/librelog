@@ -17,6 +17,9 @@ celery = Celery(
         "backend.tasks.nightly_sync",
         "backend.tasks.playback_sync",
         "backend.tasks.azuracast_sync_task",
+        "backend.tasks.audio_processing",
+        "backend.tasks.audio_delivery",
+        "backend.tasks.political_archive",
     ]
 )
 
@@ -31,6 +34,40 @@ celery.conf.update(
     task_soft_time_limit=25 * 60,  # 25 minutes
     worker_prefetch_multiplier=1,
     worker_max_tasks_per_child=1000,
+    beat_schedule={
+        'nightly-sync': {
+            'task': 'backend.tasks.nightly_sync.nightly_sync',
+            'schedule': 86400.0,  # Run daily at midnight UTC
+        },
+        'sync-playback-history': {
+            'task': 'backend.tasks.playback_sync.sync_playback_history',
+            'schedule': 3600.0,  # Run hourly
+        },
+        'cleanup-old-tracks': {
+            'task': 'backend.tasks.nightly_sync.cleanup_old_tracks',
+            'schedule': 604800.0,  # Run weekly
+        },
+        'check-copy-expiration': {
+            'task': 'backend.tasks.nightly_sync.check_copy_expiration',
+            'schedule': 3600.0,  # Run hourly to check for expiring copy
+        },
+        'retry-failed-deliveries': {
+            'task': 'backend.tasks.audio_delivery.retry_failed_deliveries',
+            'schedule': 1800.0,  # Run every 30 minutes
+        },
+        'verify-deliveries': {
+            'task': 'backend.tasks.audio_delivery.verify_deliveries',
+            'schedule': 3600.0,  # Run hourly
+        },
+        'archive-political-ads': {
+            'task': 'backend.tasks.political_archive.archive_political_ads',
+            'schedule': 86400.0,  # Run daily
+        },
+        'generate-fcc-compliance-report': {
+            'task': 'backend.tasks.political_archive.generate_fcc_compliance_report',
+            'schedule': 604800.0,  # Run weekly
+        },
+    },
 )
 
 

@@ -3,7 +3,9 @@ User roles and permissions
 """
 
 from enum import Enum
-from typing import List, Set
+from typing import List, Set, Dict
+from functools import wraps
+from fastapi import HTTPException, status
 from backend.models.user import User
 
 
@@ -143,8 +145,35 @@ def has_permission(user: User, permission: Permission) -> bool:
 def require_permission(permission: Permission):
     """Decorator to require a specific permission"""
     def decorator(func):
+        @wraps(func)
         async def wrapper(*args, **kwargs):
-            # TODO: Implement permission checking in route handlers
+            # Find current_user in kwargs (from Depends)
+            current_user = None
+            for key, value in kwargs.items():
+                if isinstance(value, User):
+                    current_user = value
+                    break
+            
+            # Also check args for User instance
+            if not current_user:
+                for arg in args:
+                    if isinstance(arg, User):
+                        current_user = arg
+                        break
+            
+            if not current_user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authentication required"
+                )
+            
+            # Check permission
+            if not has_permission(current_user, permission):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Permission denied: {permission.value} required"
+                )
+            
             return await func(*args, **kwargs)
         return wrapper
     return decorator

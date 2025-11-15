@@ -4,6 +4,7 @@ Clock templates router
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 from backend.database import get_db
 from backend.models.clock_template import ClockTemplate
 from backend.services.clock_service import ClockTemplateService
@@ -13,6 +14,19 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any
 
 router = APIRouter()
+
+
+@router.get("/count")
+async def get_clocks_count(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get total count of clock templates"""
+    query = select(func.count(ClockTemplate.id))
+    result = await db.execute(query)
+    count = result.scalar() or 0
+    
+    return {"count": count}
 
 
 class ClockTemplateCreate(BaseModel):

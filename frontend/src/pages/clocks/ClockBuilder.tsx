@@ -75,12 +75,15 @@ const ClockBuilder: React.FC = () => {
 
   const elementTypes = [
     { value: 'MUS', label: 'Music', color: 'primary' },
-    { value: 'ADV', label: 'Advertisement', color: 'secondary' },
-    { value: 'PSA', label: 'PSA', color: 'success' },
+    { value: 'ADV', label: 'Ads', color: 'secondary' },
+    { value: 'NEW', label: 'News', color: 'warning' },
     { value: 'LIN', label: 'Liner', color: 'info' },
-    { value: 'INT', label: 'Interview', color: 'warning' },
+    { value: 'INT', label: 'Interview', color: 'success' },
     { value: 'PRO', label: 'Promo', color: 'error' },
-    { value: 'BED', label: 'Bed', color: 'default' }
+    { value: 'SHO', label: 'Show segment', color: 'default' },
+    { value: 'IDS', label: 'IDs', color: 'default' },
+    { value: 'COM', label: 'Community', color: 'default' },
+    { value: 'PSA', label: 'Public Service Announcement', color: 'info' }
   ]
 
   useEffect(() => {
@@ -91,7 +94,17 @@ const ClockBuilder: React.FC = () => {
     try {
       const response = await api.get('/clocks/')
       setTemplates(response.data.templates)
-    } catch (err) {
+      setError('')
+    } catch (err: any) {
+      let message = 'Failed to load templates'
+      if (err?.response?.data?.detail) {
+        message = err.response.data.detail
+      } else if (err?.response?.data?.message) {
+        message = err.response.data.message
+      } else if (err?.message) {
+        message = err.message
+      }
+      setError(message)
       console.error('Failed to load templates:', err)
     }
   }
@@ -104,6 +117,7 @@ const ClockBuilder: React.FC = () => {
 
     setSaving(true)
     setError('')
+    setSuccess('')
 
     try {
       if (currentTemplate.id) {
@@ -124,7 +138,16 @@ const ClockBuilder: React.FC = () => {
         }
       })
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to save template')
+      let message = 'Failed to save template'
+      if (err?.response?.data?.detail) {
+        message = err.response.data.detail
+      } else if (err?.response?.data?.message) {
+        message = err.response.data.message
+      } else if (err?.message) {
+        message = err.message
+      }
+      setError(message)
+      console.error('Save template error:', err)
     } finally {
       setSaving(false)
     }

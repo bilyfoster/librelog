@@ -4,6 +4,7 @@ Campaign management router
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 from backend.database import get_db
 from backend.models.campaign import Campaign
 from backend.services.campaign_service import CampaignService
@@ -14,6 +15,24 @@ from typing import Optional, List
 from datetime import date
 
 router = APIRouter()
+
+
+@router.get("/count")
+async def get_campaigns_count(
+    active_only: bool = Query(True),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get total count of campaigns"""
+    query = select(func.count(Campaign.id))
+    
+    if active_only:
+        query = query.where(Campaign.active == True)
+    
+    result = await db.execute(query)
+    count = result.scalar() or 0
+    
+    return {"count": count}
 
 
 class CampaignCreate(BaseModel):

@@ -8,7 +8,7 @@ import {
   Typography,
   Alert,
 } from '@mui/material'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext'
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('')
@@ -24,8 +24,9 @@ const Login: React.FC = () => {
 
     try {
       await login(username, password)
-    } catch (err) {
-      setError('Invalid username or password')
+    } catch (err: any) {
+      setError(err.message || 'Invalid username or password')
+      console.error('Login error:', err)
     } finally {
       setIsLoading(false)
     }

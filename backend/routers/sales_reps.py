@@ -1,0 +1,216 @@
+"""
+Sales Reps router for traffic management
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+from backend.database import get_db
+from backend.models.sales_rep import SalesRep
+from backend.models.user import User
+from backend.routers.auth import get_current_user
+from pydantic import BaseModel
+from typing import Optional
+from decimal import Decimal
+
+router = APIRouter()
+
+
+class SalesRepCreate(BaseModel):
+    user_id: int
+    employee_id: Optional[str] = None
+    commission_rate: Optional[Decimal] = None
+    sales_goal: Optional[Decimal] = None
+
+
+class SalesRepUpdate(BaseModel):
+    employee_id: Optional[str] = None
+    commission_rate: Optional[Decimal] = None
+    sales_goal: Optional[Decimal] = None
+    active: Optional[bool] = None
+
+
+class SalesRepResponse(BaseModel):
+    id: int
+    user_id: int
+    employee_id: Optional[str]
+    commission_rate: Optional[Decimal]
+    sales_goal: Optional[Decimal]
+    active: bool
+    created_at: str
+    updated_at: str
+    username: Optional[str] = None  # From user relationship
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/", response_model=list[SalesRepResponse])
+async def list_sales_reps(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    active_only: bool = Query(True),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """List all sales reps with optional filtering"""
+    try:
+        query = select(SalesRep)
+        
+        if active_only:
+            query = query.where(SalesRep.active == True)
+        
+        query = query.options(selectinload(SalesRep.user))
+        query = query.offset(skip).limit(limit).order_by(SalesRep.id)
+        
+        result = await db.execute(query)
+        sales_reps = result.scalars().all()
+        
+        # Load user data for each sales rep
+        reps_data = []
+        for rep in sales_reps:
+            try:
+                rep_dict = SalesRepResponse.model_validate(rep).model_dump()
+                if rep.user:
+                    rep_dict["username"] = rep.user.username
+                reps_data.append(SalesRepResponse(**rep_dict))
+            except Exception as e:
+                import structlog
+                logger = structlog.get_logger()
+                logger.warning("Failed to serialize sales rep", sales_rep_id=rep.id, error=str(e))
+                # Continue with other reps even if one fails
+                continue
+        
+        return reps_data
+    except Exception as e:
+        import structlog
+        logger = structlog.get_logger()
+        logger.error("Failed to list sales reps", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list sales reps: {str(e)}"
+        )
+
+
+@router.post("/", response_model=SalesRepResponse, status_code=status.HTTP_201_CREATED)
+async def create_sales_rep(
+    sales_rep: SalesRepCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new sales rep"""
+    try:
+        # Check if user exists
+        user_result = await db.execute(select(User).where(User.id == sales_rep.user_id))
+        user = user_result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Check if sales rep already exists for this user
+        existing = await db.execute(select(SalesRep).where(SalesRep.user_id == sales_rep.user_id))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Sales rep already exists for this user")
+        
+        new_sales_rep = SalesRep(**sales_rep.model_dump())
+        db.add(new_sales_rep)
+        await db.commit()
+        await db.refresh(new_sales_rep)
+        
+        # Reload with user relationship
+        result = await db.execute(
+            select(SalesRep).options(selectinload(SalesRep.user)).where(SalesRep.id == new_sales_rep.id)
+        )
+        new_sales_rep = result.scalar_one()
+        
+        rep_dict = SalesRepResponse.model_validate(new_sales_rep).model_dump()
+        if new_sales_rep.user:
+            rep_dict["username"] = new_sales_rep.user.username
+        
+        return SalesRepResponse(**rep_dict)
+    except HTTPException:
+        raise
+    except Exception as e:
+        import structlog
+        logger = structlog.get_logger()
+        logger.error("Failed to create sales rep", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create sales rep: {str(e)}"
+        )
+
+
+@router.get("/{sales_rep_id}", response_model=SalesRepResponse)
+async def get_sales_rep(
+    sales_rep_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get a specific sales rep"""
+    result = await db.execute(
+        select(SalesRep).options(selectinload(SalesRep.user)).where(SalesRep.id == sales_rep_id)
+    )
+    sales_rep = result.scalar_one_or_none()
+    
+    if not sales_rep:
+        raise HTTPException(status_code=404, detail="Sales rep not found")
+    
+    rep_dict = SalesRepResponse.model_validate(sales_rep).model_dump()
+    if sales_rep.user:
+        rep_dict["username"] = sales_rep.user.username
+    
+    return SalesRepResponse(**rep_dict)
+
+
+@router.put("/{sales_rep_id}", response_model=SalesRepResponse)
+async def update_sales_rep(
+    sales_rep_id: int,
+    sales_rep_update: SalesRepUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Update a sales rep"""
+    result = await db.execute(select(SalesRep).where(SalesRep.id == sales_rep_id))
+    sales_rep = result.scalar_one_or_none()
+    
+    if not sales_rep:
+        raise HTTPException(status_code=404, detail="Sales rep not found")
+    
+    # Update fields
+    update_data = sales_rep_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(sales_rep, field, value)
+    
+    await db.commit()
+    
+    # Reload with user relationship
+    result = await db.execute(
+        select(SalesRep).options(selectinload(SalesRep.user)).where(SalesRep.id == sales_rep_id)
+    )
+    sales_rep = result.scalar_one()
+    
+    rep_dict = SalesRepResponse.model_validate(sales_rep).model_dump()
+    if sales_rep.user:
+        rep_dict["username"] = sales_rep.user.username
+    
+    return SalesRepResponse(**rep_dict)
+
+
+@router.delete("/{sales_rep_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_sales_rep(
+    sales_rep_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Soft delete a sales rep (set active=False)"""
+    result = await db.execute(select(SalesRep).where(SalesRep.id == sales_rep_id))
+    sales_rep = result.scalar_one_or_none()
+    
+    if not sales_rep:
+        raise HTTPException(status_code=404, detail="Sales rep not found")
+    
+    sales_rep.active = False
+    await db.commit()
+    
+    return None
+

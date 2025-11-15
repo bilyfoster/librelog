@@ -13,6 +13,7 @@ from backend.models.voice_track import VoiceTrack
 from backend.models.daily_log import DailyLog
 from backend.services.campaign_service import CampaignService
 from backend.services.clock_service import ClockTemplateService
+from backend.integrations.libretime_client import libretime_client
 import structlog
 import json
 import random
@@ -188,6 +189,8 @@ class LogGenerator:
                 "artist": track.artist,
                 "duration": track.duration or 180,
                 "file_path": track.filepath,
+                "media_id": int(track.libretime_id) if track.libretime_id else None,
+                "libretime_id": int(track.libretime_id) if track.libretime_id else None,
                 "fallback_used": False
             }
         
@@ -380,47 +383,100 @@ class LogGenerator:
         
         try:
             # Convert to LibreTime format
-            libretime_data = self._convert_to_libretime_format(log.json_data)
+            libretime_entries = await self._convert_to_libretime_format(log.json_data, log.date)
             
-            # TODO: Push to LibreTime API
-            # success = await libretime_client.publish_schedule(libretime_data)
+            if not libretime_entries:
+                logger.warning("No entries to publish", log_id=log_id)
+                return False
             
-            # For now, just mark as published
-            log.published = True
-            await self.db.commit()
+            # Push to LibreTime API
+            success = await libretime_client.publish_schedule(log.date, libretime_entries)
             
-            logger.info("Log published", log_id=log_id)
-            return True
+            if success:
+                log.published = True
+                await self.db.commit()
+                logger.info("Log published to LibreTime", log_id=log_id, date=log.date, entries=len(libretime_entries))
+                return True
+            else:
+                logger.error("LibreTime API returned failure", log_id=log_id)
+                return False
             
         except Exception as e:
             logger.error("Failed to publish log", log_id=log_id, error=str(e))
+            await self.db.rollback()
             return False
     
-    def _convert_to_libretime_format(self, log_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Convert LibreLog format to LibreTime schedule format"""
+    async def _convert_to_libretime_format(self, log_data: Dict[str, Any], target_date: date) -> List[Dict[str, Any]]:
+        """Convert LibreLog format to LibreTime replace-day format"""
         
-        libretime_schedule = {
-            "date": log_data["date"],
-            "shows": []
-        }
+        entries = []
+        log_date_str = target_date.isoformat()
         
-        for hour, hour_data in log_data["hourly_logs"].items():
-            show = {
-                "start_time": hour,
-                "end_time": f"{int(hour[:2]) + 1:02d}:00",
-                "tracks": []
-            }
+        for hour_str, hour_data in log_data.get("hourly_logs", {}).items():
+            # Parse hour (e.g., "00:00" -> hour=0)
+            hour = int(hour_str.split(":")[0])
             
-            for element in hour_data["elements"]:
-                track = {
-                    "title": element["title"],
-                    "artist": element["artist"],
-                    "duration": element["duration"],
-                    "file_path": element["file_path"],
-                    "type": element["type"]
+            # Get elements for this hour
+            elements = hour_data.get("elements", [])
+            
+            current_second = 0  # Seconds from start of hour
+            
+            for element in elements:
+                # Calculate absolute start time
+                element_start_seconds = element.get("start_time", current_second)
+                element_duration = element.get("duration", 180)
+                
+                # Create datetime for this element
+                element_start_time = datetime.combine(
+                    target_date,
+                    time(hour=hour, minute=0, second=0)
+                ) + timedelta(seconds=element_start_seconds)
+                
+                # Get media_id from element or look up by file_path
+                media_id = element.get("media_id") or element.get("libretime_id")
+                
+                if not media_id and element.get("file_path"):
+                    # Try to find track by file_path
+                    track_result = await self.db.execute(
+                        select(Track).where(Track.filepath == element["file_path"])
+                    )
+                    track = track_result.scalar_one_or_none()
+                    if track and track.libretime_id:
+                        media_id = int(track.libretime_id)
+                
+                # Skip if we can't find media_id
+                if not media_id:
+                    logger.warning(
+                        "Skipping element without media_id",
+                        element=element.get("title"),
+                        file_path=element.get("file_path")
+                    )
+                    current_second += element_duration
+                    continue
+                
+                # Map element type to LibreTime type
+                element_type = element.get("type", "track")
+                type_mapping = {
+                    "MUS": "track",
+                    "ADV": "track",
+                    "PSA": "track",
+                    "PRO": "track",
+                    "LIN": "track",
+                    "INT": "track",
+                    "BED": "track"
                 }
-                show["tracks"].append(track)
-            
-            libretime_schedule["shows"].append(show)
+                libretime_type = type_mapping.get(element_type, "track")
+                
+                # Determine hard_start (typically false, but could be configurable)
+                hard_start = element.get("hard_start", False)
+                
+                entries.append({
+                    "start": element_start_time.isoformat(),
+                    "media_id": int(media_id),
+                    "type": libretime_type,
+                    "hard_start": hard_start
+                })
+                
+                current_second += element_duration
         
-        return libretime_schedule
+        return entries

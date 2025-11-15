@@ -57,10 +57,76 @@ class TokenManager:
         return datetime.utcnow() < token_data["expires_at"]
     
     async def refresh_token(self, service: str) -> bool:
-        """Refresh token for a service (placeholder)"""
-        # TODO: Implement token refresh logic for each service
+        """Refresh token for a service"""
         logger.info("Token refresh requested", service=service)
-        return False
+        
+        # Services that use API keys don't need refresh
+        if service in ["libretime", "azuracast"]:
+            logger.info("Service uses API key, no refresh needed", service=service)
+            return True
+        
+        # Check if token exists and is expired
+        token_data = self.tokens.get(service)
+        if not token_data:
+            logger.warning("No token to refresh", service=service)
+            return False
+        
+        # If token is not expired yet, no need to refresh
+        if datetime.utcnow() < token_data["expires_at"]:
+            logger.info("Token still valid, no refresh needed", service=service)
+            return True
+        
+        # For services that support OAuth2 refresh tokens
+        # This is a framework for future implementations
+        refresh_token_key = f"{service}_refresh_token"
+        refresh_token = os.getenv(refresh_token_key.upper())
+        
+        if not refresh_token:
+            logger.warning("No refresh token available", service=service)
+            return False
+        
+        # Attempt to refresh using OAuth2 refresh token flow
+        # This is a generic implementation that can be customized per service
+        try:
+            token_url = os.getenv(f"{service.upper()}_TOKEN_URL")
+            client_id = os.getenv(f"{service.upper()}_CLIENT_ID")
+            client_secret = os.getenv(f"{service.upper()}_CLIENT_SECRET")
+            
+            if not all([token_url, client_id, client_secret]):
+                logger.warning("OAuth2 credentials not configured", service=service)
+                return False
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    token_url,
+                    data={
+                        "grant_type": "refresh_token",
+                        "refresh_token": refresh_token,
+                        "client_id": client_id,
+                        "client_secret": client_secret,
+                    },
+                    timeout=10.0
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    new_token = data.get("access_token")
+                    expires_in = data.get("expires_in", 3600)
+                    
+                    if new_token:
+                        self.store_token(service, new_token, expires_in)
+                        logger.info("Token refreshed successfully", service=service)
+                        return True
+                    else:
+                        logger.error("Refresh response missing access_token", service=service)
+                        return False
+                else:
+                    logger.error("Token refresh failed", service=service, status=response.status_code)
+                    return False
+                    
+        except Exception as e:
+            logger.error("Token refresh error", service=service, error=str(e), exc_info=True)
+            return False
     
     def get_auth_header(self, service: str) -> Optional[Dict[str, str]]:
         """Get authorization header for a service"""
@@ -70,6 +136,9 @@ class TokenManager:
         
         api_key = self.get_api_key(service)
         if api_key:
+            # LibreTime uses Api-Key format, others use Bearer
+            if service == "libretime":
+                return {"Authorization": f"Api-Key {api_key}"}
             return {"Authorization": f"Bearer {api_key}"}
         
         return None

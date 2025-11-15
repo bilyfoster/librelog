@@ -78,7 +78,7 @@ describe('Layout Component', () => {
     )
     
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
-    expect(screen.getByText('Music Library')).toBeInTheDocument()
+    expect(screen.getByText('Audio Library')).toBeInTheDocument()
     expect(screen.getByText('Clock Templates')).toBeInTheDocument()
     expect(screen.getByText('Traffic Manager')).toBeInTheDocument()
     expect(screen.getByText('Log Generator')).toBeInTheDocument()

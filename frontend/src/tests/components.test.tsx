@@ -165,9 +165,9 @@ describe('LibraryList Component', () => {
       </TestWrapper>
     )
     
-    expect(screen.getByText('Music Library')).toBeInTheDocument()
+    expect(screen.getByText('Audio Library')).toBeInTheDocument()
     expect(screen.getByText('Upload Track')).toBeInTheDocument()
-    expect(screen.getByText('Search tracks...')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/Search music\.\.\./i)).toBeInTheDocument()
   })
 
   it('renders track table', () => {

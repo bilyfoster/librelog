@@ -192,7 +192,7 @@ class ClockTemplateService:
         if not isinstance(elements, list):
             raise ValueError("Elements must be an array")
         
-        valid_types = {"MUS", "ADV", "PSA", "LIN", "INT", "PRO", "BED"}
+        valid_types = {"MUS", "ADV", "PSA", "LIN", "INT", "PRO", "SHO", "IDS", "COM", "NEW"}
         
         for i, element in enumerate(elements):
             if not isinstance(element, dict):
@@ -216,10 +216,13 @@ class ClockTemplateService:
             "MUS": 180,  # 3 minutes average
             "ADV": 60,   # 1 minute
             "PSA": 45,   # 45 seconds
+            "NEW": 120,  # 2 minutes for news segments
             "LIN": 30,   # 30 seconds
             "INT": 300,  # 5 minutes
             "PRO": 30,   # 30 seconds
-            "BED": 15    # 15 seconds
+            "SHO": 300,  # 5 minutes for show segments
+            "IDS": 10,   # 10 seconds for IDs
+            "COM": 120   # 2 minutes for community content
         }
         
         base_duration = durations.get(element_type, 30)

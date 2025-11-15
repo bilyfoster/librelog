@@ -5,34 +5,10 @@ Audit logging system for LibreLog
 import json
 from datetime import datetime
 from typing import Optional, Dict, Any
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
-from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
-from backend.database import Base
+from backend.models.audit_log import AuditLog
 import structlog
 
 logger = structlog.get_logger()
-
-
-class AuditLog(Base):
-    """Audit log model for tracking user actions"""
-    __tablename__ = "audit_logs"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    action = Column(String(100), nullable=False, index=True)
-    resource_type = Column(String(50), nullable=False, index=True)
-    resource_id = Column(Integer, nullable=True, index=True)
-    details = Column(Text)  # JSON string with additional details
-    ip_address = Column(String(45))  # IPv6 compatible
-    user_agent = Column(Text)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
-
-    # Relationships
-    user = relationship("User", back_populates="audit_logs")
-
-    def __repr__(self):
-        return f"<AuditLog(user_id={self.user_id}, action='{self.action}', resource='{self.resource_type}')>"
 
 
 class AuditLogger:
@@ -56,7 +32,7 @@ class AuditLogger:
                 action=action,
                 resource_type=resource_type,
                 resource_id=resource_id,
-                details=json.dumps(details) if details else None,
+                changes=details,  # JSONB field
                 ip_address=ip_address,
                 user_agent=user_agent
             )

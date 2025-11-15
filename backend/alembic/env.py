@@ -13,8 +13,17 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.database import Base
-from backend.models import user, track, campaign, clock_template, daily_log, voice_track, playback_history
-from backend.logging.audit import AuditLog
+# Import all models to ensure they're registered with Base.metadata
+from backend.models import (
+    user, track, campaign, clock_template, daily_log, voice_track, playback_history,
+    advertiser, agency, sales_rep, order, order_template,
+    spot, daypart, daypart_category, rotation_rule, traffic_log, break_structure,
+    copy, copy_assignment,
+    invoice, invoice_line, payment, makegood,
+    audit_log, log_revision,
+    inventory_slot, sales_goal,
+    digital_order, webhook, notification, backup, settings
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

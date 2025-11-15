@@ -4,8 +4,12 @@ Custom middleware for LibreLog API
 
 import time
 import structlog
-from fastapi import Request, Response
+from fastapi import Request, Response, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
+from backend.auth.oauth2 import verify_token
+from backend.database import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+from backend.auth.oauth2 import get_user_by_username
 
 logger = structlog.get_logger()
 
@@ -43,13 +47,64 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
-    """Middleware for authentication (placeholder)"""
+    """Middleware for JWT token validation"""
     
     async def dispatch(self, request: Request, call_next):
         # Skip auth for health check and docs
-        if request.url.path in ["/api/health", "/docs", "/redoc", "/openapi.json"]:
+        path = request.url.path
+        if path in ["/api/health", "/docs", "/redoc", "/openapi.json", "/"] or path.startswith("/api/auth") or path.startswith("/api/setup"):
             return await call_next(request)
         
-        # TODO: Implement JWT token validation
-        # For now, just pass through
+        # Extract token from Authorization header
+        authorization = request.headers.get("Authorization")
+        if not authorization:
+            logger.warning("Missing Authorization header", path=path)
+            return Response(
+                content='{"detail":"Not authenticated"}',
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                media_type="application/json",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        
+        # Parse Bearer token
+        try:
+            scheme, token = authorization.split()
+            if scheme.lower() != "bearer":
+                raise ValueError("Invalid scheme")
+        except ValueError:
+            logger.warning("Invalid Authorization header format", path=path)
+            return Response(
+                content='{"detail":"Invalid authentication scheme"}',
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                media_type="application/json",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        
+        # Verify token
+        payload = verify_token(token)
+        if payload is None:
+            logger.warning("Invalid or expired token", path=path)
+            return Response(
+                content='{"detail":"Could not validate credentials"}',
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                media_type="application/json",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        
+        # Extract username from payload
+        username = payload.get("sub")
+        if not username:
+            logger.warning("Token missing username", path=path)
+            return Response(
+                content='{"detail":"Invalid token payload"}',
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                media_type="application/json",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        
+        # Attach user info to request state for use in route handlers
+        request.state.username = username
+        request.state.token_payload = payload
+        
+        # Continue with request
         return await call_next(request)

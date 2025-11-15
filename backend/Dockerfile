@@ -15,6 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
+# Set PYTHONPATH so backend imports work
+ENV PYTHONPATH=/app
+
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash librelog
 RUN chown -R librelog:librelog /app
