@@ -25,6 +25,7 @@ import {
 } from '@mui/material'
 import { Add, Edit, Delete } from '@mui/icons-material'
 import api from '../../utils/api'
+import { getUsers } from '../../utils/api'
 
 interface SalesRep {
   id: number
@@ -55,15 +56,21 @@ const SalesReps: React.FC = () => {
       const response = await api.get('/sales-reps/', {
         params: { limit: 100, skip: 0, active_only: false },
       })
-      return response.data
+      console.log('[SalesReps] API response:', response.data)
+      console.log('[SalesReps] Response type:', typeof response.data)
+      console.log('[SalesReps] Is array:', Array.isArray(response.data))
+      // Handle both array and object responses
+      const data = Array.isArray(response.data) ? response.data : (response.data?.sales_reps || response.data?.data || [])
+      console.log('[SalesReps] Processed data:', data)
+      return data
     },
   })
 
   const { data: users } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
-      // This would need a users endpoint - for now return empty
-      return []
+      const response = await getUsers({ limit: 1000 })
+      return response.users || response || []
     },
   })
 
@@ -89,6 +96,8 @@ const SalesReps: React.FC = () => {
       }
       setErrorMessage(message)
       console.error('Create sales rep error:', error)
+      console.error('Error response data:', error?.response?.data)
+      console.error('Error status:', error?.response?.status)
     },
   })
 
@@ -142,8 +151,16 @@ const SalesReps: React.FC = () => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
+    const user_id_str = formData.get('user_id') as string
+    const user_id = user_id_str ? parseInt(user_id_str) : undefined
+    
+    if (!user_id) {
+      setErrorMessage('Please select a user')
+      return
+    }
+    
     const data: Partial<SalesRep> = {
-      user_id: parseInt(formData.get('user_id') as string),
+      user_id,
       employee_id: formData.get('employee_id') as string || undefined,
       commission_rate: formData.get('commission_rate') ? parseFloat(formData.get('commission_rate') as string) : undefined,
       sales_goal: formData.get('sales_goal') ? parseFloat(formData.get('sales_goal') as string) : undefined,
@@ -191,7 +208,7 @@ const SalesReps: React.FC = () => {
               <CircularProgress />
             </Box>
           ) : error ? (
-            <Alert severity="error">Failed to load sales reps</Alert>
+            <Alert severity="error">Failed to load sales reps: {error instanceof Error ? error.message : 'Unknown error'}</Alert>
           ) : (
             <TableContainer component={Paper}>
               <Table>
@@ -201,13 +218,14 @@ const SalesReps: React.FC = () => {
                     <TableCell>Employee ID</TableCell>
                     <TableCell>Commission Rate</TableCell>
                     <TableCell>Sales Goal</TableCell>
+                    <TableCell>Status</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {salesReps?.length === 0 ? (
+                  {!salesReps || salesReps.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} align="center">
+                      <TableCell colSpan={6} align="center">
                         <Typography color="textSecondary" sx={{ py: 3 }}>
                           No sales reps found
                         </Typography>
@@ -220,6 +238,13 @@ const SalesReps: React.FC = () => {
                         <TableCell>{rep.employee_id || 'N/A'}</TableCell>
                         <TableCell>{rep.commission_rate ? `${rep.commission_rate}%` : 'N/A'}</TableCell>
                         <TableCell>{rep.sales_goal ? `$${rep.sales_goal.toLocaleString()}` : 'N/A'}</TableCell>
+                        <TableCell>
+                          {rep.active ? (
+                            <Typography color="success.main">Active</Typography>
+                          ) : (
+                            <Typography color="text.secondary">Inactive</Typography>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <IconButton size="small" onClick={() => { setEditingRep(rep); setOpenDialog(true) }}>
                             <Edit />
@@ -253,13 +278,28 @@ const SalesReps: React.FC = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
               <TextField
                 name="user_id"
-                label="User ID"
-                type="number"
+                label="User"
+                select
                 required
                 fullWidth
                 defaultValue={editingRep?.user_id || ''}
                 disabled={!!editingRep}
-              />
+                SelectProps={{
+                  native: false,
+                }}
+              >
+                {users && users.length > 0 ? (
+                  users.map((user: any) => (
+                    <MenuItem key={user.id} value={user.id}>
+                      {user.username} ({user.role})
+                    </MenuItem>
+                  ))
+                ) : (
+                  <MenuItem disabled value="">
+                    No users available
+                  </MenuItem>
+                )}
+              </TextField>
               <TextField
                 name="employee_id"
                 label="Employee ID"

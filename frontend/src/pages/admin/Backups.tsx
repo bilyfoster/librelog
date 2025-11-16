@@ -90,7 +90,10 @@ const Backups: React.FC = () => {
     retry: 1,
     refetchInterval: (data) => {
       // Auto-refresh if there are in-progress backups
-      const hasInProgress = data?.some((b: Backup) => b.status === 'IN_PROGRESS' || b.status === 'PENDING')
+      if (!data || !Array.isArray(data)) {
+        return false
+      }
+      const hasInProgress = data.some((b: Backup) => b.status === 'IN_PROGRESS' || b.status === 'PENDING')
       return hasInProgress ? 5000 : false
     },
   })

@@ -12,6 +12,7 @@ from backend.models.user import User
 from pydantic import BaseModel
 from typing import Optional
 from datetime import date, datetime
+import json
 
 router = APIRouter()
 
@@ -22,7 +23,7 @@ class AuditLogResponse(BaseModel):
     action: str
     resource_type: str
     resource_id: Optional[int]
-    changes: Optional[dict]
+    changes: Optional[dict] = None  # Mapped from details field
     ip_address: Optional[str]
     user_agent: Optional[str]
     created_at: str
@@ -66,10 +67,20 @@ async def list_audit_logs(
     result = await db.execute(query)
     audit_logs = result.scalars().all()
     
-    # Load user data
+    # Load user data and convert details to changes
     logs_data = []
     for log in audit_logs:
         log_dict = AuditLogResponse.model_validate(log).model_dump()
+        # Map details to changes (for backward compatibility)
+        if hasattr(log, 'details') and log.details:
+            try:
+                log_dict["changes"] = json.loads(log.details) if log.details else None
+            except (json.JSONDecodeError, TypeError):
+                # If details is not JSON, store as text in changes
+                log_dict["changes"] = {"details": log.details} if log.details else None
+        else:
+            log_dict["changes"] = None
+        log_dict["created_at"] = log.created_at.isoformat() if log.created_at else ""
         if log.user:
             log_dict["username"] = log.user.username
         logs_data.append(AuditLogResponse(**log_dict))
@@ -93,6 +104,16 @@ async def get_audit_log(
         raise HTTPException(status_code=404, detail="Audit log not found")
     
     log_dict = AuditLogResponse.model_validate(audit_log).model_dump()
+    # Map details to changes (for backward compatibility)
+    if hasattr(audit_log, 'details') and audit_log.details:
+        try:
+            log_dict["changes"] = json.loads(audit_log.details) if audit_log.details else None
+        except (json.JSONDecodeError, TypeError):
+            # If details is not JSON, store as text in changes
+            log_dict["changes"] = {"details": audit_log.details} if audit_log.details else None
+    else:
+        log_dict["changes"] = None
+    log_dict["created_at"] = audit_log.created_at.isoformat() if audit_log.created_at else ""
     if audit_log.user:
         log_dict["username"] = audit_log.user.username
     

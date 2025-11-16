@@ -1,0 +1,267 @@
+{
+  "fields": [
+    {
+      "path": "advertiser.name",
+      "label": "Advertiser Name",
+      "help_text": "The business or organization name that will appear on invoices and orders.",
+      "article_id": "advertiser"
+    },
+    {
+      "path": "advertiser.payment_terms",
+      "label": "Payment Terms",
+      "help_text": "How quickly the advertiser pays invoices. Common terms: Net 30 (30 days), Net 15 (15 days), Due on Receipt (immediate).",
+      "article_id": "invoice-lifecycle"
+    },
+    {
+      "path": "advertiser.credit_limit",
+      "label": "Credit Limit",
+      "help_text": "Maximum amount the advertiser can owe at one time. Orders cannot be approved if they would exceed this limit.",
+      "article_id": "advertiser"
+    },
+    {
+      "path": "advertiser.tax_id",
+      "label": "Tax ID",
+      "help_text": "Business tax identification number (EIN, SSN, or similar). Required for billing and tax reporting.",
+      "article_id": "advertiser"
+    },
+    {
+      "path": "order.order_number",
+      "label": "Order Number",
+      "help_text": "Unique identifier for this order. Usually auto-generated but can be customized. Used for tracking and invoicing.",
+      "article_id": "order"
+    },
+    {
+      "path": "order.rate_type",
+      "label": "Rate Type",
+      "help_text": "How spots will be scheduled: ROS (any time), Daypart (specific time periods), or Fixed Time (exact times).",
+      "article_id": "rate-types",
+      "term_id": "ros"
+    },
+    {
+      "path": "order.spot_lengths",
+      "label": "Spot Lengths",
+      "help_text": "Duration of commercials in seconds. Common lengths: 15, 30, or 60 seconds. You can select multiple lengths.",
+      "article_id": "spot",
+      "term_id": "spot"
+    },
+    {
+      "path": "order.total_spots",
+      "label": "Total Spots",
+      "help_text": "Total number of commercials to run during the order period. Traffic manager will schedule this many spots.",
+      "article_id": "orders-vs-spots-vs-logs",
+      "term_id": "spot"
+    },
+    {
+      "path": "order.start_date",
+      "label": "Start Date",
+      "help_text": "First day commercials can air. Spots will be scheduled on or after this date.",
+      "article_id": "order"
+    },
+    {
+      "path": "order.end_date",
+      "label": "End Date",
+      "help_text": "Last day commercials can air. Spots will be scheduled on or before this date.",
+      "article_id": "order"
+    },
+    {
+      "path": "order.approval_status",
+      "label": "Approval Status",
+      "help_text": "Current approval state: NOT_REQUIRED (auto-approved), PENDING (awaiting approval), APPROVED (ready for scheduling), or REJECTED (needs changes).",
+      "article_id": "sales-manager-workflow"
+    },
+    {
+      "path": "order.status",
+      "label": "Order Status",
+      "help_text": "Current state: DRAFT (being created), PENDING (submitted), APPROVED (ready for scheduling), ACTIVE (spots airing), COMPLETED (all spots aired), or CANCELLED.",
+      "article_id": "order"
+    },
+    {
+      "path": "spot.scheduled_date",
+      "label": "Scheduled Date",
+      "help_text": "The specific date this commercial will air.",
+      "article_id": "spot",
+      "term_id": "spot"
+    },
+    {
+      "path": "spot.scheduled_time",
+      "label": "Scheduled Time",
+      "help_text": "The specific time this commercial will air (e.g., 8:00 AM).",
+      "article_id": "spot",
+      "term_id": "spot"
+    },
+    {
+      "path": "spot.break_position",
+      "label": "Break Position",
+      "help_text": "Where in the commercial break this spot plays: A (first), B (second), C (third), etc. A-position spots are premium.",
+      "article_id": "dayparts-break-positions",
+      "term_id": "break_position"
+    },
+    {
+      "path": "spot.daypart",
+      "label": "Daypart",
+      "help_text": "Time period when spot airs: Morning Drive (6-10 AM), Midday (10 AM-3 PM), Afternoon Drive (3-7 PM), Evening (7 PM-Midnight), or Overnight (Midnight-6 AM).",
+      "article_id": "dayparts-break-positions",
+      "term_id": "daypart"
+    },
+    {
+      "path": "spot.status",
+      "label": "Spot Status",
+      "help_text": "Current state: SCHEDULED (ready to air), AIRED (has aired), MISSED (didn't air - may need makegood), or CANCELLED.",
+      "article_id": "spot",
+      "term_id": "spot"
+    },
+    {
+      "path": "log.clock_template",
+      "label": "Clock Template",
+      "help_text": "The template that defines the structure of each hour. Select the appropriate template for the date and programming type.",
+      "article_id": "clock-templates",
+      "term_id": "clock_template"
+    },
+    {
+      "path": "log.target_date",
+      "label": "Target Date",
+      "help_text": "The date for which you're generating the daily log. Logs are created one day at a time.",
+      "article_id": "log-generator-workflow",
+      "term_id": "log"
+    },
+    {
+      "path": "log.preview",
+      "label": "Preview",
+      "help_text": "Preview shows what the log will look like before generating. Review timing, spot placement, and overall flow.",
+      "article_id": "log-generator-workflow"
+    },
+    {
+      "path": "log.publish",
+      "label": "Publish",
+      "help_text": "Publishing sends the log to LibreTime automation system. Once published, the log is locked and cannot be edited.",
+      "article_id": "log-generator-workflow"
+    },
+    {
+      "path": "invoice.invoice_number",
+      "label": "Invoice Number",
+      "help_text": "Unique identifier for this invoice. Usually auto-generated. Used for tracking and payment reference.",
+      "article_id": "invoice-lifecycle"
+    },
+    {
+      "path": "invoice.invoice_date",
+      "label": "Invoice Date",
+      "help_text": "Date the invoice is created. Used to calculate due date based on payment terms.",
+      "article_id": "invoice-lifecycle"
+    },
+    {
+      "path": "invoice.due_date",
+      "label": "Due Date",
+      "help_text": "Date payment is due. Calculated from invoice date plus payment terms (e.g., Net 30 = 30 days after invoice date).",
+      "article_id": "invoice-lifecycle"
+    },
+    {
+      "path": "invoice.payment_terms",
+      "label": "Payment Terms",
+      "help_text": "How quickly payment is expected: Net 30 (30 days), Net 15 (15 days), Due on Receipt (immediate).",
+      "article_id": "invoice-lifecycle"
+    },
+    {
+      "path": "invoice.status",
+      "label": "Invoice Status",
+      "help_text": "Current state: DRAFT (not sent), SENT (emailed to customer), PAID (fully paid), PARTIAL (partially paid), or OVERDUE (past due date).",
+      "article_id": "invoice-lifecycle"
+    },
+    {
+      "path": "copy.audio_file",
+      "label": "Audio File",
+      "help_text": "Upload the commercial audio file. Supported formats: MP3, WAV. File must match spot length (15, 30, or 60 seconds).",
+      "article_id": "copy-management",
+      "term_id": "copy"
+    },
+    {
+      "path": "copy.script_text",
+      "label": "Script Text",
+      "help_text": "For live reads, enter the script the DJ will read. Include instructions for tone, emphasis, and pronunciation.",
+      "article_id": "copy-management",
+      "term_id": "live_read"
+    },
+    {
+      "path": "copy.expires_at",
+      "label": "Expiration Date",
+      "help_text": "Date after which this copy should no longer be used. Prevents outdated commercials from airing.",
+      "article_id": "copy-management"
+    },
+    {
+      "path": "campaign.name",
+      "label": "Campaign Name",
+      "help_text": "Name for this marketing campaign. Groups related orders and copy together for tracking and reporting.",
+      "article_id": "campaign-management",
+      "term_id": "campaign"
+    },
+    {
+      "path": "daypart.name",
+      "label": "Daypart Name",
+      "help_text": "Descriptive name for this daypart (e.g., 'Morning Drive', 'Prime Time'). Use clear, industry-standard names.",
+      "article_id": "daypart-management",
+      "term_id": "daypart"
+    },
+    {
+      "path": "daypart.start_time",
+      "label": "Start Time",
+      "help_text": "When this daypart begins (e.g., 06:00 for 6:00 AM). Spots scheduled in this daypart will only air during this time period.",
+      "article_id": "daypart-management",
+      "term_id": "daypart"
+    },
+    {
+      "path": "daypart.end_time",
+      "label": "End Time",
+      "help_text": "When this daypart ends (e.g., 10:00 for 10:00 AM). Spots scheduled in this daypart will only air before this time.",
+      "article_id": "daypart-management",
+      "term_id": "daypart"
+    },
+    {
+      "path": "daypart.category_id",
+      "label": "Daypart Category",
+      "help_text": "Optional category to group related dayparts together (e.g., 'Prime Time', 'Off-Peak'). Helps organize and filter dayparts.",
+      "article_id": "daypart-categories",
+      "term_id": "daypart_category"
+    },
+    {
+      "path": "daypart.description",
+      "label": "Description",
+      "help_text": "Optional notes about this daypart, its audience, pricing, or special characteristics.",
+      "article_id": "daypart-management"
+    },
+    {
+      "path": "daypart_category.name",
+      "label": "Category Name",
+      "help_text": "Name for this daypart category (e.g., 'Prime Time', 'Off-Peak', 'Drive Time'). Use clear, descriptive names.",
+      "article_id": "daypart-categories",
+      "term_id": "daypart_category"
+    },
+    {
+      "path": "rotation_rule.name",
+      "label": "Rotation Rule Name",
+      "help_text": "Descriptive name for this rotation rule. Helps identify the rule's purpose (e.g., 'Campaign A - 30 Min Separation').",
+      "article_id": "rotation-rules",
+      "term_id": "rotation_rule"
+    },
+    {
+      "path": "rotation_rule.min_separation",
+      "label": "Minimum Separation",
+      "help_text": "Minimum time (in minutes) between spots. Prevents spots from playing too close together. Typical: 30-60 minutes.",
+      "article_id": "rotation-rules",
+      "term_id": "rotation_rule"
+    },
+    {
+      "path": "rotation_rule.max_per_hour",
+      "label": "Max Per Hour",
+      "help_text": "Maximum number of spots that can play in one hour. Prevents over-saturation. Leave blank for no limit.",
+      "article_id": "rotation-rules",
+      "term_id": "rotation_rule"
+    },
+    {
+      "path": "sales_rep.username",
+      "label": "Sales Rep Name",
+      "help_text": "Name or username for this sales representative. Used to identify who is responsible for orders and accounts.",
+      "article_id": "sales-reps",
+      "term_id": "sales_rep"
+    }
+  ]
+}
+

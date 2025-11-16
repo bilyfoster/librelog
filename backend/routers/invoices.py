@@ -73,6 +73,28 @@ class InvoiceResponse(BaseModel):
         from_attributes = True
 
 
+def invoice_to_response_dict(invoice: Invoice) -> dict:
+    """Convert Invoice model to InvoiceResponse dict with proper datetime serialization"""
+    return {
+        "id": invoice.id,
+        "invoice_number": invoice.invoice_number,
+        "advertiser_id": invoice.advertiser_id,
+        "agency_id": invoice.agency_id,
+        "order_id": invoice.order_id,
+        "campaign_id": invoice.campaign_id,
+        "invoice_date": invoice.invoice_date,
+        "due_date": invoice.due_date,
+        "subtotal": invoice.subtotal,
+        "tax": invoice.tax,
+        "total": invoice.total,
+        "status": invoice.status.value if invoice.status else None,
+        "payment_terms": invoice.payment_terms,
+        "notes": invoice.notes,
+        "created_at": invoice.created_at.isoformat() if invoice.created_at else None,
+        "updated_at": invoice.updated_at.isoformat() if invoice.updated_at else None
+    }
+
+
 @router.get("/", response_model=list[InvoiceResponse])
 async def list_invoices(
     skip: int = Query(0, ge=0),
@@ -100,7 +122,7 @@ async def list_invoices(
     result = await db.execute(query)
     invoices = result.scalars().all()
     
-    return [InvoiceResponse.model_validate(inv) for inv in invoices]
+    return [InvoiceResponse(**invoice_to_response_dict(inv)) for inv in invoices]
 
 
 @router.post("/", response_model=InvoiceResponse, status_code=status.HTTP_201_CREATED)
@@ -138,7 +160,7 @@ async def create_invoice(
         # Recalculate totals
         new_invoice = await billing_service.calculate_invoice_totals(new_invoice.id)
     
-    return InvoiceResponse.model_validate(new_invoice)
+    return InvoiceResponse(**invoice_to_response_dict(new_invoice))
 
 
 @router.get("/{invoice_id}", response_model=InvoiceResponse)
@@ -154,7 +176,7 @@ async def get_invoice(
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     
-    return InvoiceResponse.model_validate(invoice)
+    return InvoiceResponse(**invoice_to_response_dict(invoice))
 
 
 @router.put("/{invoice_id}", response_model=InvoiceResponse)
@@ -180,7 +202,7 @@ async def update_invoice(
     await db.commit()
     await db.refresh(invoice)
     
-    return InvoiceResponse.model_validate(invoice)
+    return InvoiceResponse(**invoice_to_response_dict(invoice))
 
 
 @router.post("/{invoice_id}/send")

@@ -57,7 +57,22 @@ async def list_makegoods(
     result = await db.execute(query)
     makegoods = result.scalars().all()
     
-    return [MakegoodResponse.model_validate(mg) for mg in makegoods]
+    # Convert datetime objects to strings for response
+    makegoods_data = []
+    for mg in makegoods:
+        mg_dict = {
+            "id": mg.id,
+            "original_spot_id": mg.original_spot_id,
+            "makegood_spot_id": mg.makegood_spot_id,
+            "campaign_id": mg.campaign_id,
+            "reason": mg.reason,
+            "approved_by": mg.approved_by,
+            "approved_at": mg.approved_at.isoformat() if mg.approved_at else None,
+            "created_at": mg.created_at.isoformat() if mg.created_at else "",
+        }
+        makegoods_data.append(MakegoodResponse(**mg_dict))
+    
+    return makegoods_data
 
 
 @router.post("/", response_model=MakegoodResponse, status_code=status.HTTP_201_CREATED)
@@ -81,7 +96,18 @@ async def create_makegood(
     await db.commit()
     await db.refresh(new_makegood)
     
-    return MakegoodResponse.model_validate(new_makegood)
+    # Convert datetime objects to strings for response
+    mg_dict = {
+        "id": new_makegood.id,
+        "original_spot_id": new_makegood.original_spot_id,
+        "makegood_spot_id": new_makegood.makegood_spot_id,
+        "campaign_id": new_makegood.campaign_id,
+        "reason": new_makegood.reason,
+        "approved_by": new_makegood.approved_by,
+        "approved_at": new_makegood.approved_at.isoformat() if new_makegood.approved_at else None,
+        "created_at": new_makegood.created_at.isoformat() if new_makegood.created_at else "",
+    }
+    return MakegoodResponse(**mg_dict)
 
 
 @router.post("/{makegood_id}/approve", response_model=MakegoodResponse)
@@ -106,5 +132,16 @@ async def approve_makegood(
     await db.commit()
     await db.refresh(makegood)
     
-    return MakegoodResponse.model_validate(makegood)
+    # Convert datetime objects to strings for response
+    mg_dict = {
+        "id": makegood.id,
+        "original_spot_id": makegood.original_spot_id,
+        "makegood_spot_id": makegood.makegood_spot_id,
+        "campaign_id": makegood.campaign_id,
+        "reason": makegood.reason,
+        "approved_by": makegood.approved_by,
+        "approved_at": makegood.approved_at.isoformat() if makegood.approved_at else None,
+        "created_at": makegood.created_at.isoformat() if makegood.created_at else "",
+    }
+    return MakegoodResponse(**mg_dict)
 

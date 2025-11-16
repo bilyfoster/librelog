@@ -106,7 +106,7 @@ async def get_recent_activity(
     for voice in recent_voice:
         time_ago = _format_time_ago(voice.created_at)
         activities.append(ActivityItem(
-            text=f'Voice track recorded: "{voice.title}"',
+            text=f'Voice track recorded: "{voice.show_name}"',
             time=time_ago,
             type="voice"
         ))

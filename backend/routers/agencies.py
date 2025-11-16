@@ -44,11 +44,27 @@ class AgencyResponse(BaseModel):
     address: Optional[str]
     commission_rate: Optional[Decimal]
     active: bool
-    created_at: str
-    updated_at: str
+    created_at: Optional[str]
+    updated_at: Optional[str]
 
     class Config:
         from_attributes = True
+
+
+def agency_to_response(ag: Agency) -> AgencyResponse:
+    """Convert Agency model to AgencyResponse with proper datetime serialization"""
+    return AgencyResponse(
+        id=ag.id,
+        name=ag.name,
+        contact_name=ag.contact_name,
+        email=ag.email,
+        phone=ag.phone,
+        address=ag.address,
+        commission_rate=ag.commission_rate,
+        active=ag.active,
+        created_at=ag.created_at.isoformat() if ag.created_at else None,
+        updated_at=ag.updated_at.isoformat() if ag.updated_at else None,
+    )
 
 
 @router.get("/", response_model=list[AgencyResponse])
@@ -76,7 +92,7 @@ async def list_agencies(
     result = await db.execute(query)
     agencies = result.scalars().all()
     
-    return [AgencyResponse.model_validate(ag) for ag in agencies]
+    return [agency_to_response(ag) for ag in agencies]
 
 
 @router.post("/", response_model=AgencyResponse, status_code=status.HTTP_201_CREATED)
@@ -91,7 +107,7 @@ async def create_agency(
     await db.commit()
     await db.refresh(new_agency)
     
-    return AgencyResponse.model_validate(new_agency)
+    return agency_to_response(new_agency)
 
 
 @router.get("/{agency_id}", response_model=AgencyResponse)
@@ -107,7 +123,7 @@ async def get_agency(
     if not agency:
         raise HTTPException(status_code=404, detail="Agency not found")
     
-    return AgencyResponse.model_validate(agency)
+    return agency_to_response(agency)
 
 
 @router.put("/{agency_id}", response_model=AgencyResponse)
@@ -132,7 +148,7 @@ async def update_agency(
     await db.commit()
     await db.refresh(agency)
     
-    return AgencyResponse.model_validate(agency)
+    return agency_to_response(agency)
 
 
 @router.delete("/{agency_id}", status_code=status.HTTP_204_NO_CONTENT)

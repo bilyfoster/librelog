@@ -56,7 +56,14 @@ const Makegoods: React.FC = () => {
       const params: any = { limit: 100 }
       if (campaignFilter) params.campaign_id = campaignFilter
       const data = await getMakegoods(params)
-      return data
+      // Ensure we return an array
+      if (Array.isArray(data)) {
+        return data
+      }
+      if (data && typeof data === 'object' && 'makegoods' in data && Array.isArray(data.makegoods)) {
+        return data.makegoods
+      }
+      return []
     },
     retry: 1,
   })
@@ -65,7 +72,14 @@ const Makegoods: React.FC = () => {
     queryKey: ['campaigns', 'active'],
     queryFn: async () => {
       const data = await getCampaigns({ active_only: true, limit: 1000 })
-      return data || []
+      // Handle both array and object response formats
+      if (Array.isArray(data)) {
+        return data
+      }
+      if (data && typeof data === 'object' && 'campaigns' in data && Array.isArray(data.campaigns)) {
+        return data.campaigns
+      }
+      return []
     },
     retry: 1,
   })
@@ -149,7 +163,7 @@ const Makegoods: React.FC = () => {
               label="Campaign"
             >
               <MenuItem value="">All Campaigns</MenuItem>
-              {campaigns && campaigns.map((campaign: any) => (
+              {campaigns && Array.isArray(campaigns) && campaigns.map((campaign: any) => (
                 <MenuItem key={campaign.id} value={campaign.id}>
                   {campaign.name || `Campaign #${campaign.id}`}
                 </MenuItem>

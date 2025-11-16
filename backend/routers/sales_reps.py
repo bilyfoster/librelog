@@ -56,6 +56,10 @@ async def list_sales_reps(
 ):
     """List all sales reps with optional filtering"""
     try:
+        import structlog
+        logger = structlog.get_logger()
+        logger.info("Listing sales reps", skip=skip, limit=limit, active_only=active_only)
+        
         query = select(SalesRep)
         
         if active_only:
@@ -67,18 +71,29 @@ async def list_sales_reps(
         result = await db.execute(query)
         sales_reps = result.scalars().all()
         
+        logger.info("Found sales reps", count=len(sales_reps), active_only=active_only)
+        
         # Load user data for each sales rep
         reps_data = []
         for rep in sales_reps:
             try:
-                rep_dict = SalesRepResponse.model_validate(rep).model_dump()
-                if rep.user:
-                    rep_dict["username"] = rep.user.username
+                # Convert datetime fields to strings for Pydantic validation
+                rep_dict = {
+                    "id": rep.id,
+                    "user_id": rep.user_id,
+                    "employee_id": rep.employee_id,
+                    "commission_rate": rep.commission_rate,
+                    "sales_goal": rep.sales_goal,
+                    "active": rep.active,
+                    "created_at": rep.created_at.isoformat() if rep.created_at else None,
+                    "updated_at": rep.updated_at.isoformat() if rep.updated_at else None,
+                    "username": rep.user.username if rep.user else None,
+                }
                 reps_data.append(SalesRepResponse(**rep_dict))
             except Exception as e:
                 import structlog
                 logger = structlog.get_logger()
-                logger.warning("Failed to serialize sales rep", sales_rep_id=rep.id, error=str(e))
+                logger.warning("Failed to serialize sales rep", sales_rep_id=rep.id, error=str(e), exc_info=True)
                 # Continue with other reps even if one fails
                 continue
         
@@ -123,9 +138,18 @@ async def create_sales_rep(
         )
         new_sales_rep = result.scalar_one()
         
-        rep_dict = SalesRepResponse.model_validate(new_sales_rep).model_dump()
-        if new_sales_rep.user:
-            rep_dict["username"] = new_sales_rep.user.username
+        # Convert datetime fields to strings for Pydantic validation
+        rep_dict = {
+            "id": new_sales_rep.id,
+            "user_id": new_sales_rep.user_id,
+            "employee_id": new_sales_rep.employee_id,
+            "commission_rate": new_sales_rep.commission_rate,
+            "sales_goal": new_sales_rep.sales_goal,
+            "active": new_sales_rep.active,
+            "created_at": new_sales_rep.created_at.isoformat() if new_sales_rep.created_at else None,
+            "updated_at": new_sales_rep.updated_at.isoformat() if new_sales_rep.updated_at else None,
+            "username": new_sales_rep.user.username if new_sales_rep.user else None,
+        }
         
         return SalesRepResponse(**rep_dict)
     except HTTPException:
@@ -189,9 +213,18 @@ async def update_sales_rep(
     )
     sales_rep = result.scalar_one()
     
-    rep_dict = SalesRepResponse.model_validate(sales_rep).model_dump()
-    if sales_rep.user:
-        rep_dict["username"] = sales_rep.user.username
+    # Convert datetime fields to strings for Pydantic validation
+    rep_dict = {
+        "id": sales_rep.id,
+        "user_id": sales_rep.user_id,
+        "employee_id": sales_rep.employee_id,
+        "commission_rate": sales_rep.commission_rate,
+        "sales_goal": sales_rep.sales_goal,
+        "active": sales_rep.active,
+        "created_at": sales_rep.created_at.isoformat() if sales_rep.created_at else None,
+        "updated_at": sales_rep.updated_at.isoformat() if sales_rep.updated_at else None,
+        "username": sales_rep.user.username if sales_rep.user else None,
+    }
     
     return SalesRepResponse(**rep_dict)
 

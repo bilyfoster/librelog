@@ -36,12 +36,15 @@ import Users from './pages/admin/Users'
 import InventoryDashboard from './pages/analytics/InventoryDashboard'
 import RevenueDashboard from './pages/analytics/RevenueDashboard'
 import SalesGoals from './pages/analytics/SalesGoals'
+import HelpCenter from './components/Help/HelpCenter'
+import { HelpPreferencesProvider } from './contexts/HelpPreferencesContext'
 
 function App() {
   return (
     <ErrorBoundary>
-      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <Routes>
+      <HelpPreferencesProvider>
+        <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+          <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/setup" element={<Setup />} />
         <Route path="/" element={<Layout />}>
@@ -77,10 +80,12 @@ function App() {
           <Route path="analytics/inventory" element={<InventoryDashboard />} />
           <Route path="analytics/revenue" element={<RevenueDashboard />} />
           <Route path="analytics/sales-goals" element={<SalesGoals />} />
+          <Route path="help" element={<HelpCenter />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </Box>
+          </Routes>
+        </Box>
+      </HelpPreferencesProvider>
     </ErrorBoundary>
   )
 }

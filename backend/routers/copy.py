@@ -69,6 +69,24 @@ class CopyResponse(BaseModel):
         from_attributes = True
 
 
+def copy_to_response_dict(copy_item: Copy) -> dict:
+    """Convert Copy model to CopyResponse dict with proper datetime serialization"""
+    return {
+        "id": copy_item.id,
+        "order_id": copy_item.order_id,
+        "advertiser_id": copy_item.advertiser_id,
+        "title": copy_item.title,
+        "script_text": copy_item.script_text,
+        "audio_file_path": copy_item.audio_file_path,
+        "audio_file_url": copy_item.audio_file_url,
+        "version": copy_item.version,
+        "expires_at": copy_item.expires_at.isoformat() if copy_item.expires_at else None,
+        "active": copy_item.active,
+        "created_at": copy_item.created_at.isoformat() if copy_item.created_at else None,
+        "updated_at": copy_item.updated_at.isoformat() if copy_item.updated_at else None
+    }
+
+
 @router.get("/", response_model=list[CopyResponse])
 async def list_copy(
     skip: int = Query(0, ge=0),
@@ -96,7 +114,7 @@ async def list_copy(
     result = await db.execute(query)
     copy_items = result.scalars().all()
     
-    return [CopyResponse.model_validate(c) for c in copy_items]
+    return [CopyResponse(**copy_to_response_dict(c)) for c in copy_items]
 
 
 @router.post("/", response_model=CopyResponse, status_code=status.HTTP_201_CREATED)
@@ -111,7 +129,7 @@ async def create_copy(
     await db.commit()
     await db.refresh(new_copy)
     
-    return CopyResponse.model_validate(new_copy)
+    return CopyResponse(**copy_to_response_dict(new_copy))
 
 
 @router.post("/upload", response_model=CopyResponse, status_code=status.HTTP_201_CREATED)
@@ -191,7 +209,7 @@ async def upload_copy(
         
         logger.info("Copy file uploaded", copy_id=new_copy.id, filename=safe_filename)
         
-        return CopyResponse.model_validate(new_copy)
+        return CopyResponse(**copy_to_response_dict(new_copy))
         
     except Exception as e:
         logger.error("Copy file upload failed", error=str(e), exc_info=True)
@@ -217,7 +235,7 @@ async def get_copy(
     if not copy_item:
         raise HTTPException(status_code=404, detail="Copy not found")
     
-    return CopyResponse.model_validate(copy_item)
+    return CopyResponse(**copy_to_response_dict(copy_item))
 
 
 @router.put("/{copy_id}", response_model=CopyResponse)
@@ -241,7 +259,7 @@ async def update_copy(
     await db.commit()
     await db.refresh(copy_item)
     
-    return CopyResponse.model_validate(copy_item)
+    return CopyResponse(**copy_to_response_dict(copy_item))
 
 
 @router.delete("/{copy_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -273,7 +291,7 @@ async def get_expiring_copy(
     copy_service = CopyService(db)
     expiring = await copy_service.check_expiring(days_ahead)
     
-    return [CopyResponse.model_validate(c) for c in expiring]
+    return [CopyResponse(**copy_to_response_dict(c)) for c in expiring]
 
 
 @router.get("/{filename}/file")

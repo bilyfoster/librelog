@@ -104,14 +104,66 @@ class LogGenerator:
         }
         
         current_time = 0
+        scheduled_times = {}  # Track scheduled times for elements
+        timing_drift = 0  # Track cumulative timing drift
         
-        for element_config in elements:
+        # First pass: calculate scheduled times for all elements
+        for idx, element_config in enumerate(elements):
+            element_type = element_config.get("type")
+            count = element_config.get("count", 1)
+            scheduled_offset = element_config.get("scheduled_time", None)  # Optional scheduled time in seconds
+            hard_start = element_config.get("hard_start", False)
+            
+            for i in range(count):
+                element_key = f"{idx}_{i}"
+                if scheduled_offset is not None:
+                    scheduled_times[element_key] = scheduled_offset
+                else:
+                    scheduled_times[element_key] = current_time
+                    current_time += element_config.get("duration", 180)  # Estimate based on typical duration
+        
+        # Second pass: generate elements with timing control
+        current_time = 0
+        for idx, element_config in enumerate(elements):
             element_type = element_config.get("type")
             count = element_config.get("count", 1)
             fallback = element_config.get("fallback")
+            hard_start = element_config.get("hard_start", False)
+            scheduled_offset = element_config.get("scheduled_time", None)
             
             # Generate elements for this configuration
             for i in range(count):
+                element_key = f"{idx}_{i}"
+                scheduled_time = scheduled_times.get(element_key, current_time)
+                
+                # If hard_start is true, adjust current_time to match scheduled time
+                if hard_start and scheduled_offset is not None:
+                    current_time = scheduled_offset
+                    timing_drift = 0  # Reset drift when hard starting
+                elif hard_start:
+                    # Hard start at scheduled time (top of hour for IDS, etc.)
+                    if element_type == "IDS":
+                        # IDS can be at top (00:00) or bottom (59:XX) of hour
+                        position = element_config.get("position", "top")  # "top" or "bottom"
+                        if position == "top":
+                            current_time = 0
+                        else:
+                            # Bottom of hour - will be adjusted later
+                            current_time = 3540  # 59:00
+                    else:
+                        current_time = scheduled_time
+                    timing_drift = 0
+                else:
+                    # Flexible timing: get as close as possible to scheduled time
+                    # Adjust for any accumulated drift
+                    target_time = scheduled_time - timing_drift
+                    if target_time < current_time:
+                        # Can't go backwards, start immediately
+                        current_time = current_time
+                    else:
+                        # Adjust to get closer to scheduled time
+                        current_time = target_time
+                
                 element = await self._select_element(
                     element_type=element_type,
                     target_date=target_date,
@@ -120,27 +172,38 @@ class LogGenerator:
                 )
                 
                 if element:
+                    element_duration = element.get("duration", 180)
+                    actual_start = current_time
+                    
                     element_log = {
                         "type": element_type,
                         "title": element.get("title", ""),
                         "artist": element.get("artist", ""),
-                        "duration": element.get("duration", 180),
-                        "start_time": current_time,
-                        "end_time": current_time + element.get("duration", 180),
+                        "duration": element_duration,
+                        "start_time": actual_start,
+                        "end_time": actual_start + element_duration,
+                        "scheduled_time": scheduled_time,
+                        "hard_start": hard_start,
+                        "timing_drift": timing_drift,
                         "file_path": element.get("file_path", ""),
                         "fallback_used": element.get("fallback_used", False)
                     }
                     
                     hour_log["elements"].append(element_log)
-                    hour_log["total_duration"] += element_log["duration"]
+                    hour_log["total_duration"] += element_duration
+                    
+                    # Calculate timing drift for next element
+                    expected_end = scheduled_time + element_duration
+                    actual_end = actual_start + element_duration
+                    timing_drift = actual_end - expected_end
                     
                     # Add to timeline
                     hour_log["timeline"].append({
-                        "time": f"{current_time // 60:02d}:{current_time % 60:02d}",
+                        "time": f"{actual_start // 60:02d}:{actual_start % 60:02d}",
                         "element": element_log
                     })
                     
-                    current_time += element_log["duration"]
+                    current_time = actual_end
         
         return hour_log
     
@@ -161,6 +224,10 @@ class LogGenerator:
             return await self._select_psa()
         elif element_type == "LIN":
             return await self._select_liner()
+        elif element_type == "IDS":
+            return await self._select_station_id()
+        elif element_type == "NEW":
+            return await self._select_news()
         elif element_type == "INT":
             return await self._select_interview()
         elif element_type == "PRO":
@@ -184,13 +251,22 @@ class LogGenerator:
         
         if tracks:
             track = random.choice(tracks)
+            # Try to convert libretime_id to int, but handle string IDs
+            media_id = None
+            if track.libretime_id:
+                try:
+                    media_id = int(track.libretime_id)
+                except (ValueError, TypeError):
+                    # If it's not a numeric ID, use None
+                    pass
+            
             return {
                 "title": track.title,
                 "artist": track.artist,
                 "duration": track.duration or 180,
                 "file_path": track.filepath,
-                "media_id": int(track.libretime_id) if track.libretime_id else None,
-                "libretime_id": int(track.libretime_id) if track.libretime_id else None,
+                "media_id": media_id,
+                "libretime_id": track.libretime_id,
                 "fallback_used": False
             }
         
@@ -339,6 +415,67 @@ class LogGenerator:
         
         return None
     
+    async def _select_station_id(self) -> Optional[Dict[str, Any]]:
+        """Select a station ID (for top or bottom of hour)"""
+        result = await self.db.execute(
+            select(Track).where(Track.type == "IDS").order_by(Track.last_played.asc().nullsfirst())
+        )
+        tracks = result.scalars().all()
+        
+        if tracks:
+            track = random.choice(tracks)
+            # Try to convert libretime_id to int, but handle string IDs
+            media_id = None
+            if track.libretime_id:
+                try:
+                    media_id = int(track.libretime_id)
+                except (ValueError, TypeError):
+                    # If it's not a numeric ID, try to extract number or use None
+                    # Some libretime_ids might be strings like "LT-IDS-3169"
+                    pass
+            
+            return {
+                "title": track.title,
+                "artist": track.artist or "Station ID",
+                "duration": track.duration or 30,
+                "file_path": track.filepath,
+                "media_id": media_id,
+                "libretime_id": track.libretime_id,
+                "fallback_used": False
+            }
+        
+        return None
+    
+    async def _select_news(self) -> Optional[Dict[str, Any]]:
+        """Select a news segment"""
+        result = await self.db.execute(
+            select(Track).where(Track.type == "NEW").order_by(Track.last_played.asc().nullsfirst())
+        )
+        tracks = result.scalars().all()
+        
+        if tracks:
+            track = random.choice(tracks)
+            # Try to convert libretime_id to int, but handle string IDs
+            media_id = None
+            if track.libretime_id:
+                try:
+                    media_id = int(track.libretime_id)
+                except (ValueError, TypeError):
+                    # If it's not a numeric ID, try to extract number or use None
+                    pass
+            
+            return {
+                "title": track.title,
+                "artist": track.artist or "News",
+                "duration": track.duration or 120,
+                "file_path": track.filepath,
+                "media_id": media_id,
+                "libretime_id": track.libretime_id,
+                "fallback_used": False
+            }
+        
+        return None
+    
     async def preview_log(
         self,
         target_date: date,
@@ -462,12 +599,14 @@ class LogGenerator:
                     "PSA": "track",
                     "PRO": "track",
                     "LIN": "track",
+                    "IDS": "track",
+                    "NEW": "track",
                     "INT": "track",
                     "BED": "track"
                 }
                 libretime_type = type_mapping.get(element_type, "track")
                 
-                # Determine hard_start (typically false, but could be configurable)
+                # Determine hard_start from element configuration
                 hard_start = element.get("hard_start", False)
                 
                 entries.append({

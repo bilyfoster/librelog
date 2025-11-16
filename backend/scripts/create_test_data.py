@@ -6,6 +6,7 @@ import os
 import sys
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from backend.database import AsyncSessionLocal
@@ -15,12 +16,18 @@ from backend.models.agency import Agency
 from backend.models.sales_rep import SalesRep
 from backend.models.order import Order, OrderStatus
 from backend.models.copy import Copy
-from backend.models.spot import Spot, SpotStatus
+from backend.models.spot import Spot, SpotStatus, Daypart
 from backend.models.campaign import Campaign
 from backend.models.invoice import Invoice, InvoiceStatus
 from backend.models.payment import Payment
+from backend.models.track import Track
+from backend.models.voice_track import VoiceTrack
+from backend.models.copy_assignment import CopyAssignment
+from backend.models.makegood import Makegood
+from backend.models.clock_template import ClockTemplate
 from backend.auth.oauth2 import get_password_hash
 import structlog
+import random
 
 logger = structlog.get_logger()
 
@@ -152,7 +159,11 @@ async def create_test_orders(db: AsyncSession, advertisers: list[Advertiser], sa
     start_date = datetime.now(timezone.utc).date()
     
     for i, advertiser in enumerate(advertisers[:10]):  # Create orders for first 10 advertisers
-        order_number = f"ORD-{datetime.now().year}-{1000 + i}"
+        # Use new format: YYYYMMDD-XXXX (with leading zeros for month and day)
+        current_date = datetime.now(timezone.utc)
+        # %Y%m%d ensures leading zeros: 20240105 (Jan 5), 20241215 (Dec 15)
+        date_prefix = current_date.strftime("%Y%m%d")
+        order_number = f"{date_prefix}-{i + 1:04d}"
         
         # Check if order already exists
         result = await db.execute(
@@ -258,11 +269,24 @@ async def create_test_invoices(db: AsyncSession, orders: list[Order], advertiser
     invoices = []
     
     for i, order in enumerate(orders[:5]):  # Create invoices for first 5 orders
+        invoice_number = f"INV-{datetime.now().year}-{2000 + i}"
+        
+        # Check if invoice already exists
+        result = await db.execute(
+            select(Invoice).where(Invoice.invoice_number == invoice_number)
+        )
+        existing = result.scalar_one_or_none()
+        
+        if existing:
+            logger.info("Invoice already exists", invoice_number=invoice_number)
+            invoices.append(existing)
+            continue
+        
         invoice_date = datetime.now(timezone.utc).date() - timedelta(days=i * 7)
         due_date = invoice_date + timedelta(days=30)
         
         invoice = Invoice(
-            invoice_number=f"INV-{datetime.now().year}-{2000 + i}",
+            invoice_number=invoice_number,
             advertiser_id=order.advertiser_id,
             order_id=order.id,
             invoice_date=invoice_date,
@@ -282,6 +306,355 @@ async def create_test_invoices(db: AsyncSession, orders: list[Order], advertiser
     
     logger.info("Created invoices", count=len(invoices))
     return invoices
+
+async def create_test_tracks(db: AsyncSession) -> list[Track]:
+    """Create test tracks of all types"""
+    tracks = []
+    
+    # Music tracks (MUS)
+    music_tracks = [
+        {"title": "Dancing Queen", "artist": "ABBA", "album": "Arrival", "genre": "Pop", "duration": 230},
+        {"title": "Bohemian Rhapsody", "artist": "Queen", "album": "A Night at the Opera", "genre": "Rock", "duration": 355},
+        {"title": "Billie Jean", "artist": "Michael Jackson", "album": "Thriller", "genre": "Pop", "duration": 294},
+        {"title": "Sweet Caroline", "artist": "Neil Diamond", "album": "Brother Love's Travelling Salvation Show", "genre": "Pop", "duration": 203},
+        {"title": "I Will Survive", "artist": "Gloria Gaynor", "album": "Love Tracks", "genre": "Disco", "duration": 198},
+    ]
+    
+    # Promos (PRO)
+    promo_tracks = [
+        {"title": "Weekend Show Promo", "artist": "Station", "album": None, "genre": None, "duration": 30},
+        {"title": "Morning Drive Promo", "artist": "Station", "album": None, "genre": None, "duration": 30},
+        {"title": "Evening Show Promo", "artist": "Station", "album": None, "genre": None, "duration": 30},
+    ]
+    
+    # Liners (LIN)
+    liner_tracks = [
+        {"title": "GayPHX Radio - Your Community Station", "artist": "Station", "album": None, "genre": None, "duration": 15},
+        {"title": "GayPHX Radio - Music for Everyone", "artist": "Station", "album": None, "genre": None, "duration": 20},
+        {"title": "GayPHX Radio - Phoenix's Pride", "artist": "Station", "album": None, "genre": None, "duration": 18},
+    ]
+    
+    # Station IDs (IDS)
+    id_tracks = [
+        {"title": "GayPHX Radio - Top of Hour ID", "artist": "Station", "album": None, "genre": None, "duration": 10},
+        {"title": "GayPHX Radio - Station ID", "artist": "Station", "album": None, "genre": None, "duration": 8},
+        {"title": "GayPHX Radio - Call Letters", "artist": "Station", "album": None, "genre": None, "duration": 12},
+    ]
+    
+    # News (NEW)
+    news_tracks = [
+        {"title": "Morning News Update", "artist": "News Department", "album": None, "genre": None, "duration": 120},
+        {"title": "Midday News Update", "artist": "News Department", "album": None, "genre": None, "duration": 120},
+        {"title": "Evening News Update", "artist": "News Department", "album": None, "genre": None, "duration": 120},
+    ]
+    
+    # PSAs
+    psa_tracks = [
+        {"title": "Community Health PSA", "artist": "Public Service", "album": None, "genre": None, "duration": 60},
+        {"title": "Voting Information PSA", "artist": "Public Service", "album": None, "genre": None, "duration": 45},
+        {"title": "Community Event PSA", "artist": "Public Service", "album": None, "genre": None, "duration": 30},
+    ]
+    
+    # Interviews
+    interview_tracks = [
+        {"title": "Artist Interview - Part 1", "artist": "Interview", "album": None, "genre": None, "duration": 300},
+        {"title": "Community Leader Interview", "artist": "Interview", "album": None, "genre": None, "duration": 240},
+    ]
+    
+    # Note: BED type is not currently in the Track model constraint, so excluded for now
+    # BED support exists in log generator but needs to be added to model
+    
+    all_track_data = [
+        (music_tracks, "MUS"),
+        (promo_tracks, "PRO"),
+        (liner_tracks, "LIN"),
+        (id_tracks, "IDS"),
+        (news_tracks, "NEW"),
+        (psa_tracks, "PSA"),
+        (interview_tracks, "INT"),
+    ]
+    
+    for track_list, track_type in all_track_data:
+        for track_data in track_list:
+            # Create fake filepath
+            filepath = f"/var/lib/libretime/music/{track_type.lower()}/{track_data['title'].replace(' ', '_')}.mp3"
+            
+            track = Track(
+                title=track_data["title"],
+                artist=track_data.get("artist"),
+                album=track_data.get("album"),
+                type=track_type,
+                genre=track_data.get("genre"),
+                duration=track_data.get("duration"),
+                filepath=filepath,
+                libretime_id=f"LT-{track_type}-{random.randint(1000, 9999)}"
+            )
+            db.add(track)
+            tracks.append(track)
+    
+    await db.commit()
+    for track in tracks:
+        await db.refresh(track)
+    
+    logger.info("Created tracks", count=len(tracks))
+    return tracks
+
+async def create_test_spots(db: AsyncSession, orders: list[Order], copy_items: list[Copy]) -> list[Spot]:
+    """Create test spots"""
+    spots = []
+    start_date = datetime.now(timezone.utc).date()
+    
+    for i, order in enumerate(orders):
+        # Create multiple spots per order
+        for j in range(5):
+            spot_date = start_date + timedelta(days=j * 2)
+            spot_time = f"{8 + (j * 3) % 16:02d}:{j * 15 % 60:02d}:00"
+            
+            # Determine daypart based on time
+            hour = int(spot_time.split(":")[0])
+            if hour < 6:
+                daypart = Daypart.OVERNIGHT
+            elif hour < 10:
+                daypart = Daypart.MORNING_DRIVE
+            elif hour < 15:
+                daypart = Daypart.MIDDAY
+            elif hour < 19:
+                daypart = Daypart.AFTERNOON_DRIVE
+            elif hour < 24:
+                daypart = Daypart.EVENING
+            else:
+                daypart = Daypart.OVERNIGHT
+            
+            spot = Spot(
+                order_id=order.id,
+                campaign_id=None,
+                scheduled_date=spot_date,
+                scheduled_time=spot_time,
+                spot_length=30 if j % 2 == 0 else 60,
+                break_position="A" if j % 3 == 0 else "B",
+                daypart=daypart,
+                status=SpotStatus.SCHEDULED if j < 3 else SpotStatus.AIRED,
+                conflict_resolved=False,
+            )
+            db.add(spot)
+            spots.append(spot)
+    
+    await db.commit()
+    for spot in spots:
+        await db.refresh(spot)
+    
+    logger.info("Created spots", count=len(spots))
+    return spots
+
+async def create_test_campaigns(db: AsyncSession, advertisers: list[Advertiser]) -> list[Campaign]:
+    """Create test campaigns"""
+    campaigns = []
+    start_date = datetime.now(timezone.utc).date()
+    
+    campaign_data = [
+        {"advertiser": advertisers[0].name, "priority": 1, "days": 30},
+        {"advertiser": advertisers[1].name, "priority": 2, "days": 45},
+        {"advertiser": advertisers[2].name, "priority": 1, "days": 60},
+    ]
+    
+    for i, camp_data in enumerate(campaign_data):
+        advertiser = next((a for a in advertisers if a.name == camp_data["advertiser"]), advertisers[0])
+        end_date = start_date + timedelta(days=camp_data["days"])
+        
+        campaign = Campaign(
+            advertiser=advertiser.name,
+            start_date=start_date,
+            end_date=end_date,
+            priority=camp_data["priority"],
+            active=True
+        )
+        db.add(campaign)
+        campaigns.append(campaign)
+    
+    await db.commit()
+    for campaign in campaigns:
+        await db.refresh(campaign)
+    
+    logger.info("Created campaigns", count=len(campaigns))
+    return campaigns
+
+async def create_test_clock_templates(db: AsyncSession) -> list[ClockTemplate]:
+    """Create test clock templates with all element types"""
+    templates = []
+    
+    # Morning template with all element types
+    morning_layout = {
+        "elements": [
+            {"type": "IDS", "count": 1, "hard_start": True, "scheduled_time": 0, "position": "top", "duration": 10},
+            {"type": "NEW", "count": 1, "hard_start": True, "scheduled_time": 0, "duration": 120},
+            {"type": "MUS", "count": 3, "duration": 180},
+            {"type": "ADV", "count": 2, "duration": 30},
+            {"type": "LIN", "count": 1, "duration": 15},
+            {"type": "PRO", "count": 1, "duration": 30},
+            {"type": "PSA", "count": 1, "duration": 60},
+        ]
+    }
+    
+    # Afternoon template
+    afternoon_layout = {
+        "elements": [
+            {"type": "IDS", "count": 1, "hard_start": True, "scheduled_time": 0, "position": "top", "duration": 10},
+            {"type": "MUS", "count": 4, "duration": 180},
+            {"type": "ADV", "count": 3, "duration": 30},
+            {"type": "LIN", "count": 2, "duration": 15},
+            {"type": "PRO", "count": 1, "duration": 30},
+        ]
+    }
+    
+    # Evening template with bottom of hour ID
+    evening_layout = {
+        "elements": [
+            {"type": "MUS", "count": 5, "duration": 180},
+            {"type": "ADV", "count": 2, "duration": 30},
+            {"type": "LIN", "count": 1, "duration": 15},
+            {"type": "IDS", "count": 1, "hard_start": True, "scheduled_time": 3540, "position": "bottom", "duration": 10},
+        ]
+    }
+    
+    template_data = [
+        {"name": "Morning Drive", "description": "Morning programming template", "layout": morning_layout},
+        {"name": "Afternoon Mix", "description": "Afternoon programming template", "layout": afternoon_layout},
+        {"name": "Evening Show", "description": "Evening programming template", "layout": evening_layout},
+    ]
+    
+    for temp_data in template_data:
+        template = ClockTemplate(
+            name=temp_data["name"],
+            description=temp_data["description"],
+            json_layout=temp_data["layout"]
+        )
+        db.add(template)
+        templates.append(template)
+    
+    await db.commit()
+    for template in templates:
+        await db.refresh(template)
+    
+    logger.info("Created clock templates", count=len(templates))
+    return templates
+
+async def create_test_voice_tracks(db: AsyncSession) -> list[VoiceTrack]:
+    """Create test voice tracks"""
+    voice_tracks = []
+    
+    # Get a user for uploader
+    result = await db.execute(select(User).limit(1))
+    user = result.scalar_one_or_none()
+    if not user:
+        logger.warning("No user found for voice tracks")
+        return []
+    
+    show_names = ["Morning Show", "Afternoon Drive", "Evening Show", "Weekend Special"]
+    
+    for i, show_name in enumerate(show_names):
+        scheduled_time = datetime.now(timezone.utc) + timedelta(days=i, hours=i * 6)
+        file_url = f"/var/lib/librelog/voice/{show_name.replace(' ', '_')}_{i}.mp3"
+        
+        voice_track = VoiceTrack(
+            show_name=show_name,
+            file_url=file_url,
+            scheduled_time=scheduled_time,
+            uploaded_by=user.id
+        )
+        db.add(voice_track)
+        voice_tracks.append(voice_track)
+    
+    await db.commit()
+    for vt in voice_tracks:
+        await db.refresh(vt)
+    
+    logger.info("Created voice tracks", count=len(voice_tracks))
+    return voice_tracks
+
+async def create_test_copy_assignments(db: AsyncSession, spots: list[Spot], copy_items: list[Copy]) -> list[CopyAssignment]:
+    """Create test copy assignments"""
+    assignments = []
+    
+    # Get a user for assigner
+    result = await db.execute(select(User).limit(1))
+    user = result.scalar_one_or_none()
+    
+    # Assign copy to some spots
+    for i, spot in enumerate(spots[:min(10, len(spots))]):
+        if i < len(copy_items):
+            assignment = CopyAssignment(
+                spot_id=spot.id,
+                copy_id=copy_items[i].id,
+                order_id=spot.order_id,
+                assigned_by=user.id if user else None
+            )
+            db.add(assignment)
+            assignments.append(assignment)
+    
+    await db.commit()
+    for assignment in assignments:
+        await db.refresh(assignment)
+    
+    logger.info("Created copy assignments", count=len(assignments))
+    return assignments
+
+async def create_test_payments(db: AsyncSession, invoices: list[Invoice]) -> list[Payment]:
+    """Create test payments"""
+    payments = []
+    
+    for i, invoice in enumerate(invoices[:3]):  # Create payments for first 3 invoices
+        payment_date = invoice.invoice_date + timedelta(days=15 + i * 5)
+        amount = invoice.total * Decimal("0.5") if i == 0 else invoice.total  # Partial payment for first
+        
+        payment = Payment(
+            invoice_id=invoice.id,
+            amount=amount,
+            payment_date=payment_date,
+            payment_method="Check" if i % 2 == 0 else "Credit Card",
+            reference_number=f"PAY-{datetime.now().year}-{3000 + i}",
+            notes=f"Payment for invoice {invoice.invoice_number}"
+        )
+        db.add(payment)
+        payments.append(payment)
+    
+    await db.commit()
+    for payment in payments:
+        await db.refresh(payment)
+    
+    logger.info("Created payments", count=len(payments))
+    return payments
+
+async def create_test_makegoods(db: AsyncSession, spots: list[Spot], campaigns: list[Campaign]) -> list[Makegood]:
+    """Create test makegoods"""
+    makegoods = []
+    
+    # Get a user for approver
+    result = await db.execute(select(User).limit(1))
+    user = result.scalar_one_or_none()
+    
+    # Create makegoods for some spots
+    for i in range(min(3, len(spots) - 1)):
+        original_spot = spots[i]
+        makegood_spot = spots[i + 1]
+        campaign = campaigns[0] if campaigns else None
+        
+        makegood = Makegood(
+            original_spot_id=original_spot.id,
+            makegood_spot_id=makegood_spot.id,
+            campaign_id=campaign.id if campaign else None,
+            reason=f"Original spot {original_spot.id} was preempted",
+            approved_by=user.id if user else None,
+            approved_at=datetime.now(timezone.utc) if user else None
+        )
+        db.add(makegood)
+        makegoods.append(makegood)
+    
+    await db.commit()
+    for mg in makegoods:
+        await db.refresh(mg)
+    
+    logger.info("Created makegoods", count=len(makegoods))
+    return makegoods
 
 async def main():
     """Main function to create all test data"""
@@ -307,6 +680,30 @@ async def main():
             # Create invoices
             invoices = await create_test_invoices(db, orders, advertisers)
             
+            # Create tracks (all types)
+            tracks = await create_test_tracks(db)
+            
+            # Create spots
+            spots = await create_test_spots(db, orders, copy_items)
+            
+            # Create campaigns
+            campaigns = await create_test_campaigns(db, advertisers)
+            
+            # Create clock templates
+            clock_templates = await create_test_clock_templates(db)
+            
+            # Create voice tracks
+            voice_tracks = await create_test_voice_tracks(db)
+            
+            # Create copy assignments
+            copy_assignments = await create_test_copy_assignments(db, spots, copy_items)
+            
+            # Create payments
+            payments = await create_test_payments(db, invoices)
+            
+            # Create makegoods
+            makegoods = await create_test_makegoods(db, spots, campaigns)
+            
             logger.info("Test data creation completed successfully")
             print("=" * 60)
             print("TEST DATA CREATION COMPLETE")
@@ -318,6 +715,14 @@ async def main():
             print(f"  - {len(orders)} orders")
             print(f"  - {len(copy_items)} copy items")
             print(f"  - {len(invoices)} invoices")
+            print(f"  - {len(tracks)} tracks (all types)")
+            print(f"  - {len(spots)} spots")
+            print(f"  - {len(campaigns)} campaigns")
+            print(f"  - {len(clock_templates)} clock templates")
+            print(f"  - {len(voice_tracks)} voice tracks")
+            print(f"  - {len(copy_assignments)} copy assignments")
+            print(f"  - {len(payments)} payments")
+            print(f"  - {len(makegoods)} makegoods")
             print("=" * 60)
             
         except Exception as e:

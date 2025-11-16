@@ -75,7 +75,20 @@ async def list_users(
         result = await db.execute(query)
         users = result.scalars().all()
         
-        return [UserResponse.model_validate(user) for user in users]
+        # Convert datetime fields to strings for Pydantic validation
+        users_data = []
+        for user in users:
+            user_dict = {
+                "id": user.id,
+                "username": user.username,
+                "role": user.role,
+                "created_at": user.created_at.isoformat() if user.created_at else None,
+                "last_login": user.last_login.isoformat() if user.last_login else None,
+                "last_activity": user.last_activity.isoformat() if user.last_activity else None,
+            }
+            users_data.append(UserResponse(**user_dict))
+        
+        return users_data
     except Exception as e:
         logger.error("Failed to list users", error=str(e), exc_info=True)
         raise HTTPException(
@@ -101,7 +114,16 @@ async def get_user(
                 detail="User not found"
             )
         
-        return UserResponse.model_validate(user)
+        # Convert datetime fields to strings for Pydantic validation
+        user_dict = {
+            "id": user.id,
+            "username": user.username,
+            "role": user.role,
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+            "last_login": user.last_login.isoformat() if user.last_login else None,
+            "last_activity": user.last_activity.isoformat() if user.last_activity else None,
+        }
+        return UserResponse(**user_dict)
     except HTTPException:
         raise
     except Exception as e:
@@ -150,7 +172,16 @@ async def create_user(
         
         logger.info("User created", user_id=new_user.id, username=new_user.username, role=new_user.role, created_by=current_user.id)
         
-        return UserResponse.model_validate(new_user)
+        # Convert datetime fields to strings for Pydantic validation
+        user_dict = {
+            "id": new_user.id,
+            "username": new_user.username,
+            "role": new_user.role,
+            "created_at": new_user.created_at.isoformat() if new_user.created_at else None,
+            "last_login": new_user.last_login.isoformat() if new_user.last_login else None,
+            "last_activity": new_user.last_activity.isoformat() if new_user.last_activity else None,
+        }
+        return UserResponse(**user_dict)
     except HTTPException:
         raise
     except Exception as e:
@@ -212,7 +243,16 @@ async def update_user(
         
         logger.info("User updated", user_id=user_id, updated_by=current_user.id)
         
-        return UserResponse.model_validate(user)
+        # Convert datetime fields to strings for Pydantic validation
+        user_dict = {
+            "id": user.id,
+            "username": user.username,
+            "role": user.role,
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+            "last_login": user.last_login.isoformat() if user.last_login else None,
+            "last_activity": user.last_activity.isoformat() if user.last_activity else None,
+        }
+        return UserResponse(**user_dict)
     except HTTPException:
         raise
     except Exception as e:

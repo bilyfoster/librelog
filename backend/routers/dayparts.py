@@ -86,11 +86,45 @@ async def list_dayparts(
     # Convert time objects to strings and include category name
     dayparts_data = []
     for dp in dayparts:
-        dp_dict = DaypartResponse.model_validate(dp).model_dump()
-        dp_dict["start_time"] = str(dp.start_time)
-        dp_dict["end_time"] = str(dp.end_time)
-        dp_dict["category_name"] = dp.category.name if dp.category else None
-        dayparts_data.append(DaypartResponse(**dp_dict))
+        try:
+            dp_dict = DaypartResponse.model_validate(dp).model_dump()
+            dp_dict["start_time"] = str(dp.start_time)
+            dp_dict["end_time"] = str(dp.end_time)
+            # Safely get category name - handle case where category might not be loaded
+            try:
+                if hasattr(dp, 'category') and dp.category is not None:
+                    dp_dict["category_name"] = getattr(dp.category, 'name', None)
+                else:
+                    dp_dict["category_name"] = None
+            except Exception:
+                # If accessing category fails, just set to None
+                dp_dict["category_name"] = None
+            dayparts_data.append(DaypartResponse(**dp_dict))
+        except Exception as e:
+            # Log error but continue processing other dayparts
+            import structlog
+            logger = structlog.get_logger()
+            logger.error("Error processing daypart", daypart_id=getattr(dp, 'id', None), error=str(e))
+            # Create a basic response without category
+            try:
+                dp_dict = {
+                    "id": dp.id,
+                    "name": dp.name,
+                    "start_time": str(dp.start_time),
+                    "end_time": str(dp.end_time),
+                    "days_of_week": getattr(dp, 'days_of_week', None),
+                    "category_id": getattr(dp, 'category_id', None),
+                    "description": getattr(dp, 'description', None),
+                    "active": getattr(dp, 'active', True),
+                    "created_at": dp.created_at.isoformat() if hasattr(dp, 'created_at') and dp.created_at else "",
+                    "updated_at": dp.updated_at.isoformat() if hasattr(dp, 'updated_at') and dp.updated_at else "",
+                    "category_name": None
+                }
+                dayparts_data.append(DaypartResponse(**dp_dict))
+            except Exception as e2:
+                logger.error("Failed to create fallback daypart response", error=str(e2))
+                # Skip this daypart if we can't even create a basic response
+                continue
     
     return dayparts_data
 
@@ -123,7 +157,11 @@ async def create_daypart(
     dp_dict = DaypartResponse.model_validate(new_daypart).model_dump()
     dp_dict["start_time"] = str(new_daypart.start_time)
     dp_dict["end_time"] = str(new_daypart.end_time)
-    dp_dict["category_name"] = new_daypart.category.name if new_daypart.category else None
+    # Safely get category name
+    try:
+        dp_dict["category_name"] = getattr(new_daypart.category, 'name', None) if new_daypart.category else None
+    except Exception:
+        dp_dict["category_name"] = None
     
     return DaypartResponse(**dp_dict)
 
@@ -148,7 +186,11 @@ async def get_daypart(
     dp_dict = DaypartResponse.model_validate(daypart).model_dump()
     dp_dict["start_time"] = str(daypart.start_time)
     dp_dict["end_time"] = str(daypart.end_time)
-    dp_dict["category_name"] = daypart.category.name if daypart.category else None
+    # Safely get category name
+    try:
+        dp_dict["category_name"] = getattr(daypart.category, 'name', None) if daypart.category else None
+    except Exception:
+        dp_dict["category_name"] = None
     
     return DaypartResponse(**dp_dict)
 
@@ -192,7 +234,11 @@ async def update_daypart(
     dp_dict = DaypartResponse.model_validate(daypart).model_dump()
     dp_dict["start_time"] = str(daypart.start_time)
     dp_dict["end_time"] = str(daypart.end_time)
-    dp_dict["category_name"] = daypart.category.name if daypart.category else None
+    # Safely get category name
+    try:
+        dp_dict["category_name"] = getattr(daypart.category, 'name', None) if daypart.category else None
+    except Exception:
+        dp_dict["category_name"] = None
     
     return DaypartResponse(**dp_dict)
 

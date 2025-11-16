@@ -5,6 +5,7 @@ Orders router for traffic management
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from backend.database import get_db
 from backend.models.order import Order, OrderStatus, RateType, ApprovalStatus
 from backend.models.order_template import OrderTemplate
@@ -16,14 +17,82 @@ from backend.models.user import User
 from backend.services.order_service import OrderService
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
+import re
 
 router = APIRouter()
 
 
+async def generate_next_order_number(db: AsyncSession) -> str:
+    """Generate the next auto-incrementing order number in format YYYYMMDD-XXXX
+    
+    Format ensures leading zeros for month and day:
+    - YYYY = 4-digit year (e.g., 2024)
+    - MM = 2-digit month with leading zero (e.g., 01, 02, ..., 12)
+    - DD = 2-digit day with leading zero (e.g., 01, 02, ..., 31)
+    - XXXX = 4-digit sequential number (e.g., 0001, 0002, ...)
+    """
+    current_date = datetime.now()
+    # %Y%m%d ensures leading zeros: 20240105 (Jan 5), 20241215 (Dec 15)
+    date_prefix = current_date.strftime("%Y%m%d")
+    prefix = f"{date_prefix}-"
+    
+    # Find the highest order number for the current date
+    # Query orders that start with the date prefix
+    result = await db.execute(
+        select(Order.order_number)
+        .where(Order.order_number.like(f"{prefix}%"))
+        .order_by(Order.order_number.desc())
+    )
+    
+    highest_order = result.scalar_one_or_none()
+    
+    if highest_order:
+        # Extract the number part after the prefix
+        # Format: YYYYMMDD-XXXX
+        match = re.search(rf"{re.escape(prefix)}(\d+)", highest_order)
+        if match:
+            next_number = int(match.group(1)) + 1
+        else:
+            # If format doesn't match, start from 0001
+            next_number = 1
+    else:
+        # No orders for this date yet, start from 0001
+        next_number = 1
+    
+    return f"{prefix}{next_number:04d}"
+
+
+def order_to_response_dict(order: Order) -> dict:
+    """Convert Order model to OrderResponse dict with proper datetime serialization"""
+    return {
+        "id": order.id,
+        "order_number": order.order_number,
+        "campaign_id": order.campaign_id,
+        "advertiser_id": order.advertiser_id,
+        "agency_id": order.agency_id,
+        "sales_rep_id": order.sales_rep_id,
+        "start_date": order.start_date,
+        "end_date": order.end_date,
+        "spot_lengths": order.spot_lengths,
+        "total_spots": order.total_spots,
+        "rate_type": order.rate_type.value if order.rate_type else None,
+        "rates": order.rates,
+        "total_value": order.total_value,
+        "status": order.status.value if order.status else None,
+        "approval_status": order.approval_status.value if order.approval_status else None,
+        "approved_by": order.approved_by,
+        "approved_at": order.approved_at.isoformat() if order.approved_at else None,
+        "created_at": order.created_at.isoformat() if order.created_at else None,
+        "updated_at": order.updated_at.isoformat() if order.updated_at else None,
+        "advertiser_name": order.advertiser.name if order.advertiser else None,
+        "agency_name": order.agency.name if order.agency else None,
+    }
+
+
 class OrderCreate(BaseModel):
-    order_number: str
+    order_number: Optional[str] = None  # Auto-generated if not provided
     campaign_id: Optional[int] = None
     advertiser_id: int
     agency_id: Optional[int] = None
@@ -135,7 +204,10 @@ async def list_orders(
     if end_date:
         query = query.where(Order.end_date <= end_date)
     
-    query = query.offset(skip).limit(limit).order_by(Order.created_at.desc())
+    query = query.options(
+        selectinload(Order.advertiser),
+        selectinload(Order.agency)
+    ).offset(skip).limit(limit).order_by(Order.created_at.desc())
     
     result = await db.execute(query)
     orders = result.scalars().all()
@@ -143,11 +215,7 @@ async def list_orders(
     # Load related data
     orders_data = []
     for order in orders:
-        order_dict = OrderResponse.model_validate(order).model_dump()
-        if order.advertiser:
-            order_dict["advertiser_name"] = order.advertiser.name
-        if order.agency:
-            order_dict["agency_name"] = order.agency.name
+        order_dict = order_to_response_dict(order)
         orders_data.append(OrderResponse(**order_dict))
     
     return orders_data
@@ -171,13 +239,20 @@ async def create_order(
     if not adv_result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Advertiser not found")
     
+    # Auto-generate order number if not provided
+    order_number = order.order_number
+    # Treat empty strings as None for auto-generation
+    if not order_number or (isinstance(order_number, str) and order_number.strip() == ''):
+        order_number = await generate_next_order_number(db)
+    
     # Check if order number is unique
-    existing = await db.execute(select(Order).where(Order.order_number == order.order_number))
+    existing = await db.execute(select(Order).where(Order.order_number == order_number))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Order number already exists")
     
     # Create order
     order_data = order.model_dump()
+    order_data["order_number"] = order_number
     order_data["rate_type"] = RateType[order_data["rate_type"]]
     order_data["status"] = OrderStatus[order_data["status"]]
     order_data["approval_status"] = ApprovalStatus[order_data["approval_status"]]
@@ -192,12 +267,7 @@ async def create_order(
     await db.commit()
     await db.refresh(new_order)
     
-    order_dict = OrderResponse.model_validate(new_order).model_dump()
-    if new_order.advertiser:
-        order_dict["advertiser_name"] = new_order.advertiser.name
-    if new_order.agency:
-        order_dict["agency_name"] = new_order.agency.name
-    
+    order_dict = order_to_response_dict(new_order)
     return OrderResponse(**order_dict)
 
 
@@ -208,18 +278,17 @@ async def get_order(
     current_user: User = Depends(get_current_user)
 ):
     """Get a specific order with full details"""
-    result = await db.execute(select(Order).where(Order.id == order_id))
+    query = select(Order).where(Order.id == order_id).options(
+        selectinload(Order.advertiser),
+        selectinload(Order.agency)
+    )
+    result = await db.execute(query)
     order = result.scalar_one_or_none()
     
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    order_dict = OrderResponse.model_validate(order).model_dump()
-    if order.advertiser:
-        order_dict["advertiser_name"] = order.advertiser.name
-    if order.agency:
-        order_dict["agency_name"] = order.agency.name
-    
+    order_dict = order_to_response_dict(order)
     return OrderResponse(**order_dict)
 
 
@@ -267,12 +336,7 @@ async def update_order(
     await db.commit()
     await db.refresh(order)
     
-    order_dict = OrderResponse.model_validate(order).model_dump()
-    if order.advertiser:
-        order_dict["advertiser_name"] = order.advertiser.name
-    if order.agency:
-        order_dict["agency_name"] = order.agency.name
-    
+    order_dict = order_to_response_dict(order)
     return OrderResponse(**order_dict)
 
 
@@ -300,12 +364,7 @@ async def approve_order(
     await db.commit()
     await db.refresh(order)
     
-    order_dict = OrderResponse.model_validate(order).model_dump()
-    if order.advertiser:
-        order_dict["advertiser_name"] = order.advertiser.name
-    if order.agency:
-        order_dict["agency_name"] = order.agency.name
-    
+    order_dict = order_to_response_dict(order)
     return OrderResponse(**order_dict)
 
 
@@ -347,12 +406,7 @@ async def duplicate_order(
     await db.commit()
     await db.refresh(new_order)
     
-    order_dict = OrderResponse.model_validate(new_order).model_dump()
-    if new_order.advertiser:
-        order_dict["advertiser_name"] = new_order.advertiser.name
-    if new_order.agency:
-        order_dict["agency_name"] = new_order.agency.name
-    
+    order_dict = order_to_response_dict(new_order)
     return OrderResponse(**order_dict)
 
 

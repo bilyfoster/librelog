@@ -59,6 +59,26 @@ class SpotResponse(BaseModel):
         from_attributes = True
 
 
+def spot_to_response_dict(spot: Spot) -> dict:
+    """Convert Spot model to SpotResponse dict with proper datetime serialization"""
+    return {
+        "id": spot.id,
+        "order_id": spot.order_id,
+        "campaign_id": spot.campaign_id,
+        "scheduled_date": spot.scheduled_date,
+        "scheduled_time": spot.scheduled_time,
+        "spot_length": spot.spot_length,
+        "break_position": spot.break_position.value if spot.break_position else None,
+        "daypart": spot.daypart.value if spot.daypart else None,
+        "status": spot.status.value if spot.status else None,
+        "actual_air_time": spot.actual_air_time,
+        "makegood_of_id": spot.makegood_of_id,
+        "conflict_resolved": spot.conflict_resolved,
+        "created_at": spot.created_at.isoformat() if spot.created_at else None,
+        "updated_at": spot.updated_at.isoformat() if spot.updated_at else None
+    }
+
+
 @router.get("/", response_model=list[SpotResponse])
 async def list_spots(
     skip: int = Query(0, ge=0),
@@ -90,7 +110,7 @@ async def list_spots(
     result = await db.execute(query)
     spots = result.scalars().all()
     
-    return [SpotResponse.model_validate(spot) for spot in spots]
+    return [SpotResponse(**spot_to_response_dict(spot)) for spot in spots]
 
 
 @router.post("/", response_model=SpotResponse, status_code=status.HTTP_201_CREATED)
@@ -117,7 +137,7 @@ async def create_spot(
     await db.commit()
     await db.refresh(new_spot)
     
-    return SpotResponse.model_validate(new_spot)
+    return SpotResponse(**spot_to_response_dict(new_spot))
 
 
 @router.post("/bulk", response_model=list[SpotResponse], status_code=status.HTTP_201_CREATED)
@@ -153,7 +173,7 @@ async def create_spots_bulk(
     for spot in created_spots:
         await db.refresh(spot)
     
-    return [SpotResponse.model_validate(spot) for spot in created_spots]
+    return [SpotResponse(**spot_to_response_dict(spot)) for spot in created_spots]
 
 
 @router.put("/{spot_id}", response_model=SpotResponse)
@@ -186,7 +206,7 @@ async def update_spot(
     await db.commit()
     await db.refresh(spot)
     
-    return SpotResponse.model_validate(spot)
+    return SpotResponse(**spot_to_response_dict(spot))
 
 
 @router.delete("/{spot_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -225,5 +245,5 @@ async def resolve_spot_conflict(
     await db.commit()
     await db.refresh(spot)
     
-    return SpotResponse.model_validate(spot)
+    return SpotResponse(**spot_to_response_dict(spot))
 

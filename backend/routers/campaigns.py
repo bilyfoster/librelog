@@ -80,17 +80,20 @@ async def list_campaigns(
         "campaigns": [
             {
                 "id": c.id,
-                "name": c.name,
                 "advertiser": c.advertiser,
                 "start_date": c.start_date,
                 "end_date": c.end_date,
                 "priority": c.priority,
-                "target_hours": c.target_hours,
-                "ad_type": c.ad_type,
-                "file_path": c.file_path,
+                "file_url": c.file_url,
                 "active": c.active,
-                "created_at": c.created_at,
-                "updated_at": c.updated_at
+                "order_number": c.order_number,
+                "contract_number": c.contract_number,
+                "spot_lengths": c.spot_lengths,
+                "rate_type": c.rate_type.value if c.rate_type else None,
+                "rates": c.rates,
+                "approval_status": c.approval_status.value if c.approval_status else None,
+                "created_at": c.created_at.isoformat() if c.created_at else None,
+                "updated_at": c.updated_at.isoformat() if c.updated_at else None
             }
             for c in campaigns
         ],
@@ -122,16 +125,18 @@ async def create_campaign(
         
         return {
             "id": campaign.id,
-            "name": campaign.name,
             "advertiser": campaign.advertiser,
             "start_date": campaign.start_date,
             "end_date": campaign.end_date,
             "priority": campaign.priority,
-            "target_hours": campaign.target_hours,
-            "ad_type": campaign.ad_type,
-            "file_path": campaign.file_path,
+            "file_url": campaign.file_url,
             "active": campaign.active,
-            "created_at": campaign.created_at,
+            "order_number": campaign.order_number,
+            "contract_number": campaign.contract_number,
+            "spot_lengths": campaign.spot_lengths,
+            "rate_type": campaign.rate_type.value if campaign.rate_type else None,
+            "approval_status": campaign.approval_status.value if campaign.approval_status else None,
+            "created_at": campaign.created_at.isoformat() if campaign.created_at else None,
             "message": "Campaign created successfully"
         }
         
@@ -154,17 +159,20 @@ async def get_campaign(
     
     return {
         "id": campaign.id,
-        "name": campaign.name,
         "advertiser": campaign.advertiser,
         "start_date": campaign.start_date,
         "end_date": campaign.end_date,
         "priority": campaign.priority,
-        "target_hours": campaign.target_hours,
-        "ad_type": campaign.ad_type,
-        "file_path": campaign.file_path,
+        "file_url": campaign.file_url,
         "active": campaign.active,
-        "created_at": campaign.created_at,
-        "updated_at": campaign.updated_at
+        "order_number": campaign.order_number,
+        "contract_number": campaign.contract_number,
+        "spot_lengths": campaign.spot_lengths,
+        "rate_type": campaign.rate_type.value if campaign.rate_type else None,
+        "rates": campaign.rates,
+        "approval_status": campaign.approval_status.value if campaign.approval_status else None,
+        "created_at": campaign.created_at.isoformat() if campaign.created_at else None,
+        "updated_at": campaign.updated_at.isoformat() if campaign.updated_at else None
     }
 
 
@@ -197,16 +205,18 @@ async def update_campaign(
         
         return {
             "id": campaign.id,
-            "name": campaign.name,
             "advertiser": campaign.advertiser,
             "start_date": campaign.start_date,
             "end_date": campaign.end_date,
             "priority": campaign.priority,
-            "target_hours": campaign.target_hours,
-            "ad_type": campaign.ad_type,
-            "file_path": campaign.file_path,
+            "file_url": campaign.file_url,
             "active": campaign.active,
-            "updated_at": campaign.updated_at,
+            "order_number": campaign.order_number,
+            "contract_number": campaign.contract_number,
+            "spot_lengths": campaign.spot_lengths,
+            "rate_type": campaign.rate_type.value if campaign.rate_type else None,
+            "approval_status": campaign.approval_status.value if campaign.approval_status else None,
+            "updated_at": campaign.updated_at.isoformat() if campaign.updated_at else None,
             "message": "Campaign updated successfully"
         }
         

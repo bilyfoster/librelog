@@ -50,11 +50,29 @@ class AdvertiserResponse(BaseModel):
     payment_terms: Optional[str]
     credit_limit: Optional[Decimal]
     active: bool
-    created_at: str
-    updated_at: str
+    created_at: Optional[str]
+    updated_at: Optional[str]
 
     class Config:
         from_attributes = True
+
+
+def advertiser_to_response(adv: Advertiser) -> AdvertiserResponse:
+    """Convert Advertiser model to AdvertiserResponse with proper datetime serialization"""
+    return AdvertiserResponse(
+        id=adv.id,
+        name=adv.name,
+        contact_name=adv.contact_name,
+        email=adv.email,
+        phone=adv.phone,
+        address=adv.address,
+        tax_id=adv.tax_id,
+        payment_terms=adv.payment_terms,
+        credit_limit=adv.credit_limit,
+        active=adv.active,
+        created_at=adv.created_at.isoformat() if adv.created_at else None,
+        updated_at=adv.updated_at.isoformat() if adv.updated_at else None,
+    )
 
 
 @router.get("/", response_model=list[AdvertiserResponse])
@@ -82,7 +100,7 @@ async def list_advertisers(
     result = await db.execute(query)
     advertisers = result.scalars().all()
     
-    return [AdvertiserResponse.model_validate(adv) for adv in advertisers]
+    return [advertiser_to_response(adv) for adv in advertisers]
 
 
 @router.post("/", response_model=AdvertiserResponse, status_code=status.HTTP_201_CREATED)
@@ -97,7 +115,7 @@ async def create_advertiser(
     await db.commit()
     await db.refresh(new_advertiser)
     
-    return AdvertiserResponse.model_validate(new_advertiser)
+    return advertiser_to_response(new_advertiser)
 
 
 @router.get("/{advertiser_id}", response_model=AdvertiserResponse)
@@ -113,7 +131,7 @@ async def get_advertiser(
     if not advertiser:
         raise HTTPException(status_code=404, detail="Advertiser not found")
     
-    return AdvertiserResponse.model_validate(advertiser)
+    return advertiser_to_response(advertiser)
 
 
 @router.put("/{advertiser_id}", response_model=AdvertiserResponse)
@@ -138,7 +156,7 @@ async def update_advertiser(
     await db.commit()
     await db.refresh(advertiser)
     
-    return AdvertiserResponse.model_validate(advertiser)
+    return advertiser_to_response(advertiser)
 
 
 @router.delete("/{advertiser_id}", status_code=status.HTTP_204_NO_CONTENT)

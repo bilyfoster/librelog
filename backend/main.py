@@ -18,7 +18,7 @@ from backend.routers import (
     advertisers, agencies, sales_reps, orders, spots, dayparts, daypart_categories, rotation_rules, traffic_logs, break_structures, copy, copy_assignments,
     invoices, payments, makegoods, audit_logs, log_revisions, inventory, revenue, sales_goals,
     webhooks, notifications, collaboration, backups, settings, users,
-    audio_cuts, live_reads, political_compliance, audio_delivery, audio_qc
+    audio_cuts, live_reads, political_compliance, audio_delivery, audio_qc, help
 )
 from backend.middleware import AuthMiddleware, LoggingMiddleware
 from backend.models import user, track, campaign, clock_template, daily_log, voice_track, playback_history
@@ -150,6 +150,7 @@ app.include_router(live_reads.router, prefix="/api", tags=["Live Reads"])
 app.include_router(political_compliance.router, prefix="/api", tags=["Political Compliance"])
 app.include_router(audio_delivery.router, prefix="/api", tags=["Audio Delivery"])
 app.include_router(audio_qc.router, prefix="/api", tags=["Audio QC"])
+app.include_router(help.router, prefix="/api/help", tags=["Help"])
 
 
 @app.exception_handler(Exception)

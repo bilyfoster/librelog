@@ -11,8 +11,13 @@ import {
   MenuItem,
   Grid,
   Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  FormHelperText,
 } from '@mui/material'
 import api from '../../utils/api'
+import InfoButton from '../Help/InfoButton'
 
 interface Order {
   id?: number
@@ -123,10 +128,16 @@ const OrderForm: React.FC<OrderFormProps> = ({ open, onClose, order, advertisers
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    // Prepare data - omit order_number if it's empty (for auto-generation)
+    const submitData = { ...formData }
+    if (!submitData.order_number || submitData.order_number.trim() === '') {
+      delete submitData.order_number
+    }
+    
     if (order?.id) {
-      updateMutation.mutate({ id: order.id, data: formData })
+      updateMutation.mutate({ id: order.id, data: submitData })
     } else {
-      createMutation.mutate(formData)
+      createMutation.mutate(submitData)
     }
   }
 
@@ -138,13 +149,17 @@ const OrderForm: React.FC<OrderFormProps> = ({ open, onClose, order, advertisers
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Order Number"
-                  required
-                  fullWidth
-                  value={formData.order_number || ''}
-                  onChange={(e) => setFormData({ ...formData, order_number: e.target.value })}
-                />
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <TextField
+                    label="Order Number"
+                    fullWidth
+                    value={formData.order_number || ''}
+                    onChange={(e) => setFormData({ ...formData, order_number: e.target.value || undefined })}
+                    helperText={!order?.id ? "Leave blank to auto-generate (e.g., 20241215-0001)" : undefined}
+                    placeholder="Auto-generated if left blank"
+                  />
+                  <InfoButton fieldPath="order.order_number" label="Order Number" />
+                </Box>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -217,44 +232,53 @@ const OrderForm: React.FC<OrderFormProps> = ({ open, onClose, order, advertisers
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Total Spots"
-                  type="number"
-                  fullWidth
-                  value={formData.total_spots || 0}
-                  onChange={(e) => setFormData({ ...formData, total_spots: parseInt(e.target.value) || 0 })}
-                />
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <TextField
+                    label="Total Spots"
+                    type="number"
+                    fullWidth
+                    value={formData.total_spots || 0}
+                    onChange={(e) => setFormData({ ...formData, total_spots: parseInt(e.target.value) || 0 })}
+                  />
+                  <InfoButton fieldPath="order.total_spots" label="Total Spots" />
+                </Box>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Rate Type"
-                  select
-                  required
-                  fullWidth
-                  value={formData.rate_type || 'ROS'}
-                  onChange={(e) => setFormData({ ...formData, rate_type: e.target.value })}
-                >
-                  <MenuItem value="ROS">Run of Schedule</MenuItem>
-                  <MenuItem value="DAYPART">Daypart</MenuItem>
-                  <MenuItem value="PROGRAM">Program</MenuItem>
-                  <MenuItem value="FIXED_TIME">Fixed Time</MenuItem>
-                </TextField>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <TextField
+                    label="Rate Type"
+                    select
+                    required
+                    fullWidth
+                    value={formData.rate_type || 'ROS'}
+                    onChange={(e) => setFormData({ ...formData, rate_type: e.target.value })}
+                  >
+                    <MenuItem value="ROS">Run of Schedule</MenuItem>
+                    <MenuItem value="DAYPART">Daypart</MenuItem>
+                    <MenuItem value="PROGRAM">Program</MenuItem>
+                    <MenuItem value="FIXED_TIME">Fixed Time</MenuItem>
+                  </TextField>
+                  <InfoButton fieldPath="order.rate_type" label="Rate Type" />
+                </Box>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Status"
-                  select
-                  fullWidth
-                  value={formData.status || 'DRAFT'}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                >
-                  <MenuItem value="DRAFT">Draft</MenuItem>
-                  <MenuItem value="PENDING">Pending</MenuItem>
-                  <MenuItem value="APPROVED">Approved</MenuItem>
-                  <MenuItem value="ACTIVE">Active</MenuItem>
-                  <MenuItem value="COMPLETED">Completed</MenuItem>
-                  <MenuItem value="CANCELLED">Cancelled</MenuItem>
-                </TextField>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <TextField
+                    label="Status"
+                    select
+                    fullWidth
+                    value={formData.status || 'DRAFT'}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  >
+                    <MenuItem value="DRAFT">Draft</MenuItem>
+                    <MenuItem value="PENDING">Pending</MenuItem>
+                    <MenuItem value="APPROVED">Approved</MenuItem>
+                    <MenuItem value="ACTIVE">Active</MenuItem>
+                    <MenuItem value="COMPLETED">Completed</MenuItem>
+                    <MenuItem value="CANCELLED">Cancelled</MenuItem>
+                  </TextField>
+                  <InfoButton fieldPath="order.status" label="Order Status" />
+                </Box>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField

@@ -1,20 +1,81 @@
 import axios from 'axios'
 
-// Use relative path for API calls (works with Traefik proxy)
-// This ensures we use the same protocol (HTTPS) as the current page
-const API_BASE_URL = import.meta.env.VITE_API_URL || ''
-
-// Determine baseURL based on environment
-// In browser, always use relative path to match current page protocol
-// This prevents mixed content errors
-let baseURL = '/api'
-if (typeof window !== 'undefined') {
-  // Force relative path - browser will use same protocol as page
-  baseURL = '/api'
-} else if (API_BASE_URL) {
-  // Server-side rendering or build-time: use provided URL
-  baseURL = API_BASE_URL.startsWith('http') ? `${API_BASE_URL}/api` : `/api`
+// URL normalization helper function
+// Ensures all URLs are relative paths, stripping any absolute URLs
+const normalizeUrl = (url: string | undefined): string => {
+  if (!url) return ''
+  
+  // If it's already a relative path, return as-is
+  if (url.startsWith('/')) {
+    return url
+  }
+  
+  // If it's an absolute URL, extract just the path
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    try {
+      const urlObj = new URL(url)
+      return urlObj.pathname + (urlObj.search || '')
+    } catch (e) {
+      // If URL parsing fails, strip protocol and domain
+      return url.replace(/^https?:\/\/[^/]+/, '')
+    }
+  }
+  
+  // If it doesn't start with /, make it relative
+  return '/' + url
 }
+
+// Validate and fix URLs to prevent Docker hostnames
+const validateAndFixUrl = (url: string | undefined, baseURL: string | undefined): { url: string; baseURL: string } => {
+  // CRITICAL: Check for Docker hostnames BEFORE normalization
+  // Check original values first to catch cases like "https://api:8000/api/tracks"
+  const dockerHostnamePattern = /(?:https?:\/\/)?api:\d+/
+  const originalUrl = url || ''
+  const originalBaseURL = baseURL || ''
+  const originalFullUrl = originalBaseURL + originalUrl
+  
+  // Detect Docker hostname in original values
+  if (dockerHostnamePattern.test(originalUrl) || dockerHostnamePattern.test(originalBaseURL) || dockerHostnamePattern.test(originalFullUrl)) {
+    console.error('[API] CRITICAL: Detected Docker hostname in URL!', {
+      originalUrl,
+      originalBaseURL,
+      originalFullUrl,
+      message: 'Docker hostnames like "api:8000" cannot be resolved by browsers. Using relative path instead.'
+    })
+    // Force relative paths - normalize will strip the Docker hostname
+    return { url: normalizeUrl(url), baseURL: '/api' }
+  }
+  
+  // Normalize URLs
+  let normalizedUrl = normalizeUrl(url || '')
+  let normalizedBaseURL = normalizeUrl(baseURL || '/api')
+  
+  // Double-check normalized values (shouldn't have Docker hostnames after normalization, but be safe)
+  const normalizedFullUrl = normalizedBaseURL + normalizedUrl
+  if (dockerHostnamePattern.test(normalizedFullUrl)) {
+    console.error('[API] CRITICAL: Docker hostname detected after normalization!', {
+      normalizedUrl,
+      normalizedBaseURL,
+      normalizedFullUrl,
+      action: 'Forcing relative paths'
+    })
+    normalizedBaseURL = '/api'
+    normalizedUrl = normalizeUrl(url || '')
+  }
+  
+  // Ensure baseURL is always relative in browser
+  if (typeof window !== 'undefined' && normalizedBaseURL && (normalizedBaseURL.startsWith('http://') || normalizedBaseURL.startsWith('https://'))) {
+    console.warn('[API] Detected absolute baseURL in browser context, forcing relative:', normalizedBaseURL)
+    normalizedBaseURL = '/api'
+  }
+  
+  return { url: normalizedUrl, baseURL: normalizedBaseURL }
+}
+
+// Use relative path for API calls (works with Traefik proxy and Vite dev server)
+// In browser, ALWAYS use relative path to match current page protocol
+// This prevents mixed content errors and Docker hostname resolution issues
+const baseURL = typeof window !== 'undefined' ? '/api' : (import.meta.env.VITE_API_URL || '/api')
 
 const api = axios.create({
   baseURL: baseURL,
@@ -24,69 +85,65 @@ const api = axios.create({
   timeout: 10000, // 10 second timeout
 })
 
-// Request interceptor to add auth token and ensure HTTPS
+// Request interceptor to add auth token and ensure relative URLs
 api.interceptors.request.use(
   (config) => {
-    // Force relative URLs to use the current page's protocol
+    // CRITICAL: In browser context, ALWAYS use relative URLs
+    // This prevents Docker hostname resolution issues and ensures proper proxy routing
     if (typeof window !== 'undefined') {
-      const currentProtocol = window.location.protocol
-      
-      // CRITICAL: Always force baseURL to be relative
-      // This ensures axios uses the same protocol as the current page
       const originalBaseURL = config.baseURL
-      config.baseURL = '/api'
+      const originalUrl = config.url
       
-      // If url is an absolute URL, convert to relative
+      // Validate and fix URLs to prevent Docker hostnames and absolute URLs
+      const { url: normalizedUrl, baseURL: normalizedBaseURL } = validateAndFixUrl(config.url, config.baseURL)
+      
+      // Apply normalized URLs
+      config.baseURL = normalizedBaseURL
+      config.url = normalizedUrl
+      
+      // Additional safety check: if axios somehow constructed an absolute URL, fix it
+      // This can happen if axios combines baseURL and url into an absolute URL
       if (config.url && (config.url.startsWith('http://') || config.url.startsWith('https://'))) {
-        try {
-          const urlObj = new URL(config.url)
-          config.url = urlObj.pathname + (urlObj.search || '')
-        } catch (e) {
-          // If URL parsing fails, strip protocol and domain
-          config.url = config.url.replace(/^https?:\/\/[^/]+/, '')
-        }
+        console.warn('[API] Interceptor caught absolute URL, normalizing:', {
+          original: config.url,
+          normalized: normalizeUrl(config.url)
+        })
+        config.url = normalizeUrl(config.url)
       }
       
-      // Ensure url is relative (starts with /)
-      if (config.url && !config.url.startsWith('/') && !config.url.startsWith('http')) {
-        config.url = '/' + config.url
-      }
-      
-      // Debug: Log if we detect HTTP URLs (remove in production)
-      if (process.env.NODE_ENV === 'development') {
-        const finalUrl = (config.baseURL || '') + (config.url || '')
-        if (finalUrl.includes('http://') && currentProtocol === 'https:') {
-          console.warn('[API] Detected HTTP URL in HTTPS context:', {
-            originalBaseURL,
-            baseURL: config.baseURL,
-            url: config.url,
-            finalUrl,
-            currentProtocol
-          })
-        }
-      }
-      
-      // Final safety: if config has an absolute URL somehow, reconstruct with relative paths
-      const testUrl = (config.baseURL || '') + (config.url || '')
-      if (testUrl.includes('http://') && currentProtocol === 'https:') {
-        // Force reconstruction with relative paths
+      // Final validation: ensure the constructed URL doesn't contain Docker hostnames
+      const constructedUrl = (config.baseURL || '') + (config.url || '')
+      if (constructedUrl.includes('api:8000') || constructedUrl.match(/https?:\/\/[a-zA-Z0-9_-]+:\d+/)) {
+        console.error('[API] CRITICAL: Docker hostname detected in constructed URL!', {
+          constructedUrl,
+          baseURL: config.baseURL,
+          url: config.url,
+          originalBaseURL,
+          originalUrl,
+          action: 'Forcing relative paths'
+        })
         config.baseURL = '/api'
-        if (config.url) {
-          config.url = config.url.replace(/^https?:\/\/[^/]+/, '')
-          if (!config.url.startsWith('/')) {
-            config.url = '/' + config.url
-          }
-        }
+        config.url = normalizeUrl(config.url)
+      }
+      
+      // Development mode logging
+      if (process.env.NODE_ENV === 'development' && (originalBaseURL !== config.baseURL || originalUrl !== config.url)) {
+        console.log('[API] URL normalization applied:', {
+          original: { baseURL: originalBaseURL, url: originalUrl },
+          normalized: { baseURL: config.baseURL, url: config.url }
+        })
       }
     }
     
+    // Add authentication token
     const token = localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
     
-    // Always log requests for debugging API issues
-    console.log('[API] Request:', config.method?.toUpperCase(), config.baseURL + (config.url || ''), {
+    // Log requests for debugging (final URL after normalization)
+    const finalUrl = (config.baseURL || '') + (config.url || '')
+    console.log('[API] Request:', config.method?.toUpperCase(), finalUrl, {
       hasToken: !!token,
       timeout: config.timeout
     })
@@ -108,33 +165,92 @@ api.interceptors.response.use(
     return response
   },
   (error) => {
-    // Enhanced error logging with more diagnostic info
+    // Enhanced error logging with Docker hostname detection
+    const url = error.config?.baseURL + (error.config?.url || '')
+    const errorUrl = error.request?.responseURL || error.config?.url || url
+    const hasDockerHostname = /(?:https?:\/\/)?api:\d+/.test(errorUrl) || /(?:https?:\/\/)?api:\d+/.test(url)
+    
+    // CRITICAL: Detect Docker hostname in error URLs
+    if (hasDockerHostname) {
+      console.error('[API] CRITICAL ERROR: Docker hostname detected in failed request!', {
+        errorUrl,
+        configUrl: url,
+        baseURL: error.config?.baseURL,
+        url: error.config?.url,
+        errorCode: error.code,
+        errorMessage: error.message,
+        diagnosis: 'The browser tried to connect to "api:8000" which is a Docker internal hostname. Browsers cannot resolve Docker hostnames. This indicates a configuration error where absolute URLs with Docker hostnames are being constructed.',
+        solution: 'All API requests must use relative URLs (/api/...) that work with the proxy (Vite dev server or Traefik). Check that baseURL is always "/api" in browser context.',
+        currentLocation: typeof window !== 'undefined' ? window.location.href : 'N/A'
+      })
+    }
+    
     if (error.code === 'ECONNABORTED') {
-      const url = error.config?.baseURL + (error.config?.url || '')
       console.error('[API] Request timeout:', error.config?.method?.toUpperCase(), url, 'after', error.config?.timeout, 'ms')
       console.error('[API] Timeout diagnostic:', {
         fullUrl: url,
         baseURL: error.config?.baseURL,
         url: error.config?.url,
         timeout: error.config?.timeout,
-        currentLocation: window.location.href,
-        message: 'Backend may not be running or not reachable. Check backend container status and network connectivity.'
+        currentLocation: typeof window !== 'undefined' ? window.location.href : 'N/A',
+        hasDockerHostname,
+        message: hasDockerHostname 
+          ? 'CRITICAL: Request contains Docker hostname. This will always fail in browser. Use relative URLs.'
+          : 'Backend may not be running or not reachable. Check backend container status and network connectivity.'
       })
-    } else if (error.response) {
-      console.error('[API] Error response:', error.config?.method?.toUpperCase(), error.config?.baseURL + (error.config?.url || ''), error.response.status, error.response.data)
-    } else if (error.request) {
-      const url = error.config?.baseURL + (error.config?.url || '')
-      console.error('[API] No response received:', error.config?.method?.toUpperCase(), url, error.message)
-      console.error('[API] Network error diagnostic:', {
+    } else if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+      // Enhanced diagnostics for network errors
+      const diagnostic: any = {
         fullUrl: url,
+        errorUrl,
         errorCode: error.code,
         errorMessage: error.message,
+        baseURL: error.config?.baseURL,
+        url: error.config?.url,
         requestMade: !!error.request,
         responseReceived: !!error.response,
-        message: 'Request was sent but no response received. Backend may be down or unreachable.'
-      })
+        currentLocation: typeof window !== 'undefined' ? window.location.href : 'N/A',
+        hasDockerHostname
+      }
+      
+      if (hasDockerHostname) {
+        diagnostic.criticalIssue = 'Docker hostname detected in URL'
+        diagnostic.solution = 'The URL contains "api:8000" which browsers cannot resolve. Ensure all API calls use relative URLs (/api/...).'
+        diagnostic.checklist = [
+          'Verify baseURL is "/api" (relative) not "https://api:8000/api"',
+          'Check that request interceptor is normalizing URLs correctly',
+          'Ensure no code is setting absolute URLs with Docker hostnames',
+          'In development: Vite proxy should handle /api -> http://api:8000',
+          'In production: Traefik should route /api -> backend service'
+        ]
+      } else {
+        diagnostic.message = 'Request was sent but no response received. Backend may be down or unreachable.'
+      }
+      
+      console.error('[API] No response received:', error.config?.method?.toUpperCase(), url, error.message)
+      console.error('[API] Network error diagnostic:', diagnostic)
+    } else if (error.response) {
+      console.error('[API] Error response:', error.config?.method?.toUpperCase(), url, error.response.status)
+      console.error('[API] Error response data:', error.response.data)
+      // Log validation errors in a more readable format
+      if (error.response.data?.detail) {
+        if (Array.isArray(error.response.data.detail)) {
+          console.error('[API] Validation errors:', error.response.data.detail.map((err: any) => ({
+            field: err.loc?.join('.') || 'unknown',
+            message: err.msg || err.message || 'Validation error',
+            type: err.type || 'unknown'
+          })))
+        } else {
+          console.error('[API] Error detail:', error.response.data.detail)
+        }
+      }
     } else {
-      console.error('[API] Request setup error:', error.message)
+      console.error('[API] Request setup error:', error.message, {
+        url,
+        hasDockerHostname,
+        baseURL: error.config?.baseURL,
+        configUrl: error.config?.url
+      })
     }
     
     if (error.response?.status === 401) {

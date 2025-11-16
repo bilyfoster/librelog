@@ -59,7 +59,22 @@ async def list_payments(
     result = await db.execute(query)
     payments = result.scalars().all()
     
-    return [PaymentResponse.model_validate(p) for p in payments]
+    # Convert datetime objects to strings for response
+    payments_data = []
+    for p in payments:
+        payment_dict = {
+            "id": p.id,
+            "invoice_id": p.invoice_id,
+            "amount": p.amount,
+            "payment_date": p.payment_date.isoformat() if p.payment_date else "",
+            "payment_method": p.payment_method,
+            "reference_number": p.reference_number,
+            "notes": p.notes,
+            "created_at": p.created_at.isoformat() if p.created_at else "",
+        }
+        payments_data.append(PaymentResponse(**payment_dict))
+    
+    return payments_data
 
 
 @router.post("/", response_model=PaymentResponse, status_code=status.HTTP_201_CREATED)
@@ -74,7 +89,18 @@ async def create_payment(
     await db.commit()
     await db.refresh(new_payment)
     
-    return PaymentResponse.model_validate(new_payment)
+    # Convert datetime objects to strings for response
+    payment_dict = {
+        "id": new_payment.id,
+        "invoice_id": new_payment.invoice_id,
+        "amount": new_payment.amount,
+        "payment_date": new_payment.payment_date.isoformat() if new_payment.payment_date else "",
+        "payment_method": new_payment.payment_method,
+        "reference_number": new_payment.reference_number,
+        "notes": new_payment.notes,
+        "created_at": new_payment.created_at.isoformat() if new_payment.created_at else "",
+    }
+    return PaymentResponse(**payment_dict)
 
 
 @router.get("/{payment_id}", response_model=PaymentResponse)
@@ -90,7 +116,18 @@ async def get_payment(
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
     
-    return PaymentResponse.model_validate(payment)
+    # Convert datetime objects to strings for response
+    payment_dict = {
+        "id": payment.id,
+        "invoice_id": payment.invoice_id,
+        "amount": payment.amount,
+        "payment_date": payment.payment_date.isoformat() if payment.payment_date else "",
+        "payment_method": payment.payment_method,
+        "reference_number": payment.reference_number,
+        "notes": payment.notes,
+        "created_at": payment.created_at.isoformat() if payment.created_at else "",
+    }
+    return PaymentResponse(**payment_dict)
 
 
 @router.put("/{payment_id}", response_model=PaymentResponse)
@@ -113,7 +150,18 @@ async def update_payment(
     await db.commit()
     await db.refresh(payment)
     
-    return PaymentResponse.model_validate(payment)
+    # Convert datetime objects to strings for response
+    payment_dict = {
+        "id": payment.id,
+        "invoice_id": payment.invoice_id,
+        "amount": payment.amount,
+        "payment_date": payment.payment_date.isoformat() if payment.payment_date else "",
+        "payment_method": payment.payment_method,
+        "reference_number": payment.reference_number,
+        "notes": payment.notes,
+        "created_at": payment.created_at.isoformat() if payment.created_at else "",
+    }
+    return PaymentResponse(**payment_dict)
 
 
 @router.delete("/{payment_id}", status_code=status.HTTP_204_NO_CONTENT)

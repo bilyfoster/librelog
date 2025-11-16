@@ -118,7 +118,9 @@ describe('AuthContext', () => {
 
 describe('API Utils', () => {
   it('creates API instance with correct configuration', () => {
-    expect(api.defaults.baseURL).toBe('http://localhost:8000/api')
+    // In browser context, baseURL should always be relative '/api'
+    // This works with both Vite dev proxy and Traefik production routing
+    expect(api.defaults.baseURL).toBe('/api')
     expect(api.defaults.headers['Content-Type']).toBe('application/json')
   })
 
