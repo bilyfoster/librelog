@@ -17,6 +17,7 @@ class VoiceTrack(Base):
     file_url = Column(Text, nullable=False)
     scheduled_time = Column(DateTime(timezone=True), index=True)
     uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    libretime_id = Column(String(50), nullable=True, index=True)  # LibreTime file ID after upload
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships

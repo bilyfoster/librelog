@@ -20,6 +20,7 @@ celery = Celery(
         "backend.tasks.audio_processing",
         "backend.tasks.audio_delivery",
         "backend.tasks.political_archive",
+        "backend.tasks.libretime_sync",
     ]
 )
 
@@ -41,6 +42,10 @@ celery.conf.update(
         },
         'sync-playback-history': {
             'task': 'backend.tasks.playback_sync.sync_playback_history',
+            'schedule': 3600.0,  # Run hourly
+        },
+        'sync-media-library-from-libretime': {
+            'task': 'backend.tasks.libretime_sync.sync_media_library_from_libretime',
             'schedule': 3600.0,  # Run hourly
         },
         'cleanup-old-tracks': {

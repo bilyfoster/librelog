@@ -18,7 +18,7 @@ class Track(Base):
     album = Column(String(255))
     type = Column(
         String(10),
-        CheckConstraint("type IN ('MUS', 'ADV', 'PSA', 'LIN', 'INT', 'PRO', 'SHO', 'IDS', 'COM', 'NEW')"),
+        CheckConstraint("type IN ('MUS', 'ADV', 'PSA', 'LIN', 'INT', 'PRO', 'SHO', 'IDS', 'COM', 'NEW', 'VOT')"),
         nullable=False,
         index=True
     )

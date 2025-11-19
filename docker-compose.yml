@@ -88,6 +88,30 @@ services:
       - libretime
     command: celery -A backend.tasks.celery worker --loglevel=info
 
+  # Celery Beat Scheduler (for periodic tasks)
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - POSTGRES_URI=postgresql://librelog:password@db:5432/librelog
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONPATH=/app
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app/backend
+      - ./shared:/app/shared
+    working_dir: /app
+    networks:
+      - libretime
+    command: celery -A backend.tasks.celery beat --loglevel=info
+
   # Vite + React Frontend
   frontend:
     build:

@@ -14,6 +14,7 @@ from backend.database import get_db
 from backend.models.voice_track import VoiceTrack
 from backend.routers.auth import get_current_user
 from backend.models.user import User
+from backend.integrations.libretime_client import libretime_client
 import aiofiles
 import structlog
 
@@ -236,3 +237,83 @@ async def serve_voice_track_file(
         media_type="audio/mpeg",
         filename=filename
     )
+
+
+@router.post("/{voice_track_id}/upload-to-libretime", response_model=VoiceTrackResponse)
+async def upload_voice_track_to_libretime(
+    voice_track_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload a voice track to LibreTime when ready"""
+    result = await db.execute(select(VoiceTrack).where(VoiceTrack.id == voice_track_id))
+    voice_track = result.scalar_one_or_none()
+    
+    if not voice_track:
+        raise HTTPException(status_code=404, detail="Voice track not found")
+    
+    # Check if already uploaded
+    if voice_track.libretime_id:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Voice track already uploaded to LibreTime (ID: {voice_track.libretime_id})"
+        )
+    
+    # Extract filename from file_url
+    filename = voice_track.file_url.split('/')[-2] if '/' in voice_track.file_url else None
+    if not filename:
+        raise HTTPException(status_code=400, detail="Invalid file URL format")
+    
+    file_path = Path(VOICE_TRACKS_DIR) / filename
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Voice track file not found")
+    
+    try:
+        # Upload to LibreTime
+        result = await libretime_client.upload_voice_track(
+            file_path=str(file_path),
+            title=voice_track.show_name or f"Voice Track {voice_track_id}",
+            description=f"Voice track uploaded from LibreLog",
+            artist_name=None,
+            genre=None
+        )
+        
+        if result and result.get("success"):
+            # Store LibreTime file ID (we'll need to get it from the response or query)
+            # For now, we'll store the library_id as a reference
+            library_id = result.get("library_id")
+            if library_id:
+                # Note: The actual file ID will be available after analyzer processes it
+                # We might need to query for it later or store a temporary reference
+                voice_track.libretime_id = f"lib_{library_id}"
+            else:
+                voice_track.libretime_id = "uploaded"  # Temporary marker
+            
+            await db.commit()
+            await db.refresh(voice_track)
+            
+            logger.info(
+                "Voice track uploaded to LibreTime",
+                voice_track_id=voice_track_id,
+                libretime_id=voice_track.libretime_id
+            )
+            
+            return VoiceTrackResponse.model_validate(voice_track)
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to upload to LibreTime: " + result.get("error", "Unknown error")
+            )
+            
+    except Exception as e:
+        logger.error(
+            "Failed to upload voice track to LibreTime",
+            voice_track_id=voice_track_id,
+            error=str(e),
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to upload to LibreTime: {str(e)}"
+        )

@@ -12,6 +12,8 @@ from backend.models.playback_history import PlaybackHistory
 from backend.models.daily_log import DailyLog
 from backend.models.settings import Setting
 from backend.integrations.libretime_client import libretime_client
+from backend.integrations.type_mapping import map_libretime_to_librelog, is_valid_libretime_code
+from backend.services.libretime_config_service import LibreTimeConfigService
 from backend.routers.auth import get_current_user
 from backend.models.user import User
 from pydantic import BaseModel
@@ -69,8 +71,9 @@ async def sync_tracks(
     errors = []
     
     try:
-        # Get tracks from LibreTime
-        tracks_data = await libretime_client.get_tracks(limit=limit, offset=offset)
+        # Get tracks from LibreTime using integration endpoint
+        response = await libretime_client.get_media_library(limit=limit, offset=offset)
+        tracks_data = response.get("results", [])
         
         if not tracks_data:
             logger.warning("No tracks received from LibreTime")
@@ -145,40 +148,20 @@ async def sync_tracks(
                         errors.append(f"Track missing title: media_id={media_id}")
                         continue
                     
-                    track_type = track_data.get("type", "MUS")
-                    # Map LibreTime library codes to track types
-                    type_mapping = {
-                        "music": "MUS",
-                        "promo": "PRO",
-                        "ad": "ADV",
-                        "ads": "ADV",  # LibreTime uses "ADS" for advertisements
-                        "advertisement": "ADV",
-                        "psa": "PSA",
-                        "link": "LIN",
-                        "liner": "LIN",
-                        "intro": "INT",
-                        "interview": "INT",
-                        "news": "NEW",
-                        "new": "NEW",
-                        "show": "SHO",
-                        "show segment": "SHO",
-                        "segment": "SHO",
-                        "id": "IDS",
-                        "ids": "IDS",
-                        "community": "COM",
-                        "comm": "COM"
-                    }
-                    # Handle both lowercase and uppercase
-                    track_type_lower = track_type.lower() if track_type else "mus"
-                    # Try mapping first, then check if it's already a valid type code
-                    mapped_type = type_mapping.get(track_type_lower)
-                    if mapped_type:
-                        track_type = mapped_type
-                    elif track_type and track_type.upper() in ["MUS", "ADV", "PSA", "LIN", "INT", "PRO", "SHO", "IDS", "COM", "NEW"]:
-                        track_type = track_type.upper()
-                    else:
-                        # Default to MUS if unknown
+                    # Get track type from LibreTime library code
+                    libretime_code = track_data.get("type") or track_data.get("library", {}).get("code") or "MUS"
+                    
+                    # Use type mapping utility
+                    try:
+                        if is_valid_libretime_code(libretime_code):
+                            track_type = map_libretime_to_librelog(libretime_code)
+                        else:
+                            # Fallback to MUS if code is not recognized
+                            track_type = "MUS"
+                            logger.warning("Unknown LibreTime code, defaulting to MUS", code=libretime_code)
+                    except ValueError:
                         track_type = "MUS"
+                        logger.warning("Type mapping error, defaulting to MUS", code=libretime_code)
                     
                     if existing_track:
                         # Update existing track
@@ -459,4 +442,38 @@ async def get_sync_status(
         total_tracks=total_tracks,
         connection_status=connection_status
     )
+
+
+@router.post("/libretime/save-config")
+async def save_libretime_config(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Save LibreTime configuration to LibreLog settings"""
+    try:
+        result = await LibreTimeConfigService.save_libretime_config(db)
+        return result
+    except Exception as e:
+        logger.error("Failed to save LibreTime config", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save config: {str(e)}"
+        )
+
+
+@router.get("/libretime/config")
+async def get_libretime_config(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get LibreTime configuration from settings"""
+    try:
+        config = await LibreTimeConfigService.get_libretime_config(db)
+        return config
+    except Exception as e:
+        logger.error("Failed to get LibreTime config", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get config: {str(e)}"
+        )
 
