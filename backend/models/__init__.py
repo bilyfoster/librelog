@@ -7,7 +7,9 @@ from backend.models.track import Track
 from backend.models.campaign import Campaign, RateType, ApprovalStatus
 from backend.models.clock_template import ClockTemplate
 from backend.models.daily_log import DailyLog
-from backend.models.voice_track import VoiceTrack
+from backend.models.voice_track import VoiceTrack, BreakType, VoiceTrackStatus
+from backend.models.voice_track_slot import VoiceTrackSlot
+from backend.models.voice_track_audit import VoiceTrackAudit
 from backend.models.playback_history import PlaybackHistory
 from backend.models.advertiser import Advertiser
 from backend.models.agency import Agency
@@ -54,6 +56,10 @@ __all__ = [
     "ClockTemplate",
     "DailyLog",
     "VoiceTrack",
+    "BreakType",
+    "VoiceTrackStatus",
+    "VoiceTrackSlot",
+    "VoiceTrackAudit",
     "PlaybackHistory",
     "Advertiser",
     "Agency",

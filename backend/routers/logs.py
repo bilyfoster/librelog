@@ -8,8 +8,10 @@ from sqlalchemy import select, func
 from backend.database import get_db
 from backend.models.daily_log import DailyLog
 from backend.models.spot import Spot
+from backend.models.voice_track_slot import VoiceTrackSlot
 from backend.services.log_generator import LogGenerator
 from backend.services.log_editor import LogEditor
+from backend.services.voice_track_slot_service import VoiceTrackSlotService
 from backend.routers.auth import get_current_user
 from backend.models.user import User
 from pydantic import BaseModel
@@ -418,3 +420,43 @@ async def remove_spot_from_log(
         raise HTTPException(status_code=400, detail="Failed to remove spot from log")
     
     return {"message": "Spot removed from log successfully"}
+
+
+@router.get("/{log_id}/voice-slots")
+async def get_voice_slots(
+    log_id: int,
+    hour: Optional[int] = Query(None, ge=0, le=23),
+    status: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all voice track slots for a log"""
+    result = await db.execute(select(DailyLog).where(DailyLog.id == log_id))
+    log = result.scalar_one_or_none()
+    
+    if not log:
+        raise HTTPException(status_code=404, detail="Daily log not found")
+    
+    slot_service = VoiceTrackSlotService(db)
+    slots = await slot_service.get_slots_for_log(log_id, hour, status)
+    
+    return {
+        "log_id": log_id,
+        "slots": [
+            {
+                "id": slot.id,
+                "hour": slot.hour,
+                "break_position": slot.break_position,
+                "assigned_dj_id": slot.assigned_dj_id,
+                "voice_track_id": slot.voice_track_id,
+                "previous_track_id": slot.previous_track_id,
+                "next_track_id": slot.next_track_id,
+                "ramp_time": float(slot.ramp_time) if slot.ramp_time else None,
+                "status": slot.status,
+                "created_at": slot.created_at.isoformat() if slot.created_at else None,
+                "updated_at": slot.updated_at.isoformat() if slot.updated_at else None
+            }
+            for slot in slots
+        ],
+        "count": len(slots)
+    }

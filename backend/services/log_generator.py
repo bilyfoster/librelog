@@ -10,6 +10,7 @@ from backend.models.clock_template import ClockTemplate
 from backend.models.campaign import Campaign
 from backend.models.track import Track
 from backend.models.voice_track import VoiceTrack
+from backend.services.voice_track_slot_service import VoiceTrackSlotService
 from backend.models.daily_log import DailyLog
 from backend.services.campaign_service import CampaignService
 from backend.services.clock_service import ClockTemplateService
@@ -75,6 +76,17 @@ class LogGenerator:
         await self.db.commit()
         await self.db.refresh(daily_log)
         
+        # Create voice track slots for this log
+        try:
+            slot_service = VoiceTrackSlotService(self.db)
+            # Extract break structure from clock template or use defaults
+            break_structure = self._extract_break_structure(clock_template, hourly_logs)
+            slots = await slot_service.create_slots_for_log(daily_log.id, break_structure)
+            logger.info("Voice track slots created", log_id=daily_log.id, slot_count=len(slots))
+        except Exception as e:
+            logger.warning("Failed to create voice track slots", error=str(e), exc_info=True)
+            # Don't fail log generation if slot creation fails
+        
         logger.info("Daily log generated", log_id=daily_log.id, date=target_date)
         
         return {
@@ -84,6 +96,47 @@ class LogGenerator:
             "hourly_logs": hourly_logs,
             "message": "Daily log generated successfully"
         }
+    
+    def _extract_break_structure(
+        self,
+        clock_template: ClockTemplate,
+        hourly_logs: Dict[str, Any]
+    ) -> Dict[int, List[int]]:
+        """
+        Extract break structure from clock template or hourly logs
+        
+        Returns:
+            Dictionary mapping hour to list of break positions in seconds
+        """
+        break_structure = {}
+        
+        # Try to get break structure from clock template
+        layout = clock_template.json_layout
+        elements = layout.get("elements", [])
+        
+        # Find break positions (typically spots or voice track slots)
+        for hour in range(24):
+            hour_str = f"{hour:02d}:00"
+            hour_data = hourly_logs.get(hour_str, {})
+            hour_elements = hour_data.get("elements", [])
+            
+            break_positions = []
+            cumulative_time = 0
+            
+            for elem in hour_elements:
+                elem_type = elem.get("type")
+                # Look for spots or breaks (typically at 15, 30, 45 minutes)
+                if elem_type in ["spot", "break", "voice_track"]:
+                    break_positions.append(cumulative_time)
+                cumulative_time += elem.get("duration", 0)
+            
+            # If no breaks found, use default positions (15, 30, 45 minutes)
+            if not break_positions:
+                break_positions = [900, 1800, 2700]  # 15, 30, 45 minutes
+            
+            break_structure[hour] = break_positions
+        
+        return break_structure
     
     async def _generate_hour_log(
         self,

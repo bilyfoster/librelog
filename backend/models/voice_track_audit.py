@@ -1,0 +1,29 @@
+"""
+Voice track audit model for logging changes
+"""
+
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
+from backend.database import Base
+
+
+class VoiceTrackAudit(Base):
+    """Voice track audit model for tracking changes"""
+    __tablename__ = "voice_track_audit"
+
+    id = Column(Integer, primary_key=True, index=True)
+    voice_track_id = Column(Integer, ForeignKey("voice_tracks.id"), nullable=False, index=True)
+    action = Column(String(50), nullable=False)  # recorded/edited/approved/deleted
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    audit_metadata = Column(JSONB, nullable=True)  # Additional details (renamed from metadata - SQLAlchemy reserved)
+
+    # Relationships
+    voice_track = relationship("VoiceTrack", backref="audit_logs")
+    user = relationship("User", foreign_keys=[user_id])
+
+    def __repr__(self):
+        return f"<VoiceTrackAudit(voice_track_id={self.voice_track_id}, action='{self.action}', user_id={self.user_id})>"
+

@@ -1,0 +1,230 @@
+import React, { useEffect, useRef, useState } from 'react'
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Typography,
+  IconButton,
+  LinearProgress,
+  Chip,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemButton,
+} from '@mui/material'
+import {
+  Mic,
+  Stop,
+  Pause,
+  PlayArrow,
+  Delete,
+  CheckCircle,
+} from '@mui/icons-material'
+import { useVoiceRecorder } from '../../hooks/useVoiceRecorder'
+import WaveformDisplay from './WaveformDisplay'
+
+interface SharedVoiceRecorderProps {
+  context: 'voice_track' | 'production'
+  breakId?: number
+  requestId?: number
+  script?: string
+  onUpload?: (blob: Blob) => Promise<void>
+  onTakeSelect?: (takeId: number) => void
+  takes?: any[]
+}
+
+const SharedVoiceRecorder: React.FC<SharedVoiceRecorderProps> = ({
+  context,
+  breakId,
+  requestId,
+  script,
+  onUpload,
+  onTakeSelect,
+  takes = [],
+}) => {
+  const {
+    isRecording,
+    isPaused,
+    recordingTime,
+    audioBlob,
+    selectedTake,
+    startRecording,
+    stopRecording,
+    pauseRecording,
+    resumeRecording,
+    selectTake,
+    reset,
+  } = useVoiceRecorder({
+    context,
+    breakId,
+    requestId,
+    onRecordingComplete: async (blob) => {
+      if (onUpload) {
+        await onUpload(blob)
+      }
+    },
+  })
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  const handleStart = async () => {
+    try {
+      await startRecording()
+    } catch (error) {
+      console.error('Failed to start recording:', error)
+      alert('Failed to start recording. Please check microphone permissions.')
+    }
+  }
+
+  const handleStop = () => {
+    stopRecording()
+  }
+
+  const handlePause = () => {
+    if (isPaused) {
+      resumeRecording()
+    } else {
+      pauseRecording()
+    }
+  }
+
+  const handleReset = () => {
+    reset()
+  }
+
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>
+          {context === 'voice_track' ? 'Voice Track Recording' : 'Voice Talent Recording'}
+        </Typography>
+
+        {/* Script display for production context */}
+        {context === 'production' && script && (
+          <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Script:
+            </Typography>
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+              {script}
+            </Typography>
+          </Box>
+        )}
+
+        {/* Recording controls */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          {!isRecording ? (
+            <Button
+              variant="contained"
+              color="error"
+              startIcon={<Mic />}
+              onClick={handleStart}
+              size="large"
+            >
+              Start Recording
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Stop />}
+                onClick={handleStop}
+                size="large"
+              >
+                Stop
+              </Button>
+              <IconButton
+                color="primary"
+                onClick={handlePause}
+                size="large"
+              >
+                {isPaused ? <PlayArrow /> : <Pause />}
+              </IconButton>
+              <Typography variant="h6" sx={{ minWidth: 60 }}>
+                {formatTime(recordingTime)}
+              </Typography>
+            </>
+          )}
+
+          {audioBlob && (
+            <Button
+              variant="outlined"
+              startIcon={<Delete />}
+              onClick={handleReset}
+              size="small"
+            >
+              Reset
+            </Button>
+          )}
+        </Box>
+
+        {/* Recording indicator */}
+        {isRecording && (
+          <Box sx={{ mb: 2 }}>
+            <LinearProgress />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+              Recording in progress...
+            </Typography>
+          </Box>
+        )}
+
+        {/* Waveform display */}
+        {audioBlob && (
+          <Box sx={{ mb: 2 }}>
+            <WaveformDisplay audioBlob={audioBlob} />
+          </Box>
+        )}
+
+        {/* Takes list */}
+        {takes.length > 0 && (
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Takes ({takes.length})
+            </Typography>
+            <List>
+              {takes.map((take) => (
+                <ListItem
+                  key={take.id}
+                  secondaryAction={
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      {take.is_final && (
+                        <Chip
+                          label="Selected"
+                          color="success"
+                          size="small"
+                          icon={<CheckCircle />}
+                        />
+                      )}
+                      {!take.is_final && (
+                        <Button
+                          size="small"
+                          onClick={() => onTakeSelect?.(take.id)}
+                        >
+                          Select
+                        </Button>
+                      )}
+                    </Box>
+                  }
+                >
+                  <ListItemText
+                    primary={`Take ${take.take_number}`}
+                    secondary={new Date(take.created_at).toLocaleString()}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Box>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+export default SharedVoiceRecorder
+

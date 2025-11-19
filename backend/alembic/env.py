@@ -24,6 +24,8 @@ from backend.models import (
     inventory_slot, sales_goal,
     digital_order, webhook, notification, backup, settings
 )
+# Import new voice tracking models
+from backend.models import voice_track_slot, voice_track_audit
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
