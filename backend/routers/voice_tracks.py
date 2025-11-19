@@ -80,6 +80,7 @@ class VoiceTrackResponse(BaseModel):
         from_attributes = True
 
 
+@router.get("", response_model=list[VoiceTrackResponse])
 @router.get("/", response_model=list[VoiceTrackResponse])
 async def list_voice_tracks(
     skip: int = Query(0, ge=0),
@@ -221,6 +222,11 @@ async def delete_voice_track(
                     logger.info("Voice track file deleted", filename=filename)
         except Exception as e:
             logger.warning("Failed to delete voice track file", error=str(e))
+    
+    # Delete audit records first (to avoid foreign key constraint violation)
+    await db.execute(
+        delete(VoiceTrackAudit).where(VoiceTrackAudit.voice_track_id == voice_track_id)
+    )
     
     # Delete database record
     await db.delete(voice_track)
@@ -730,14 +736,46 @@ async def delete_recording(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recording not found")
         
         # Delete file if exists
-        if recording.file_url:
+        # Prefer raw_file_url as it contains the actual file system path
+        file_path = None
+        if recording.raw_file_url:
             try:
-                file_path = Path(recording.file_url)
-                if file_path.exists():
-                    file_path.unlink()
+                file_path = Path(recording.raw_file_url)
             except Exception as e:
-                logger.warning("Failed to delete file", file=recording.file_url, error=str(e))
+                logger.warning("Invalid raw_file_url", raw_file_url=recording.raw_file_url, error=str(e))
         
+        # Fallback: extract from file_url if raw_file_url not available
+        if not file_path and recording.file_url:
+            try:
+                # file_url format: /api/voice/{filename}/file or /api/voice/{break_id}/{filename}/file
+                url_parts = [p for p in recording.file_url.split('/') if p]
+                if len(url_parts) >= 3 and url_parts[-1] == 'file':
+                    # Extract filename (second to last part)
+                    filename = url_parts[-2]
+                    if len(url_parts) >= 4:
+                        # Break-based: /api/voice/{break_id}/{filename}/file
+                        break_id = url_parts[-3]
+                        file_path = Path(VOICE_TRACKS_DIR) / break_id / filename
+                    else:
+                        # Standalone: /api/voice/{filename}/file
+                        file_path = Path(VOICE_TRACKS_DIR) / filename
+            except Exception as e:
+                logger.warning("Failed to extract file path from file_url", file_url=recording.file_url, error=str(e))
+        
+        # Delete the file if it exists
+        if file_path and file_path.exists():
+            try:
+                file_path.unlink()
+                logger.info("Recording file deleted", file_path=str(file_path))
+            except Exception as e:
+                logger.warning("Failed to delete file", file_path=str(file_path), error=str(e))
+        
+        # Delete audit records first (to avoid foreign key constraint violation)
+        await db.execute(
+            delete(VoiceTrackAudit).where(VoiceTrackAudit.voice_track_id == recording_id)
+        )
+        
+        # Delete the voice track record
         await db.execute(delete(VoiceTrack).where(VoiceTrack.id == recording_id))
         await db.commit()
         
