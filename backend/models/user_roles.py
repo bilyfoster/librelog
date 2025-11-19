@@ -15,6 +15,8 @@ class Role(str, Enum):
     PRODUCER = "producer"
     DJ = "dj"
     SALES = "sales"
+    PRODUCTION_DIRECTOR = "production_director"
+    VOICE_TALENT = "voice_talent"
 
 
 class Permission(str, Enum):
@@ -56,6 +58,15 @@ class Permission(str, Enum):
     CREATE_USERS = "create_users"
     EDIT_USERS = "edit_users"
     DELETE_USERS = "delete_users"
+    
+    # Production management
+    VIEW_PRODUCTION_ORDERS = "view_production_orders"
+    CREATE_PRODUCTION_ORDERS = "create_production_orders"
+    EDIT_PRODUCTION_ORDERS = "edit_production_orders"
+    ASSIGN_PRODUCTION = "assign_production"
+    APPROVE_PRODUCTION = "approve_production"
+    DELIVER_PRODUCTION = "deliver_production"
+    VIEW_PRODUCTION_ARCHIVE = "view_production_archive"
 
 
 # Role-based permissions mapping
@@ -86,6 +97,13 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.CREATE_USERS,
         Permission.EDIT_USERS,
         Permission.DELETE_USERS,
+        Permission.VIEW_PRODUCTION_ORDERS,
+        Permission.CREATE_PRODUCTION_ORDERS,
+        Permission.EDIT_PRODUCTION_ORDERS,
+        Permission.ASSIGN_PRODUCTION,
+        Permission.APPROVE_PRODUCTION,
+        Permission.DELIVER_PRODUCTION,
+        Permission.VIEW_PRODUCTION_ARCHIVE,
     },
     Role.PRODUCER: {
         # Producer can manage content and schedules
@@ -105,6 +123,9 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.UPLOAD_VOICE,
         Permission.VIEW_REPORTS,
         Permission.EXPORT_REPORTS,
+        Permission.VIEW_PRODUCTION_ORDERS,
+        Permission.EDIT_PRODUCTION_ORDERS,  # Can update assigned POs
+        Permission.VIEW_PRODUCTION_ARCHIVE,
     },
     Role.DJ: {
         # DJ can view and upload content
@@ -126,6 +147,32 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.VIEW_LOGS,
         Permission.VIEW_REPORTS,
         Permission.EXPORT_REPORTS,
+        Permission.VIEW_PRODUCTION_ORDERS,  # View their client POs
+        Permission.CREATE_PRODUCTION_ORDERS,  # Create POs for their clients
+    },
+    Role.PRODUCTION_DIRECTOR: {
+        # Production Director can review, route, assign, approve
+        Permission.VIEW_TRACKS,
+        Permission.VIEW_CAMPAIGNS,
+        Permission.VIEW_CLOCKS,
+        Permission.VIEW_LOGS,
+        Permission.VIEW_REPORTS,
+        Permission.VIEW_PRODUCTION_ORDERS,
+        Permission.CREATE_PRODUCTION_ORDERS,
+        Permission.EDIT_PRODUCTION_ORDERS,
+        Permission.ASSIGN_PRODUCTION,
+        Permission.APPROVE_PRODUCTION,
+        Permission.DELIVER_PRODUCTION,
+        Permission.VIEW_PRODUCTION_ARCHIVE,
+    },
+    Role.VOICE_TALENT: {
+        # Voice Talent can view assigned scripts and upload takes
+        Permission.VIEW_TRACKS,
+        Permission.VIEW_CAMPAIGNS,
+        Permission.VIEW_CLOCKS,
+        Permission.VIEW_LOGS,
+        Permission.VIEW_PRODUCTION_ORDERS,  # Only assigned requests
+        Permission.VIEW_PRODUCTION_ARCHIVE,
     },
 }
 

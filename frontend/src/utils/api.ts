@@ -2188,4 +2188,205 @@ export const getBackupsProxy = async (params?: {
   return response.data
 }
 
+// Production Orders API
+export const getProductionOrders = async (params?: {
+  status?: string
+  advertiser_id?: number
+  assigned_to?: number
+  deadline_before?: string
+  limit?: number
+  offset?: number
+}) => {
+  const response = await api.get('/production-orders', { params })
+  return response.data
+}
+
+export const getProductionOrder = async (po_id: number) => {
+  const response = await api.get(`/production-orders/${po_id}`)
+  return response.data
+}
+
+export const createProductionOrder = async (data: {
+  copy_id: number
+  client_name?: string
+  deadline?: string
+  instructions?: string
+  talent_needs?: any
+  audio_references?: string[]
+  stations?: string[]
+}) => {
+  const response = await api.post('/production-orders', data)
+  return response.data
+}
+
+export const updateProductionOrder = async (po_id: number, updates: any) => {
+  const response = await api.put(`/production-orders/${po_id}`, updates)
+  return response.data
+}
+
+export const assignProductionOrder = async (
+  po_id: number,
+  user_id: number,
+  assignment_type: string,
+  notes?: string
+) => {
+  const response = await api.post(`/production-orders/${po_id}/assign`, null, {
+    params: { user_id, assignment_type, notes }
+  })
+  return response.data
+}
+
+export const updateProductionOrderStatus = async (po_id: number, new_status: string) => {
+  const response = await api.post(`/production-orders/${po_id}/update-status`, null, {
+    params: { new_status }
+  })
+  return response.data
+}
+
+export const deliverProductionOrder = async (
+  po_id: number,
+  delivery_method: string = 'local',
+  target_server?: string,
+  target_path?: string
+) => {
+  const response = await api.post(`/production-orders/${po_id}/deliver`, null, {
+    params: { delivery_method, target_server, target_path }
+  })
+  return response.data
+}
+
+// Voice Talent API
+export const getVoiceTalentRequests = async (status?: string) => {
+  const response = await api.get('/voice-talent/requests', { params: { status } })
+  return response.data
+}
+
+export const uploadTake = async (request_id: number, file: File, take_number?: number) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await api.post(`/voice-talent/requests/${request_id}/upload-take`, formData, {
+    params: { take_number },
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+  return response.data
+}
+
+export const approveTake = async (request_id: number, take_number: number) => {
+  const response = await api.post(`/voice-talent/requests/${request_id}/approve-take`, null, {
+    params: { take_number }
+  })
+  return response.data
+}
+
+// Production Assignments API
+export const getProductionAssignments = async (params?: {
+  production_order_id?: number
+  user_id?: number
+  assignment_type?: string
+  status?: string
+}) => {
+  const response = await api.get('/production-assignments', { params })
+  return response.data
+}
+
+export const createProductionAssignment = async (data: {
+  production_order_id: number
+  user_id: number
+  assignment_type: string
+  notes?: string
+}) => {
+  const response = await api.post('/production-assignments', data)
+  return response.data
+}
+
+export const updateProductionAssignment = async (assignment_id: number, updates: {
+  status?: string
+  notes?: string
+}) => {
+  const response = await api.put(`/production-assignments/${assignment_id}`, updates)
+  return response.data
+}
+
+// Copy Production API
+export const setNeedsProduction = async (copy_id: number, needs_production: boolean) => {
+  const response = await api.post(`/copy/${copy_id}/set-needs-production`, null, {
+    params: { needs_production }
+  })
+  return response.data
+}
+
+export const approveCopy = async (copy_id: number, auto_create_po: boolean = true) => {
+  const response = await api.post(`/copy/${copy_id}/approve`, null, {
+    params: { auto_create_po }
+  })
+  return response.data
+}
+
+export const rejectCopy = async (copy_id: number, reason?: string) => {
+  const response = await api.post(`/copy/${copy_id}/reject`, null, {
+    params: { reason }
+  })
+  return response.data
+}
+
+export const getCopyProductionStatus = async (copy_id: number) => {
+  const response = await api.get(`/copy/${copy_id}/production-status`)
+  return response.data
+}
+
+// Production Archive API
+export const searchProductionByClient = async (client_name: string, limit?: number) => {
+  const response = await api.get('/production-archive/search/client', {
+    params: { client_name, limit }
+  })
+  return response.data
+}
+
+export const searchProductionByScript = async (keyword: string, limit?: number) => {
+  const response = await api.get('/production-archive/search/script', {
+    params: { keyword, limit }
+  })
+  return response.data
+}
+
+export const searchProductionBySpotLength = async (spot_length: number, limit?: number) => {
+  const response = await api.get('/production-archive/search/spot-length', {
+    params: { spot_length, limit }
+  })
+  return response.data
+}
+
+export const getProductionHistory = async (params?: {
+  client_name?: string
+  start_date?: string
+  end_date?: string
+  status?: string
+  limit?: number
+}) => {
+  const response = await api.get('/production-archive/history', { params })
+  return response.data
+}
+
+// Production Reports API
+export const getProductionTurnaroundReport = async (start_date?: string, end_date?: string) => {
+  const response = await api.get('/reports/production/turnaround', {
+    params: { start_date, end_date }
+  })
+  return response.data
+}
+
+export const getProductionWorkloadReport = async (user_id?: number) => {
+  const response = await api.get('/reports/production/workload', {
+    params: { user_id }
+  })
+  return response.data
+}
+
+export const getMissedDeadlinesReport = async (days_overdue?: number) => {
+  const response = await api.get('/reports/production/missed-deadlines', {
+    params: { days_overdue }
+  })
+  return response.data
+}
+
 export default api

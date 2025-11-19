@@ -2,10 +2,28 @@
 Copy model for audio asset and script management
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey, Enum as SQLEnum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
+import enum
+
+
+class CopyStatus(str, enum.Enum):
+    """Copy status enumeration"""
+    DRAFT = "draft"
+    PENDING_APPROVAL = "pending_approval"
+    APPROVED = "approved"
+    IN_PRODUCTION = "in_production"
+    COMPLETED = "completed"
+    DELIVERED = "delivered"
+
+
+class CopyApprovalStatus(str, enum.Enum):
+    """Copy approval status enumeration"""
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
 
 
 class Copy(Base):
@@ -35,6 +53,14 @@ class Copy(Base):
     copy_instructions = Column(Text, nullable=True)  # Instructions for talent
     instruction_attachments = Column(Text, nullable=True)  # JSON array of PDF/image paths
     
+    # Production workflow fields
+    production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=True, unique=True, index=True)
+    copy_status = Column(SQLEnum(CopyStatus), nullable=False, default=CopyStatus.DRAFT, index=True)
+    needs_production = Column(Boolean, default=False, index=True)  # KEY FLAG: When true + copy approved → auto-create ProductionOrder
+    copy_approval_status = Column(SQLEnum(CopyApprovalStatus), nullable=False, default=CopyApprovalStatus.PENDING, index=True)
+    script_approved_at = Column(DateTime(timezone=True), nullable=True)
+    script_approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -43,6 +69,8 @@ class Copy(Base):
     advertiser = relationship("Advertiser", back_populates="copy_items")
     copy_assignments = relationship("CopyAssignment", back_populates="copy")
     audio_cuts = relationship("AudioCut", back_populates="copy", cascade="all, delete-orphan")
+    production_order = relationship("ProductionOrder", back_populates="copy", uselist=False, foreign_keys=[production_order_id])
+    script_approver = relationship("User", foreign_keys=[script_approved_by])
 
     def __repr__(self):
         return f"<Copy(title='{self.title}', version={self.version})>"

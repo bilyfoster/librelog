@@ -6,7 +6,9 @@ from typing import List, Optional
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
-from backend.models.copy import Copy
+from backend.models.copy import Copy, CopyStatus, CopyApprovalStatus
+from backend.services.production_order_service import ProductionOrderService
+from backend.services.production_approval_service import ProductionApprovalService
 import structlog
 
 logger = structlog.get_logger()
@@ -88,4 +90,64 @@ class CopyService:
         )
         
         return result.scalars().all()
+    
+    async def set_needs_production(self, copy_id: int, needs_production: bool) -> Copy:
+        """Set the needs_production flag on copy"""
+        result = await self.db.execute(select(Copy).where(Copy.id == copy_id))
+        copy_item = result.scalar_one_or_none()
+        
+        if not copy_item:
+            raise ValueError("Copy not found")
+        
+        copy_item.needs_production = needs_production
+        
+        await self.db.commit()
+        await self.db.refresh(copy_item)
+        
+        logger.info(
+            "Copy needs_production flag updated",
+            copy_id=copy_id,
+            needs_production=needs_production
+        )
+        
+        return copy_item
+    
+    async def approve_copy(
+        self,
+        copy_id: int,
+        approved_by: int,
+        auto_create_po: bool = True
+    ) -> Copy:
+        """Approve copy and optionally auto-create production order if needs_production=true"""
+        approval_service = ProductionApprovalService(self.db)
+        return await approval_service.approve_copy(copy_id, approved_by, auto_create_po)
+    
+    async def get_production_status(self, copy_id: int) -> Optional[dict]:
+        """Get production status for a copy item"""
+        result = await self.db.execute(
+            select(Copy)
+            .where(Copy.id == copy_id)
+        )
+        copy_item = result.scalar_one_or_none()
+        
+        if not copy_item:
+            return None
+        
+        production_order = None
+        if copy_item.production_order_id:
+            po_service = ProductionOrderService(self.db)
+            production_order = await po_service.get_by_id(copy_item.production_order_id)
+        
+        return {
+            "copy_id": copy_id,
+            "copy_status": copy_item.copy_status.value if copy_item.copy_status else None,
+            "copy_approval_status": copy_item.copy_approval_status.value if copy_item.copy_approval_status else None,
+            "needs_production": copy_item.needs_production,
+            "production_order_id": copy_item.production_order_id,
+            "production_order": {
+                "id": production_order.id,
+                "po_number": production_order.po_number,
+                "status": production_order.status.value if production_order else None
+            } if production_order else None
+        }
 

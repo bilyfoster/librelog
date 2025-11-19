@@ -66,24 +66,76 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({
       setError(null)
 
       try {
+        // Construct the full URL
+        let audioUrl = src
+        
         // If src is already a full URL or blob URL, use it directly
         if (src.startsWith('blob:') || src.startsWith('http://') || src.startsWith('https://')) {
+          audioUrl = src
+        } else {
+          // For relative paths, use as-is (browser will resolve through Traefik)
+          // Don't add /api prefix if src already starts with /api
+          if (src.startsWith('/api/')) {
+            audioUrl = src
+          } else if (src.startsWith('/')) {
+            audioUrl = `/api${src}`
+          } else {
+            audioUrl = `/api/${src}`
+          }
+        }
+
+        // For preview endpoints (which are public), use the URL directly
+        // This allows the browser to handle streaming and range requests properly
+        if (audioUrl.includes('/preview') || audioUrl.includes('/tracks/')) {
           if (audioRef.current) {
-            audioRef.current.src = src
-            await audioRef.current.load()
+            // Set up the audio element with the URL directly
+            // This allows the browser to handle streaming, range requests, and caching
+            audioRef.current.src = audioUrl
+            audioRef.current.crossOrigin = 'anonymous'
+            
+            // Wait for metadata to load
+            await new Promise((resolve, reject) => {
+              if (!audioRef.current) {
+                reject(new Error('Audio element not available'))
+                return
+              }
+              
+              const audio = audioRef.current
+              
+              const handleLoadedMetadata = () => {
+                audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+                audio.removeEventListener('error', handleError)
+                resolve(undefined)
+              }
+              
+              const handleError = (e: Event) => {
+                audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+                audio.removeEventListener('error', handleError)
+                const error = (e.target as HTMLAudioElement).error
+                reject(new Error(error ? `Audio error: ${error.code} - ${error.message}` : 'Failed to load audio'))
+              }
+              
+              audio.addEventListener('loadedmetadata', handleLoadedMetadata)
+              audio.addEventListener('error', handleError)
+              
+              // Start loading
+              audio.load()
+              
+              // Timeout after 30 seconds
+              setTimeout(() => {
+                audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+                audio.removeEventListener('error', handleError)
+                reject(new Error('Audio loading timeout'))
+              }, 30000)
+            })
           }
           setLoading(false)
           return
         }
 
-        // Otherwise, fetch with authentication
+        // For other endpoints, fetch with authentication and create blob
         const token = localStorage.getItem('token')
-        const apiBaseUrl = '/api' // Relative path works with axios interceptor
-        
-        // Construct full URL
-        const fullUrl = src.startsWith('/') ? `${apiBaseUrl}${src}` : `${apiBaseUrl}/${src}`
-        
-        const response = await fetch(fullUrl, {
+        const response = await fetch(audioUrl, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },

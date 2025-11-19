@@ -28,6 +28,18 @@ export default defineConfig({
             // Log proxy requests for debugging
             console.log('Proxying:', req.url, '->', proxyReq.path);
           });
+          // Ensure proxy responses don't include HTTP redirects
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            // Remove any Location headers that might contain HTTP URLs
+            if (proxyRes.headers.location) {
+              const location = proxyRes.headers.location;
+              // If location is HTTP, convert to relative path
+              if (location.startsWith('http://')) {
+                const url = new URL(location);
+                proxyRes.headers.location = url.pathname + (url.search || '');
+              }
+            }
+          });
         },
       },
     },

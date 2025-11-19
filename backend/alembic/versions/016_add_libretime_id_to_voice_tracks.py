@@ -51,3 +51,4 @@ def downgrade():
         CHECK (type IN ('MUS', 'ADV', 'PSA', 'LIN', 'INT', 'PRO', 'SHO', 'IDS', 'COM', 'NEW'));
     """)
 
+

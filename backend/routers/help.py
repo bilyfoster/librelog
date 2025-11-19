@@ -42,6 +42,7 @@ async def get_articles(
     """Get help articles with optional filtering"""
     workflows = load_help_content("workflows.json")
     concepts = load_help_content("concepts.json")
+    documentation = load_help_content("documentation.json")
     
     articles = []
     
@@ -71,6 +72,19 @@ async def get_articles(
                 "category": concept.get("category", "concepts")
             })
     
+    # Add documentation
+    if "documentation" in documentation:
+        for doc in documentation["documentation"]:
+            if category and doc.get("category") != category:
+                continue
+            if search and search.lower() not in doc.get("title", "").lower() and search.lower() not in doc.get("content", "").lower():
+                continue
+            articles.append({
+                **doc,
+                "type": "documentation",
+                "category": doc.get("category", "reference")
+            })
+    
     return {"articles": articles, "total": len(articles)}
 
 
@@ -83,6 +97,7 @@ async def get_article(
     """Get a specific help article"""
     workflows = load_help_content("workflows.json")
     concepts = load_help_content("concepts.json")
+    documentation = load_help_content("documentation.json")
     
     # Search in workflows
     if "workflows" in workflows:
@@ -95,6 +110,12 @@ async def get_article(
         for concept in concepts["concepts"]:
             if concept.get("id") == article_id:
                 return {**concept, "type": "concept"}
+    
+    # Search in documentation
+    if "documentation" in documentation:
+        for doc in documentation["documentation"]:
+            if doc.get("id") == article_id:
+                return {**doc, "type": "documentation"}
     
     raise HTTPException(status_code=404, detail="Article not found")
 
@@ -188,6 +209,7 @@ async def search_help(
     # Search articles
     workflows = load_help_content("workflows.json")
     concepts = load_help_content("concepts.json")
+    documentation = load_help_content("documentation.json")
     
     if "workflows" in workflows:
         for workflow in workflows["workflows"]:
@@ -202,6 +224,13 @@ async def search_help(
                 search_lower in concept.get("content", "").lower() or
                 search_lower in concept.get("description", "").lower()):
                 results["articles"].append({**concept, "type": "concept"})
+    
+    if "documentation" in documentation:
+        for doc in documentation["documentation"]:
+            if (search_lower in doc.get("title", "").lower() or
+                search_lower in doc.get("content", "").lower() or
+                search_lower in doc.get("description", "").lower()):
+                results["articles"].append({**doc, "type": "documentation"})
     
     # Search terms
     terms_data = load_help_content("terminology.json")

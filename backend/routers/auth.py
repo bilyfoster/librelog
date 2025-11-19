@@ -5,6 +5,7 @@ Authentication router
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db
 from backend.auth.oauth2 import authenticate_user, create_access_token, verify_token, get_user_by_username
@@ -45,6 +46,87 @@ async def get_current_user(
         raise credentials_exception
     
     return user
+
+
+class UserProfileUpdate(BaseModel):
+    """User profile update model"""
+    username: Optional[str] = None
+    password: Optional[str] = None
+    current_password: Optional[str] = None  # Required when changing password
+
+
+@router.get("/profile", response_model=dict)
+async def get_user_profile(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get current user's profile"""
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "role": current_user.role,
+        "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+        "last_login": current_user.last_login.isoformat() if current_user.last_login else None,
+        "last_activity": current_user.last_activity.isoformat() if current_user.last_activity else None,
+    }
+
+
+@router.put("/profile", response_model=dict)
+async def update_user_profile(
+    profile_data: UserProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update current user's profile"""
+    from backend.auth.oauth2 import verify_password, get_password_hash
+    
+    # Check username uniqueness if changing username
+    if profile_data.username is not None and profile_data.username != current_user.username:
+        from sqlalchemy import select
+        result = await db.execute(select(User).where(User.username == profile_data.username))
+        existing = result.scalar_one_or_none()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already exists"
+            )
+        current_user.username = profile_data.username
+    
+    # Handle password change
+    if profile_data.password is not None:
+        if not profile_data.current_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is required to change password"
+            )
+        
+        # Verify current password
+        if not verify_password(profile_data.current_password, current_user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect"
+            )
+        
+        # Set new password
+        current_user.password_hash = get_password_hash(profile_data.password)
+    
+    await db.commit()
+    await db.refresh(current_user)
+    
+    audit_logger.info(
+        "User profile updated",
+        user_id=current_user.id,
+        username=current_user.username
+    )
+    
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "role": current_user.role,
+        "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+        "last_login": current_user.last_login.isoformat() if current_user.last_login else None,
+        "last_activity": current_user.last_activity.isoformat() if current_user.last_activity else None,
+    }
 
 
 @router.post("/login")

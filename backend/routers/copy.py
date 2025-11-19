@@ -12,6 +12,8 @@ from backend.models.copy import Copy
 from backend.routers.auth import get_current_user
 from backend.models.user import User
 from backend.services.copy_service import CopyService
+from backend.services.production_approval_service import ProductionApprovalService
+from backend.models.copy import CopyStatus, CopyApprovalStatus
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone
@@ -383,4 +385,72 @@ async def assign_copy_to_spot(
     await db.refresh(assignment)
     
     return {"message": "Copy assigned to spot successfully", "assignment_id": assignment.id}
+
+
+@router.post("/{copy_id}/set-needs-production")
+async def set_needs_production(
+    copy_id: int,
+    needs_production: bool = Query(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Set the needs_production flag on copy"""
+    copy_service = CopyService(db)
+    
+    try:
+        copy_item = await copy_service.set_needs_production(copy_id, needs_production)
+        return CopyResponse(**copy_to_response_dict(copy_item))
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/{copy_id}/approve")
+async def approve_copy(
+    copy_id: int,
+    auto_create_po: bool = Query(True),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Approve copy and optionally auto-create production order if needs_production=true"""
+    copy_service = CopyService(db)
+    
+    try:
+        copy_item = await copy_service.approve_copy(copy_id, current_user.id, auto_create_po)
+        return CopyResponse(**copy_to_response_dict(copy_item))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{copy_id}/reject")
+async def reject_copy(
+    copy_id: int,
+    reason: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Reject copy"""
+    approval_service = ProductionApprovalService(db)
+    
+    try:
+        copy_item = await approval_service.reject_copy(copy_id, current_user.id, reason)
+        return CopyResponse(**copy_to_response_dict(copy_item))
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/{copy_id}/production-status")
+async def get_production_status(
+    copy_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get production status for a copy item"""
+    copy_service = CopyService(db)
+    
+    status_info = await copy_service.get_production_status(copy_id)
+    
+    if not status_info:
+        raise HTTPException(status_code=404, detail="Copy not found")
+    
+    return status_info
 

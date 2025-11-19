@@ -8,7 +8,7 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import MetaData
 
 # Database URL from environment
-DATABASE_URL = os.getenv("POSTGRES_URI", "postgresql://librelog:password@localhost:5432/librelog")
+DATABASE_URL = os.getenv("POSTGRES_URI", "postgresql://librelog:password@db:5432/librelog")
 
 # Convert to async URL
 if DATABASE_URL.startswith("postgresql://"):

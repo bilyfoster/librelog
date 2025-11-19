@@ -34,6 +34,7 @@ import {
   Save as SaveIcon,
 } from '@mui/icons-material'
 import api from '../../utils/api'
+import { TRACK_TYPES, getTrackType, getTrackTypeChipColor } from '../../utils/trackTypes'
 
 interface ClockElement {
   id: string
@@ -73,18 +74,7 @@ const ClockBuilder: React.FC = () => {
   const [elementDialogOpen, setElementDialogOpen] = useState(false)
   const [editingElement, setEditingElement] = useState<ClockElement | null>(null)
 
-  const elementTypes = [
-    { value: 'MUS', label: 'Music', color: 'primary' },
-    { value: 'ADV', label: 'Ads', color: 'secondary' },
-    { value: 'NEW', label: 'News', color: 'warning' },
-    { value: 'LIN', label: 'Liner', color: 'info' },
-    { value: 'INT', label: 'Interview', color: 'success' },
-    { value: 'PRO', label: 'Promo', color: 'error' },
-    { value: 'SHO', label: 'Show segment', color: 'default' },
-    { value: 'IDS', label: 'IDs', color: 'default' },
-    { value: 'COM', label: 'Community', color: 'default' },
-    { value: 'PSA', label: 'Public Service Announcement', color: 'info' }
-  ]
+  const elementTypes = TRACK_TYPES
 
   useEffect(() => {
     loadTemplates()
@@ -361,36 +351,63 @@ const ClockBuilder: React.FC = () => {
               </Box>
 
               <List>
-                {currentTemplate.json_layout.elements.map((element, index) => (
-                  <ListItem key={element.id}>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Chip
-                            label={element.type}
-                            color={elementTypes.find(t => t.value === element.type)?.color as any}
-                            size="small"
-                          />
-                          <Typography variant="body1">
-                            {element.title || `${element.type} ${index + 1}`}
-                          </Typography>
-                          <Typography variant="body2" color="textSecondary">
-                            ({element.count}x {formatDuration(element.duration)})
-                          </Typography>
-                        </Box>
-                      }
-                      secondary={element.fallback ? `Fallback: ${element.fallback}` : undefined}
-                    />
-                    <ListItemSecondaryAction>
-                      <IconButton onClick={() => handleEditElement(element)}>
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleDeleteElement(element.id)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                ))}
+                {currentTemplate.json_layout.elements.map((element, index) => {
+                  const typeInfo = getTrackType(element.type)
+                  return (
+                    <ListItem 
+                      key={element.id}
+                      sx={{
+                        backgroundColor: typeInfo?.backgroundColor || 'transparent',
+                        borderRadius: 1,
+                        mb: 1,
+                        '&:hover': {
+                          backgroundColor: typeInfo ? `${typeInfo.backgroundColor}dd` : undefined,
+                        }
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
+                        <Box
+                          sx={{
+                            width: 4,
+                            height: 40,
+                            backgroundColor: typeInfo?.color || '#757575',
+                            borderRadius: 1,
+                          }}
+                        />
+                      </Box>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Chip
+                              label={element.type}
+                              sx={{
+                                backgroundColor: typeInfo?.color || '#757575',
+                                color: '#fff',
+                                fontWeight: 'bold',
+                              }}
+                              size="small"
+                            />
+                            <Typography variant="body1">
+                              {element.title || `${element.type} ${index + 1}`}
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              ({element.count}x {formatDuration(element.duration)})
+                            </Typography>
+                          </Box>
+                        }
+                        secondary={element.fallback ? `Fallback: ${element.fallback}` : undefined}
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton onClick={() => handleEditElement(element)}>
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton onClick={() => handleDeleteElement(element.id)}>
+                          <DeleteIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  )
+                })}
               </List>
 
               {currentTemplate.json_layout.elements.length === 0 && (
@@ -541,7 +558,11 @@ const ClockBuilder: React.FC = () => {
                           </Typography>
                           <Chip
                             label={item.element.type}
-                            color={elementTypes.find(t => t.value === item.element.type)?.color as any}
+                            sx={{
+                              backgroundColor: getTrackType(item.element.type)?.color || '#757575',
+                              color: '#fff',
+                              fontWeight: 'bold',
+                            }}
                             size="small"
                           />
                           <Typography variant="body1">

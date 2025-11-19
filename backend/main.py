@@ -18,7 +18,8 @@ from backend.routers import (
     advertisers, agencies, sales_reps, orders, spots, dayparts, daypart_categories, rotation_rules, traffic_logs, break_structures, copy, copy_assignments,
     invoices, payments, makegoods, audit_logs, log_revisions, inventory, revenue, sales_goals,
     webhooks, notifications, collaboration, backups, settings, users,
-    audio_cuts, live_reads, political_compliance, audio_delivery, audio_qc, help, proxy
+    audio_cuts, live_reads, political_compliance, audio_delivery, audio_qc, help, proxy,
+    production_orders, voice_talent, production_assignments, production_archive
 )
 from backend.middleware import AuthMiddleware, LoggingMiddleware
 from backend.models import user, track, campaign, clock_template, daily_log, voice_track, playback_history
@@ -88,10 +89,11 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",
-        "http://frontend:3000",
+        "http://frontend:3000",  # Internal container communication
         "https://log-dev.gayphx.com",
         "http://log-dev.gayphx.com",
+        "https://log.gayphx.com",
+        "http://log.gayphx.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -124,10 +126,12 @@ async def health_check():
 # Include routers
 # NOTE: Traefik strips /api prefix before forwarding, so routes are registered without /api
 # The paths will be /auth/login, /setup, etc. when they reach the backend
+# However, when accessing directly (not through Traefik), we need /api prefix
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(setup.router, prefix="/setup", tags=["Setup"])
-# NOTE: Traefik strips /api prefix, so all routes are registered without /api
+# Include tracks router with both /tracks and /api/tracks for compatibility
 app.include_router(tracks.router, prefix="/tracks", tags=["Tracks"])
+app.include_router(tracks.router, prefix="/api/tracks", tags=["Tracks"])  # For direct API access
 app.include_router(campaigns.router, prefix="/campaigns", tags=["Campaigns"])
 app.include_router(clocks.router, prefix="/clocks", tags=["Clock Templates"])
 app.include_router(logs.router, prefix="/logs", tags=["Logs"])
@@ -168,6 +172,10 @@ app.include_router(audio_delivery.router, prefix="", tags=["Audio Delivery"])
 app.include_router(audio_qc.router, prefix="", tags=["Audio QC"])
 app.include_router(help.router, prefix="/help", tags=["Help"])
 app.include_router(proxy.router, prefix="/proxy", tags=["Proxy"])
+app.include_router(production_orders.router, prefix="/production-orders", tags=["Production Orders"])
+app.include_router(voice_talent.router, prefix="/voice-talent", tags=["Voice Talent"])
+app.include_router(production_assignments.router, prefix="/production-assignments", tags=["Production Assignments"])
+app.include_router(production_archive.router, prefix="/production-archive", tags=["Production Archive"])
 
 
 @app.exception_handler(Exception)

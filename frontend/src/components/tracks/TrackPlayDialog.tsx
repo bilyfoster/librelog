@@ -7,8 +7,10 @@ import {
   Button,
   Typography,
   Box,
+  Chip,
 } from '@mui/material'
 import AudioPlayer from '../audio/AudioPlayer'
+import { getTrackType } from '../../utils/trackTypes'
 
 interface TrackPlayDialogProps {
   open: boolean
@@ -40,9 +42,22 @@ const TrackPlayDialog: React.FC<TrackPlayDialogProps> = ({
             }}
           />
           <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-              Type: {track.type || 'N/A'}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Type:
+              </Typography>
+              {track.type && (
+                <Chip
+                  label={track.type}
+                  size="small"
+                  sx={{
+                    backgroundColor: getTrackType(track.type)?.color || '#757575',
+                    color: '#fff',
+                    fontWeight: 'bold',
+                  }}
+                />
+              )}
+            </Box>
             <Typography variant="body2" color="text.secondary">
               Genre: {track.genre || 'N/A'}
             </Typography>

@@ -38,6 +38,12 @@ import InventoryDashboard from './pages/analytics/InventoryDashboard'
 import RevenueDashboard from './pages/analytics/RevenueDashboard'
 import SalesGoals from './pages/analytics/SalesGoals'
 import HelpCenter from './components/Help/HelpCenter'
+import ProductionOrders from './pages/production/ProductionOrders'
+import ProductionOrderDetail from './pages/production/ProductionOrderDetail'
+import ProducerDashboard from './pages/production/ProducerDashboard'
+import VoiceTalentPortal from './pages/production/VoiceTalentPortal'
+import ProductionArchive from './pages/production/ProductionArchive'
+import Profile from './pages/Profile'
 import { HelpPreferencesProvider } from './contexts/HelpPreferencesContext'
 
 function App() {
@@ -81,6 +87,12 @@ function App() {
           <Route path="analytics/inventory" element={<InventoryDashboard />} />
           <Route path="analytics/revenue" element={<RevenueDashboard />} />
           <Route path="analytics/sales-goals" element={<SalesGoals />} />
+          <Route path="production/orders" element={<ProductionOrders />} />
+          <Route path="production/orders/:id" element={<ProductionOrderDetail />} />
+          <Route path="production/dashboard" element={<ProducerDashboard />} />
+          <Route path="production/voice-talent" element={<VoiceTalentPortal />} />
+          <Route path="production/archive" element={<ProductionArchive />} />
+          <Route path="profile" element={<Profile />} />
           <Route path="help" element={<HelpCenter />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />

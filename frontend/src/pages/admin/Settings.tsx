@@ -35,6 +35,8 @@ import {
   Settings as SettingsIcon,
   Backup as BackupIcon,
   Webhook as WebhookIcon,
+  Palette as PaletteIcon,
+  Image as ImageIcon,
 } from '@mui/icons-material'
 import {
   getSettingsProxy,
@@ -72,6 +74,7 @@ const Settings: React.FC = () => {
   const [testDialog, setTestDialog] = useState<{ open: boolean; type: 'smtp' | 's3' | 'backblaze' | null }>({ open: false, type: null })
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [testLoading, setTestLoading] = useState(false)
+  const [logoUploading, setLogoUploading] = useState(false)
 
   const queryClient = useQueryClient()
 
@@ -128,6 +131,7 @@ const Settings: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] })
+      queryClient.removeQueries({ queryKey: ['settings'] }) // Force refetch
       setSaveMessage({ type: 'success', text: 'Settings saved successfully' })
       setTimeout(() => setSaveMessage(null), 3000)
     },
@@ -154,6 +158,14 @@ const Settings: React.FC = () => {
       settingsToSave[key] = {
         value: value || '',
         encrypted: isPassword,
+      }
+    }
+    
+    // Ensure logo_url is included if it exists in formData (even if empty string)
+    if (category === 'branding' && 'logo_url' in settings) {
+      settingsToSave['logo_url'] = {
+        value: settings.logo_url || '',
+        encrypted: false,
       }
     }
     
@@ -235,6 +247,7 @@ const Settings: React.FC = () => {
   }
 
   const categories = [
+    { id: 'branding', label: 'Branding', icon: <PaletteIcon /> },
     { id: 'general', label: 'General', icon: <SettingsIcon /> },
     { id: 'smtp', label: 'SMTP', icon: <EmailIcon /> },
     { id: 'storage', label: 'Storage', icon: <StorageIcon /> },
@@ -273,8 +286,151 @@ const Settings: React.FC = () => {
           </Tabs>
         </Box>
 
-        {/* General Settings */}
+        {/* Branding Settings */}
         <TabPanel value={tabValue} index={0}>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>
+                Branding Configuration
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Customize the appearance and name of your traffic system. Changes will be reflected in the header.
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="System Name"
+                value={formData.branding?.system_name || ''}
+                onChange={(e) => handleChange('branding', 'system_name', e.target.value)}
+                margin="normal"
+                helperText="Name displayed in the header"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Header Color"
+                value={formData.branding?.header_color || '#424242'}
+                onChange={(e) => handleChange('branding', 'header_color', e.target.value)}
+                margin="normal"
+                helperText="Hex color code (e.g., #424242). Ensure API status indicators remain visible."
+                InputProps={{
+                  startAdornment: (
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        backgroundColor: formData.branding?.header_color || '#424242',
+                        border: '1px solid #ccc',
+                        borderRadius: 1,
+                        mr: 1,
+                      }}
+                    />
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                Logo
+              </Typography>
+              {formData.branding?.logo_url && (
+                <Box sx={{ mb: 2 }}>
+                  <img 
+                    src={formData.branding.logo_url} 
+                    alt="Current logo" 
+                    style={{ maxHeight: 100, maxWidth: 300 }}
+                  />
+                </Box>
+              )}
+              <input
+                accept="image/*"
+                style={{ display: 'none' }}
+                id="logo-upload"
+                type="file"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  
+                  setLogoUploading(true)
+                  try {
+                    const formData = new FormData()
+                    formData.append('file', file)
+                    
+                    const token = localStorage.getItem('token')
+                    const response = await fetch('/api/settings/branding/upload-logo', {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                      },
+                      body: formData,
+                    })
+                    
+                    if (!response.ok) {
+                      const error = await response.json()
+                      throw new Error(error.detail || 'Failed to upload logo')
+                    }
+                    
+                    const result = await response.json()
+                    handleChange('branding', 'logo_url', result.logo_url)
+                    // Also save the logo_url to settings immediately
+                    await updateCategorySettings('branding', {
+                      logo_url: {
+                        value: result.logo_url,
+                        encrypted: false,
+                      }
+                    })
+                    queryClient.invalidateQueries({ queryKey: ['settings'] })
+                    setSaveMessage({ type: 'success', text: 'Logo uploaded and saved successfully' })
+                    setTimeout(() => setSaveMessage(null), 3000)
+                  } catch (error: any) {
+                    setSaveMessage({ type: 'error', text: error.message || 'Failed to upload logo' })
+                    setTimeout(() => setSaveMessage(null), 5000)
+                  } finally {
+                    setLogoUploading(false)
+                    // Reset input
+                    e.target.value = ''
+                  }
+                }}
+              />
+              <label htmlFor="logo-upload">
+                <Button
+                  variant="outlined"
+                  component="span"
+                  startIcon={<ImageIcon />}
+                  disabled={logoUploading}
+                  sx={{ mt: 1 }}
+                >
+                  {logoUploading ? 'Uploading...' : formData.branding?.logo_url ? 'Replace Logo' : 'Upload Logo'}
+                </Button>
+              </label>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Upload a logo image (PNG, JPG, GIF, SVG, or WebP, max 5MB). Logo will appear in the header and login page.
+              </Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <Typography variant="body2">
+                  <strong>Note:</strong> The header color should provide sufficient contrast for the API status indicators (green for online, red for offline) to remain clearly visible.
+                </Typography>
+              </Alert>
+            </Grid>
+            <Grid item xs={12}>
+              <Button
+                variant="contained"
+                startIcon={<SaveIcon />}
+                onClick={() => handleSave('branding')}
+                disabled={saveMutation.isPending}
+              >
+                {saveMutation.isPending ? 'Saving...' : 'Save Branding Settings'}
+              </Button>
+            </Grid>
+          </Grid>
+        </TabPanel>
+
+        {/* General Settings */}
+        <TabPanel value={tabValue} index={1}>
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <TextField
@@ -410,7 +566,7 @@ const Settings: React.FC = () => {
         </TabPanel>
 
         {/* Storage Settings */}
-        <TabPanel value={tabValue} index={2}>
+        <TabPanel value={tabValue} index={3}>
           <Typography variant="h6" gutterBottom>
             S3 Configuration
           </Typography>
@@ -521,7 +677,7 @@ const Settings: React.FC = () => {
         </TabPanel>
 
         {/* Backup Settings */}
-        <TabPanel value={tabValue} index={3}>
+        <TabPanel value={tabValue} index={4}>
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal">
@@ -571,7 +727,7 @@ const Settings: React.FC = () => {
         </TabPanel>
 
         {/* Integrations Settings */}
-        <TabPanel value={tabValue} index={4}>
+        <TabPanel value={tabValue} index={5}>
           <Alert severity="info" sx={{ mb: 2 }}>
             LibreTime configuration is loaded from environment variables (LIBRETIME_URL, LIBRETIME_API_KEY).
             Changes here will be saved to the database but environment variables take precedence at runtime.

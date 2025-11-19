@@ -7,7 +7,7 @@ from celery import Celery
 from backend.integrations.azuracast_sync import azuracast_sync
 
 # Celery configuration
-redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
 celery = Celery(
     "librelog",
@@ -21,6 +21,7 @@ celery = Celery(
         "backend.tasks.audio_delivery",
         "backend.tasks.political_archive",
         "backend.tasks.libretime_sync",
+        "backend.tasks.production_reminders",
     ]
 )
 
@@ -71,6 +72,10 @@ celery.conf.update(
         'generate-fcc-compliance-report': {
             'task': 'backend.tasks.political_archive.generate_fcc_compliance_report',
             'schedule': 604800.0,  # Run weekly
+        },
+        'production-deadline-reminders': {
+            'task': 'backend.tasks.production_reminders.send_production_deadline_reminders',
+            'schedule': 3600.0,  # Run hourly to check for approaching deadlines
         },
     },
 )

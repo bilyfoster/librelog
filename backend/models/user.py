@@ -18,7 +18,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     role = Column(
         String(20),
-        CheckConstraint("role IN ('admin', 'producer', 'dj', 'sales')"),
+        CheckConstraint("role IN ('admin', 'producer', 'dj', 'sales', 'production_director', 'voice_talent')"),
         nullable=False,
         default="dj"
     )

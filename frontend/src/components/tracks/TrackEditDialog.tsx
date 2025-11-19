@@ -11,8 +11,10 @@ import {
   MenuItem,
   Alert,
   CircularProgress,
+  Chip,
 } from '@mui/material'
 import { updateTrack } from '../../utils/api'
+import { TRACK_TYPES, getTrackType } from '../../utils/trackTypes'
 
 interface TrackEditDialogProps {
   open: boolean
@@ -20,19 +22,6 @@ interface TrackEditDialogProps {
   onClose: () => void
   onUpdate?: () => void
 }
-
-const TRACK_TYPES = [
-  { value: 'MUS', label: 'Music' },
-  { value: 'ADV', label: 'Ads' },
-  { value: 'NEW', label: 'News' },
-  { value: 'LIN', label: 'Liner' },
-  { value: 'INT', label: 'Interview' },
-  { value: 'PRO', label: 'Promo' },
-  { value: 'SHO', label: 'Show segment' },
-  { value: 'IDS', label: 'IDs' },
-  { value: 'COM', label: 'Community' },
-  { value: 'PSA', label: 'Public Service Announcement' },
-]
 
 const TrackEditDialog: React.FC<TrackEditDialogProps> = ({
   open,
@@ -114,9 +103,39 @@ const TrackEditDialog: React.FC<TrackEditDialogProps> = ({
             onChange={(e) => setFormData({ ...formData, type: e.target.value })}
             select
             fullWidth
+            InputProps={{
+              startAdornment: formData.type ? (
+                <Box sx={{ mr: 1 }}>
+                  <Chip
+                    label={formData.type}
+                    size="small"
+                    sx={{
+                      backgroundColor: getTrackType(formData.type)?.color || '#757575',
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      height: 24,
+                    }}
+                  />
+                </Box>
+              ) : undefined,
+            }}
           >
             {TRACK_TYPES.map((type) => (
-              <MenuItem key={type.value} value={type.value}>
+              <MenuItem 
+                key={type.value} 
+                value={type.value}
+                sx={{
+                  '&::before': {
+                    content: '""',
+                    display: 'inline-block',
+                    width: 12,
+                    height: 12,
+                    backgroundColor: type.color,
+                    borderRadius: '50%',
+                    mr: 1,
+                  }
+                }}
+              >
                 {type.label}
               </MenuItem>
             ))}

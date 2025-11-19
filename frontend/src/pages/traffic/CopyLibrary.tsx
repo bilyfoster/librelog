@@ -33,12 +33,19 @@ import {
   Search as SearchIcon,
   Visibility as VisibilityIcon,
   Assignment as AssignmentIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
+  Build as BuildIcon,
 } from '@mui/icons-material'
 import {
   getCopyProxy,
   deleteCopy,
   getOrdersProxy,
   getAdvertisersProxy,
+  setNeedsProduction,
+  approveCopy,
+  rejectCopy,
+  getCopyProductionStatus,
 } from '../../utils/api'
 import api from '../../utils/api'
 import CopyUpload from '../../components/copy/CopyUpload'
@@ -59,6 +66,10 @@ interface Copy {
   active: boolean
   created_at: string
   updated_at: string
+  needs_production?: boolean
+  copy_status?: string
+  copy_approval_status?: string
+  production_order_id?: number
 }
 
 const CopyLibrary: React.FC = () => {
@@ -134,6 +145,46 @@ const CopyLibrary: React.FC = () => {
       }
       setErrorMessage(message)
       console.error('Delete copy error:', error)
+    },
+  })
+
+  const needsProductionMutation = useMutation({
+    mutationFn: async ({ id, needs_production }: { id: number; needs_production: boolean }) => {
+      return await setNeedsProduction(id, needs_production)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['copy'] })
+      setErrorMessage(null)
+    },
+    onError: (error: any) => {
+      setErrorMessage(error?.response?.data?.detail || 'Failed to update production flag')
+    },
+  })
+
+  const approveCopyMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await approveCopy(id, true)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['copy'] })
+      queryClient.invalidateQueries({ queryKey: ['production-orders'] })
+      setErrorMessage(null)
+    },
+    onError: (error: any) => {
+      setErrorMessage(error?.response?.data?.detail || 'Failed to approve copy')
+    },
+  })
+
+  const rejectCopyMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await rejectCopy(id)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['copy'] })
+      setErrorMessage(null)
+    },
+    onError: (error: any) => {
+      setErrorMessage(error?.response?.data?.detail || 'Failed to reject copy')
     },
   })
 
@@ -289,6 +340,7 @@ const CopyLibrary: React.FC = () => {
                   <TableCell>Order</TableCell>
                   <TableCell>Expiration</TableCell>
                   <TableCell>Status</TableCell>
+                  <TableCell>Production</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -342,30 +394,98 @@ const CopyLibrary: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      <Tooltip title="View Details">
-                        <IconButton size="small" onClick={() => handleView(copy)}>
-                          <VisibilityIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Edit">
-                        <IconButton size="small" onClick={() => handleEdit(copy)}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Assign to Spot">
-                        <IconButton size="small" onClick={() => handleAssign(copy)}>
-                          <AssignmentIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDelete(copy.id)}
-                          color="error"
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      <Box display="flex" flexDirection="column" gap={0.5}>
+                        {copy.copy_approval_status && (
+                          <Chip
+                            label={copy.copy_approval_status}
+                            size="small"
+                            color={
+                              copy.copy_approval_status === 'approved'
+                                ? 'success'
+                                : copy.copy_approval_status === 'rejected'
+                                ? 'error'
+                                : 'default'
+                            }
+                          />
+                        )}
+                        {copy.needs_production && (
+                          <Chip label="Needs Production" size="small" color="warning" />
+                        )}
+                        {copy.production_order_id && (
+                          <Chip
+                            label={`PO: ${copy.production_order_id}`}
+                            size="small"
+                            color="info"
+                          />
+                        )}
+                        {copy.copy_status && copy.copy_status !== 'draft' && (
+                          <Chip label={copy.copy_status} size="small" />
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Box display="flex" gap={0.5}>
+                        <Tooltip title="View Details">
+                          <IconButton size="small" onClick={() => handleView(copy)}>
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Edit">
+                          <IconButton size="small" onClick={() => handleEdit(copy)}>
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Assign to Spot">
+                          <IconButton size="small" onClick={() => handleAssign(copy)}>
+                            <AssignmentIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        {copy.copy_approval_status === 'pending' && (
+                          <>
+                            <Tooltip title="Approve Copy">
+                              <IconButton
+                                size="small"
+                                onClick={() => approveCopyMutation.mutate(copy.id)}
+                                color="success"
+                              >
+                                <CheckCircleIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Reject Copy">
+                              <IconButton
+                                size="small"
+                                onClick={() => rejectCopyMutation.mutate(copy.id)}
+                                color="error"
+                              >
+                                <CancelIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        )}
+                        <Tooltip title={copy.needs_production ? 'Production Required' : 'Mark for Production'}>
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              needsProductionMutation.mutate({
+                                id: copy.id,
+                                needs_production: !copy.needs_production,
+                              })
+                            }
+                            color={copy.needs_production ? 'warning' : 'default'}
+                          >
+                            <BuildIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDelete(copy.id)}
+                            color="error"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}

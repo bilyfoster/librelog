@@ -664,12 +664,58 @@ async def get_settings_proxy(
 ):
     """Get settings - server-side proxy endpoint"""
     from backend.services.settings_service import SettingsService
+    import os
     
     try:
-        categories = ["general", "smtp", "storage", "backup", "integrations"]
+        categories = ["general", "branding", "smtp", "storage", "backup", "integrations"]
         result = {}
         for category in categories:
             result[category] = await SettingsService.get_category_settings(db, category)
+        
+        # Set default branding values only if not set in database
+        branding_settings = result.get("branding", {})
+        if not branding_settings.get("system_name") or not branding_settings["system_name"].get("value"):
+            branding_settings["system_name"] = {
+                "value": "GayPHX Radio Traffic System",
+                "encrypted": False,
+                "description": "Name of the traffic system displayed in the header"
+            }
+        if not branding_settings.get("header_color") or not branding_settings["header_color"].get("value"):
+            branding_settings["header_color"] = {
+                "value": "#424242",
+                "encrypted": False,
+                "description": "Header background color (hex code). Ensure API status indicators (green/red) remain visible."
+            }
+        if "logo_url" not in branding_settings:
+            branding_settings["logo_url"] = {
+                "value": "",
+                "encrypted": False,
+                "description": "URL to the logo image file (uploaded via logo upload endpoint)"
+            }
+        result["branding"] = branding_settings
+        
+        # Override integrations settings with environment variables if they exist
+        libretime_url = os.getenv("LIBRETIME_URL", "").rstrip("/api/v2").rstrip("/")
+        libretime_api_key = os.getenv("LIBRETIME_API_KEY", "")
+        
+        if libretime_url:
+            if "integrations" not in result:
+                result["integrations"] = {}
+            result["integrations"]["libretime_url"] = {
+                "value": libretime_url,
+                "encrypted": False,
+                "description": "LibreTime API URL (from environment variable)"
+            }
+        
+        if libretime_api_key:
+            if "integrations" not in result:
+                result["integrations"] = {}
+            result["integrations"]["libretime_api_key"] = {
+                "value": libretime_api_key[:10] + "..." if len(libretime_api_key) > 10 else libretime_api_key,
+                "encrypted": True,
+                "description": "LibreTime API Key (from environment variable, masked)"
+            }
+        
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch settings: {str(e)}")

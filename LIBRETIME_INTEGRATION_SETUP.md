@@ -121,3 +121,4 @@ docker compose exec postgres psql -U libretime -d libretime -c "SELECT code, typ
   - LibreTime: `docker/config.yml`
   - LibreLog: `.env` file (to be added)
 
+

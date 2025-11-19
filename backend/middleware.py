@@ -50,10 +50,24 @@ class AuthMiddleware(BaseHTTPMiddleware):
     """Middleware for JWT token validation"""
     
     async def dispatch(self, request: Request, call_next):
-        # Skip auth for health check and docs
-        # NOTE: Traefik strips /api prefix before forwarding, so paths come as /auth/login not /api/auth/login
+        # Skip auth for health check, docs, and public endpoints
+        # NOTE: Traefik may or may not strip /api prefix depending on configuration
+        # Check both with and without /api prefix
         path = request.url.path
-        if path in ["/api/health", "/health", "/docs", "/redoc", "/openapi.json", "/"] or path.startswith("/api/auth") or path.startswith("/api/setup") or path.startswith("/auth") or path.startswith("/setup"):
+        path_without_api = path.replace("/api", "", 1) if path.startswith("/api") else path
+        
+        if (path in ["/api/health", "/health", "/docs", "/redoc", "/openapi.json", "/"] or 
+            path_without_api in ["/health", "/docs", "/redoc", "/openapi.json", "/"] or
+            path.startswith("/api/auth") or 
+            path.startswith("/api/setup") or 
+            path.startswith("/auth") or 
+            path.startswith("/setup") or
+            path.endswith("/preview") or  # Preview endpoints are public (redirects to LibreTime)
+            path_without_api.endswith("/preview") or  # Also check without /api prefix
+            path.startswith("/api/settings/branding/logo/") or  # Logo files are public
+            path_without_api.startswith("/settings/branding/logo/") or  # Also check without /api prefix
+            path == "/api/settings/branding/public" or  # Public branding endpoint
+            path_without_api == "/settings/branding/public"):  # Also check without /api prefix
             return await call_next(request)
         
         # Extract token from Authorization header

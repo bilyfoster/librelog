@@ -55,10 +55,12 @@ const HelpCenter: React.FC = () => {
 
   const { data: workflowsData } = useHelpArticles(undefined, undefined, tabValue === 0 ? searchQuery : undefined)
   const { data: conceptsData } = useHelpArticles(undefined, undefined, tabValue === 1 ? searchQuery : undefined)
+  const { data: documentationData } = useHelpArticles(undefined, undefined, tabValue === 3 ? searchQuery : undefined)
   const { data: searchResults } = useHelpSearch(searchQuery)
 
   const workflows = workflowsData?.articles.filter(a => a.type === 'workflow') || []
   const concepts = conceptsData?.articles.filter(a => a.type === 'concept') || []
+  const documentation = documentationData?.articles.filter(a => a.type === 'documentation') || []
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
@@ -77,7 +79,7 @@ const HelpCenter: React.FC = () => {
     setModalOpen(true)
   }
 
-  const showSearchResults = searchQuery.length > 0 && tabValue === 3
+  const showSearchResults = searchQuery.length > 0 && tabValue === 4
 
   return (
     <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto', p: 3 }}>
@@ -108,6 +110,7 @@ const HelpCenter: React.FC = () => {
           <Tab icon={<WorkflowIcon />} label="Workflows" iconPosition="start" />
           <Tab icon={<ConceptIcon />} label="Concepts" iconPosition="start" />
           <Tab icon={<BookIcon />} label="Terminology" iconPosition="start" />
+          <Tab icon={<BookIcon />} label="Documentation" iconPosition="start" />
           <Tab icon={<SearchIcon />} label="Search" iconPosition="start" />
         </Tabs>
 
@@ -171,6 +174,35 @@ const HelpCenter: React.FC = () => {
         </TabPanel>
 
         <TabPanel value={tabValue} index={3}>
+          <Typography variant="h6" gutterBottom>
+            Documentation
+          </Typography>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            Comprehensive guides and reference documentation for LibreLog.
+          </Typography>
+          <List>
+            {documentation.map((doc) => (
+              <ListItem key={doc.id} disablePadding>
+                <ListItemButton onClick={() => handleArticleClick(doc.id)}>
+                  <ListItemText
+                    primary={doc.title}
+                    secondary={doc.description}
+                  />
+                  {doc.category && (
+                    <Chip label={doc.category} size="small" sx={{ ml: 2 }} />
+                  )}
+                </ListItemButton>
+              </ListItem>
+            ))}
+            {documentation.length === 0 && (
+              <Typography variant="body2" color="text.secondary">
+                No documentation found. {searchQuery && 'Try a different search term.'}
+              </Typography>
+            )}
+          </List>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={4}>
           {showSearchResults && searchResults ? (
             <Box>
               {searchResults.results.articles.length > 0 && (

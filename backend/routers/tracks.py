@@ -213,7 +213,10 @@ async def preview_track(
     track_id: int,
     db: AsyncSession = Depends(get_db)
 ):
-    """Preview/play a track - proxies file from LibreTime"""
+    """
+    Preview/play a track - redirects to LibreTime file download.
+    This endpoint is public (no auth required) as it only redirects to LibreTime.
+    """
     result = await db.execute(select(Track).where(Track.id == track_id))
     track = result.scalar_one_or_none()
     
@@ -353,22 +356,72 @@ async def preview_track(
     std_logger.info(f"Returning redirect to LibreTime for track {track_id}")
     
     if track.libretime_id:
-        # Return a redirect to LibreTime's download endpoint
-        # The browser will handle the X-Accel-Redirect
-        download_url = f"{libretime_url}/api/v2/files/{track.libretime_id}/download"
+        # Proxy the file from LibreTime to avoid authentication issues in browser
+        # Prefer internal URL (container name) for server-to-server communication
+        # Fall back to public URL if internal URL not configured
+        internal_url = os.getenv("LIBRETIME_INTERNAL_URL", "")  # e.g., http://nginx:8080
+        api_url = internal_url if internal_url else os.getenv("LIBRETIME_API_URL", libretime_url)
+        if not api_url:
+            api_url = os.getenv("LIBRETIME_URL", "").rstrip("/api/v2").rstrip("/")
         
-        # If libretime_url is internal (http://libretime-api-1:9001), we need to use the public URL
-        # Check if we have a public URL configured
-        public_libretime_url = os.getenv("LIBRETIME_PUBLIC_URL", "")
-        if public_libretime_url:
-            download_url = f"{public_libretime_url.rstrip('/api/v2').rstrip('/')}/api/v2/files/{track.libretime_id}/download"
-            return RedirectResponse(url=download_url)
+        if api_url and libretime_api_key:
+            # Clean up the URL
+            api_url = api_url.rstrip('/api/v2').rstrip('/')
+            download_url = f"{api_url}/api/v2/files/{track.libretime_id}/download"
+            std_logger.info(f"Proxying track from LibreTime: {download_url}")
+            
+            try:
+                # Fetch file from LibreTime with API key
+                async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
+                    headers = {"Authorization": f"Api-Key {libretime_api_key}"}
+                    response = await client.get(download_url, headers=headers)
+                    
+                    if response.status_code == 200:
+                        # Determine content type from response or file extension
+                        content_type = response.headers.get("content-type", "")
+                        # If content-type is HTML, it might be a redirect page - check file extension
+                        if "text/html" in content_type or not content_type:
+                            # Determine from filepath or default to audio/mpeg
+                            if track.filepath and track.filepath.endswith((".mp3", ".MP3")):
+                                content_type = "audio/mpeg"
+                            elif track.filepath and track.filepath.endswith((".ogg", ".OGG")):
+                                content_type = "audio/ogg"
+                            elif track.filepath and track.filepath.endswith((".wav", ".WAV")):
+                                content_type = "audio/wav"
+                            else:
+                                content_type = "audio/mpeg"  # Default
+                        
+                        # Clean up content-type (remove charset if present for audio)
+                        if "charset" in content_type:
+                            content_type = content_type.split(";")[0].strip()
+                        
+                        # Stream the file to the browser
+                        return StreamingResponse(
+                            iter([response.content]),
+                            media_type=content_type,
+                            headers={
+                                "Content-Disposition": f'inline; filename="{track.title or "track"}.mp3"',
+                                "Accept-Ranges": "bytes",
+                                "Content-Length": str(len(response.content)),
+                            }
+                        )
+                    else:
+                        std_logger.error(f"LibreTime returned status {response.status_code}")
+                        raise HTTPException(
+                            status_code=response.status_code,
+                            detail=f"Failed to fetch track from LibreTime: {response.status_code}"
+                        )
+            except Exception as e:
+                std_logger.error(f"Error proxying track: {e}", exc_info=True)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to proxy track from LibreTime: {str(e)}"
+                )
         else:
-            # Can't redirect to internal URL, return error
-            std_logger.error("No public LibreTime URL configured, cannot redirect")
+            std_logger.error("LibreTime API URL or API key not configured")
             raise HTTPException(
                 status_code=501,
-                detail="Preview requires LIBRETIME_PUBLIC_URL to be configured for browser access"
+                detail="Preview requires LIBRETIME_API_URL and LIBRETIME_API_KEY to be configured"
             )
     
     logger.error("All preview methods failed", track_id=track_id, libretime_id=track.libretime_id, filepath=track.filepath)

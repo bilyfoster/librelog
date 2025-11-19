@@ -712,6 +712,158 @@ class ReportService:
             "message": "CSV report generated successfully"
         }
     
+    async def generate_production_turnaround_report(
+        self,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None
+    ) -> Dict[str, Any]:
+        """Generate production turnaround time report"""
+        from backend.models.production_order import ProductionOrder, ProductionOrderStatus
+        from sqlalchemy import select, and_, func
+        from datetime import datetime, timezone
+        
+        query = select(ProductionOrder)
+        
+        if start_date:
+            query = query.where(ProductionOrder.created_at >= datetime.combine(start_date, datetime.min.time()).replace(tzinfo=timezone.utc))
+        if end_date:
+            query = query.where(ProductionOrder.created_at <= datetime.combine(end_date, datetime.max.time()).replace(tzinfo=timezone.utc))
+        
+        query = query.where(
+            ProductionOrder.status.in_([
+                ProductionOrderStatus.COMPLETED,
+                ProductionOrderStatus.DELIVERED
+            ])
+        )
+        
+        result = await self.db.execute(query)
+        orders = result.scalars().all()
+        
+        turnaround_times = []
+        for order in orders:
+            if order.completed_at and order.created_at:
+                turnaround = (order.completed_at - order.created_at).total_seconds() / 3600  # Hours
+                turnaround_times.append({
+                    "po_number": order.po_number,
+                    "client_name": order.client_name,
+                    "created_at": order.created_at.isoformat(),
+                    "completed_at": order.completed_at.isoformat(),
+                    "turnaround_hours": round(turnaround, 2),
+                    "turnaround_days": round(turnaround / 24, 2)
+                })
+        
+        avg_turnaround = sum(t["turnaround_hours"] for t in turnaround_times) / len(turnaround_times) if turnaround_times else 0
+        
+        return {
+            "report_type": "production_turnaround",
+            "start_date": start_date.isoformat() if start_date else None,
+            "end_date": end_date.isoformat() if end_date else None,
+            "total_orders": len(turnaround_times),
+            "average_turnaround_hours": round(avg_turnaround, 2),
+            "average_turnaround_days": round(avg_turnaround / 24, 2),
+            "orders": turnaround_times
+        }
+    
+    async def generate_production_workload_report(
+        self,
+        user_id: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Generate production workload report by user"""
+        from backend.models.production_assignment import ProductionAssignment, AssignmentStatus
+        from backend.models.production_order import ProductionOrder, ProductionOrderStatus
+        from sqlalchemy import select, and_, func
+        from backend.models.user import User
+        
+        query = select(
+            ProductionAssignment.user_id,
+            func.count(ProductionAssignment.id).label('total_assignments'),
+            func.count(
+                func.case(
+                    (ProductionAssignment.status == AssignmentStatus.IN_PROGRESS, 1),
+                    else_=None
+                )
+            ).label('in_progress'),
+            func.count(
+                func.case(
+                    (ProductionAssignment.status == AssignmentStatus.COMPLETED, 1),
+                    else_=None
+                )
+            ).label('completed')
+        ).group_by(ProductionAssignment.user_id)
+        
+        if user_id:
+            query = query.where(ProductionAssignment.user_id == user_id)
+        
+        result = await self.db.execute(query)
+        workload_data = result.all()
+        
+        workload_report = []
+        for row in workload_data:
+            user_result = await self.db.execute(
+                select(User).where(User.id == row.user_id)
+            )
+            user = user_result.scalar_one_or_none()
+            
+            workload_report.append({
+                "user_id": row.user_id,
+                "username": user.username if user else "Unknown",
+                "role": user.role if user else "Unknown",
+                "total_assignments": row.total_assignments,
+                "in_progress": row.in_progress,
+                "completed": row.completed,
+                "pending": row.total_assignments - row.in_progress - row.completed
+            })
+        
+        return {
+            "report_type": "production_workload",
+            "workload_by_user": workload_report
+        }
+    
+    async def generate_missed_deadlines_report(
+        self,
+        days_overdue: int = 0
+    ) -> Dict[str, Any]:
+        """Generate report of production orders with missed deadlines"""
+        from backend.models.production_order import ProductionOrder, ProductionOrderStatus
+        from sqlalchemy import select, and_
+        from datetime import datetime, timezone, timedelta
+        
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_overdue)
+        
+        result = await self.db.execute(
+            select(ProductionOrder)
+            .where(
+                and_(
+                    ProductionOrder.deadline.isnot(None),
+                    ProductionOrder.deadline < cutoff_date,
+                    ProductionOrder.status.notin_([
+                        ProductionOrderStatus.COMPLETED,
+                        ProductionOrderStatus.DELIVERED,
+                        ProductionOrderStatus.CANCELLED
+                    ])
+                )
+            )
+            .order_by(ProductionOrder.deadline.asc())
+        )
+        overdue_orders = result.scalars().all()
+        
+        overdue_list = []
+        for order in overdue_orders:
+            days_overdue_count = (datetime.now(timezone.utc) - order.deadline).days if order.deadline else 0
+            overdue_list.append({
+                "po_number": order.po_number,
+                "client_name": order.client_name,
+                "deadline": order.deadline.isoformat() if order.deadline else None,
+                "days_overdue": days_overdue_count,
+                "status": order.status.value if hasattr(order.status, 'value') else str(order.status)
+            })
+        
+        return {
+            "report_type": "missed_deadlines",
+            "total_overdue": len(overdue_list),
+            "orders": overdue_list
+        }
+    
     async def _get_report_data(self, report_type: str, report_params: Dict[str, Any]) -> Dict[str, Any]:
         """Get report data based on type"""
         # This is a helper method to fetch data for different report types
@@ -743,6 +895,16 @@ class ReportService:
             start_date = datetime.fromisoformat(report_params.get("start_date", date.today().isoformat())).date()
             end_date = datetime.fromisoformat(report_params.get("end_date", date.today().isoformat())).date()
             return await self.generate_fcc_compliance_log(start_date, end_date)
+        elif report_type == "production_turnaround":
+            start_date = datetime.fromisoformat(report_params.get("start_date")).date() if report_params.get("start_date") else None
+            end_date = datetime.fromisoformat(report_params.get("end_date")).date() if report_params.get("end_date") else None
+            return await self.generate_production_turnaround_report(start_date, end_date)
+        elif report_type == "production_workload":
+            user_id = report_params.get("user_id")
+            return await self.generate_production_workload_report(user_id)
+        elif report_type == "missed_deadlines":
+            days_overdue = report_params.get("days_overdue", 0)
+            return await self.generate_missed_deadlines_report(days_overdue)
         else:
             # Default: return empty data structure
             return {"data": []}

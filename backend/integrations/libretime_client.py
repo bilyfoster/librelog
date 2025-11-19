@@ -17,7 +17,10 @@ class LibreTimeClient(APIConnector):
     """LibreTime API client"""
     
     def __init__(self):
-        base_url = os.getenv("LIBRETIME_API_URL", "https://dev-studio.gayphx.com")
+        # For internal server-to-server calls, prefer internal URL (container name)
+        # For external calls, use public URL
+        internal_url = os.getenv("LIBRETIME_INTERNAL_URL", "")
+        base_url = internal_url if internal_url else os.getenv("LIBRETIME_API_URL", "https://dev-studio.gayphx.com")
         # Remove /api suffix if present, we'll add it in endpoints
         if base_url.endswith("/api"):
             base_url = base_url[:-4]

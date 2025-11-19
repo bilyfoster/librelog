@@ -484,6 +484,40 @@ async def get_fcc_compliance_log(
     return await report_service.generate_fcc_compliance_log(start_date, end_date)
 
 
+@router.get("/production/turnaround")
+async def get_production_turnaround_report(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Production turnaround time report"""
+    report_service = ReportService(db)
+    return await report_service.generate_production_turnaround_report(start_date, end_date)
+
+
+@router.get("/production/workload")
+async def get_production_workload_report(
+    user_id: Optional[int] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Production workload report by user"""
+    report_service = ReportService(db)
+    return await report_service.generate_production_workload_report(user_id)
+
+
+@router.get("/production/missed-deadlines")
+async def get_missed_deadlines_report(
+    days_overdue: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Missed production deadlines report"""
+    report_service = ReportService(db)
+    return await report_service.generate_missed_deadlines_report(days_overdue)
+
+
 @router.post("/export")
 async def export_report(
     report_type: str = Query(...),

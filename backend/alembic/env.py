@@ -46,7 +46,7 @@ target_metadata = Base.metadata
 
 def get_url():
     """Get database URL from environment"""
-    return os.getenv("POSTGRES_URI", "postgresql://librelog:password@localhost:5432/librelog")
+    return os.getenv("POSTGRES_URI", "postgresql://librelog:password@db:5432/librelog")
 
 
 def run_migrations_offline() -> None:

@@ -20,8 +20,13 @@ from backend.models.daypart_category import DaypartCategory
 from backend.models.rotation_rule import RotationRule, RotationType
 from backend.models.traffic_log import TrafficLog, TrafficLogType
 from backend.models.break_structure import BreakStructure
-from backend.models.copy import Copy
+from backend.models.copy import Copy, CopyStatus, CopyApprovalStatus
 from backend.models.copy_assignment import CopyAssignment
+from backend.models.production_order import ProductionOrder, ProductionOrderType, ProductionOrderStatus
+from backend.models.production_assignment import ProductionAssignment, AssignmentType, AssignmentStatus
+from backend.models.voice_talent_request import VoiceTalentRequest, TalentType, TalentRequestStatus
+from backend.models.production_revision import ProductionRevision
+from backend.models.production_comment import ProductionComment
 from backend.models.invoice import Invoice, InvoiceStatus
 from backend.models.invoice_line import InvoiceLine
 from backend.models.payment import Payment
@@ -64,7 +69,20 @@ __all__ = [
     "TrafficLogType",
     "BreakStructure",
     "Copy",
+    "CopyStatus",
+    "CopyApprovalStatus",
     "CopyAssignment",
+    "ProductionOrder",
+    "ProductionOrderType",
+    "ProductionOrderStatus",
+    "ProductionAssignment",
+    "AssignmentType",
+    "AssignmentStatus",
+    "VoiceTalentRequest",
+    "TalentType",
+    "TalentRequestStatus",
+    "ProductionRevision",
+    "ProductionComment",
     "Invoice",
     "InvoiceLine",
     "Payment",

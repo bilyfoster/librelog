@@ -2,10 +2,15 @@
 Settings router for application configuration management
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, EmailStr
+from pathlib import Path
+import os
+import aiofiles
+from datetime import datetime
 
 from backend.database import get_db
 from backend.models.user import User
@@ -13,6 +18,24 @@ from backend.routers.auth import get_current_user
 from backend.services.settings_service import SettingsService
 
 router = APIRouter(prefix="/settings", tags=["settings"])
+
+# Logo storage directory - create lazily with fallback
+def _get_logo_dir() -> Path:
+    """Get logo directory, creating it if needed with fallback"""
+    logo_dir = Path(os.getenv("LOGO_DIR", "/var/lib/librelog/logos"))
+    try:
+        logo_dir.mkdir(parents=True, exist_ok=True)
+        return logo_dir
+    except (PermissionError, FileNotFoundError, OSError):
+        # Fallback to /tmp if /var/lib is not writable
+        fallback_dir = Path("/tmp/librelog/logos")
+        try:
+            fallback_dir.mkdir(parents=True, exist_ok=True)
+            return fallback_dir
+        except Exception:
+            # Last resort: use /tmp directly
+            Path("/tmp").mkdir(parents=True, exist_ok=True)
+            return Path("/tmp")
 
 
 class SettingValue(BaseModel):
@@ -53,11 +76,33 @@ async def get_all_settings(
 ):
     """Get all settings grouped by category"""
     import os
-    categories = ["general", "smtp", "storage", "backup", "integrations"]
+    categories = ["general", "branding", "smtp", "storage", "backup", "integrations"]
     result = {}
     
     for category in categories:
         result[category] = await SettingsService.get_category_settings(db, category)
+    
+    # Set default branding values only if not set in database
+    branding_settings = result.get("branding", {})
+    if not branding_settings.get("system_name") or not branding_settings["system_name"].get("value"):
+        branding_settings["system_name"] = {
+            "value": "GayPHX Radio Traffic System",
+            "encrypted": False,
+            "description": "Name of the traffic system displayed in the header"
+        }
+    if not branding_settings.get("header_color") or not branding_settings["header_color"].get("value"):
+        branding_settings["header_color"] = {
+            "value": "#424242",
+            "encrypted": False,
+            "description": "Header background color (hex code). Ensure API status indicators (green/red) remain visible."
+        }
+    if "logo_url" not in branding_settings:
+        branding_settings["logo_url"] = {
+            "value": "",
+            "encrypted": False,
+            "description": "URL to the logo image file (uploaded via logo upload endpoint)"
+        }
+    result["branding"] = branding_settings
     
     # Override integrations settings with environment variables if they exist
     # This ensures the UI shows the actual values being used
@@ -93,6 +138,28 @@ async def get_category_settings(
 ):
     """Get settings for a specific category"""
     settings = await SettingsService.get_category_settings(db, category)
+    
+    # For branding category, apply defaults if not set
+    if category == "branding":
+        if not settings.get("system_name") or not settings["system_name"].get("value"):
+            settings["system_name"] = {
+                "value": "GayPHX Radio Traffic System",
+                "encrypted": False,
+                "description": "Name of the traffic system displayed in the header"
+            }
+        if not settings.get("header_color") or not settings["header_color"].get("value"):
+            settings["header_color"] = {
+                "value": "#424242",
+                "encrypted": False,
+                "description": "Header background color (hex code). Ensure API status indicators (green/red) remain visible."
+            }
+        if "logo_url" not in settings:
+            settings["logo_url"] = {
+                "value": "",
+                "encrypted": False,
+                "description": "URL to the logo image file (uploaded via logo upload endpoint)"
+            }
+    
     return settings
 
 
@@ -163,4 +230,130 @@ async def test_backblaze_connection(
         test_data.bucket_name
     )
     return result
+
+
+@router.post("/branding/upload-logo")
+async def upload_logo(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload logo image for branding"""
+    # Check if user is admin
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can upload logos"
+        )
+    
+    # Validate file type (images only)
+    allowed_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'}
+    file_ext = Path(file.filename).suffix.lower() if file.filename else ''
+    
+    if file_ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type. Allowed: {', '.join(allowed_extensions)}"
+        )
+    
+    # Validate file size (max 5MB)
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(
+            status_code=400,
+            detail="File size exceeds 5MB limit"
+        )
+    
+    # Generate filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_filename = f"logo_{timestamp}{file_ext}"
+    logo_dir = _get_logo_dir()
+    file_path = logo_dir / safe_filename
+    
+    # Save file
+    try:
+        async with aiofiles.open(file_path, 'wb') as f:
+            await f.write(content)
+        
+        # Generate file URL
+        file_url = f"/api/settings/branding/logo/{safe_filename}"
+        
+        # Save logo URL to settings
+        await SettingsService.set_setting(
+            db,
+            "branding",
+            "logo_url",
+            file_url,
+            encrypted=False,
+            description="URL to the logo image file"
+        )
+        
+        return {
+            "success": True,
+            "logo_url": file_url,
+            "filename": safe_filename
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save logo: {str(e)}"
+        )
+
+
+@router.get("/branding/public")
+async def get_public_branding(
+    db: AsyncSession = Depends(get_db)
+    # No auth required - public branding info for login page
+):
+    """Get public branding settings (logo and system name) - no auth required"""
+    branding_settings = await SettingsService.get_category_settings(db, "branding")
+    
+    # Apply defaults if not set
+    system_name = "GayPHX Radio Traffic System"
+    header_color = "#424242"
+    logo_url = ""
+    
+    if branding_settings.get("system_name") and branding_settings["system_name"].get("value"):
+        system_name = branding_settings["system_name"]["value"]
+    if branding_settings.get("header_color") and branding_settings["header_color"].get("value"):
+        header_color = branding_settings["header_color"]["value"]
+    if branding_settings.get("logo_url") and branding_settings["logo_url"].get("value"):
+        logo_url = branding_settings["logo_url"]["value"]
+    
+    return {
+        "system_name": system_name,
+        "header_color": header_color,
+        "logo_url": logo_url
+    }
+
+
+@router.get("/branding/logo/{filename}")
+async def get_logo(filename: str):
+    """Serve logo file (public endpoint - no auth required)"""
+    logo_dir = _get_logo_dir()
+    file_path = logo_dir / filename
+    
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Logo not found"
+        )
+    
+    # Determine content type
+    ext = file_path.suffix.lower()
+    content_types = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.svg': 'image/svg+xml',
+        '.webp': 'image/webp',
+    }
+    media_type = content_types.get(ext, 'image/png')
+    
+    return FileResponse(
+        file_path,
+        media_type=media_type,
+        filename=filename
+    )
 

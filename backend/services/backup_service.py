@@ -131,7 +131,7 @@ class BackupService:
     @staticmethod
     async def _dump_database(temp_dir: str, backup: Backup):
         """Create PostgreSQL database dump"""
-        db_url = os.getenv("POSTGRES_URI", "postgresql://librelog:password@localhost:5432/librelog")
+        db_url = os.getenv("POSTGRES_URI", "postgresql://librelog:password@db:5432/librelog")
         
         # Parse database URL
         if db_url.startswith("postgresql://"):
@@ -308,7 +308,7 @@ class BackupService:
         if not os.path.exists(dump_file):
             raise ValueError("Database dump not found in backup")
         
-        db_url = os.getenv("POSTGRES_URI", "postgresql://librelog:password@localhost:5432/librelog")
+        db_url = os.getenv("POSTGRES_URI", "postgresql://librelog:password@db:5432/librelog")
         # Similar parsing as in _dump_database
         # ... (implementation similar to dump)
         

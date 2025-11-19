@@ -24,19 +24,7 @@ import {
 import { Search, Sync } from '@mui/icons-material'
 import api from '../../utils/api'
 import { syncTracks, getTracksAggregated } from '../../utils/api'
-
-const TRACK_TYPES = [
-  { value: 'MUS', label: 'Music', color: 'primary' },
-  { value: 'ADV', label: 'Ads', color: 'secondary' },
-  { value: 'NEW', label: 'News', color: 'warning' },
-  { value: 'LIN', label: 'Liner', color: 'info' },
-  { value: 'INT', label: 'Interview', color: 'success' },
-  { value: 'PRO', label: 'Promo', color: 'error' },
-  { value: 'SHO', label: 'Show segment', color: 'default' },
-  { value: 'IDS', label: 'IDs', color: 'default' },
-  { value: 'COM', label: 'Community', color: 'default' },
-  { value: 'PSA', label: 'Public Service Announcement', color: 'info' },
-]
+import { TRACK_TYPES, getTrackType, getTrackTypeChipColor, getTrackTypeBackgroundColor } from '../../utils/trackTypes'
 
 const SpotsLibrary: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -83,8 +71,7 @@ const SpotsLibrary: React.FC = () => {
   }
 
   const getTypeColor = (type: string) => {
-    const typeInfo = TRACK_TYPES.find(t => t.value === type)
-    return typeInfo?.color || 'default'
+    return getTrackTypeChipColor(type)
   }
 
   if (isLoading && !tracksData) {
@@ -132,8 +119,26 @@ const SpotsLibrary: React.FC = () => {
             {TRACK_TYPES.map((type) => (
               <Tab
                 key={type.value}
-                label={type.label}
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        backgroundColor: type.color,
+                        borderRadius: '50%',
+                      }}
+                    />
+                    {type.label}
+                  </Box>
+                }
                 value={type.value}
+                sx={{
+                  '&.Mui-selected': {
+                    color: type.color,
+                    fontWeight: 'bold',
+                  }
+                }}
               />
             ))}
           </Tabs>
@@ -187,21 +192,49 @@ const SpotsLibrary: React.FC = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  tracks.map((track: any) => (
-                    <TableRow key={track.id}>
-                      <TableCell>{track.title || 'Untitled'}</TableCell>
-                      <TableCell>{track.artist || 'Unknown'}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={track.type || selectedType}
-                          color={getTypeColor(track.type || selectedType) as any}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>{track.duration ? `${Math.floor(track.duration / 60)}:${(track.duration % 60).toString().padStart(2, '0')}` : 'N/A'}</TableCell>
-                      <TableCell>{track.genre || '-'}</TableCell>
-                    </TableRow>
-                  ))
+                  tracks.map((track: any) => {
+                    const trackType = track.type || selectedType
+                    const typeInfo = getTrackType(trackType)
+                    return (
+                      <TableRow 
+                        key={track.id}
+                        sx={{
+                          backgroundColor: typeInfo?.backgroundColor || 'transparent',
+                          '&:hover': {
+                            backgroundColor: typeInfo ? `${typeInfo.backgroundColor}dd` : undefined,
+                          }
+                        }}
+                      >
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box
+                              sx={{
+                                width: 4,
+                                height: 40,
+                                backgroundColor: typeInfo?.color || '#757575',
+                                borderRadius: 1,
+                              }}
+                            />
+                            <Typography>{track.title || 'Untitled'}</Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>{track.artist || 'Unknown'}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={trackType}
+                            sx={{
+                              backgroundColor: typeInfo?.color || '#757575',
+                              color: '#fff',
+                              fontWeight: 'bold',
+                            }}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>{track.duration ? `${Math.floor(track.duration / 60)}:${(track.duration % 60).toString().padStart(2, '0')}` : 'N/A'}</TableCell>
+                        <TableCell>{track.genre || '-'}</TableCell>
+                      </TableRow>
+                    )
+                  })
                 )}
               </TableBody>
             </Table>
