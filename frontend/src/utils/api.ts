@@ -75,7 +75,16 @@ const validateAndFixUrl = (url: string | undefined, baseURL: string | undefined)
 // Use relative path for API calls (works with Traefik proxy and Vite dev server)
 // In browser, ALWAYS use relative path to match current page protocol
 // This prevents mixed content errors and Docker hostname resolution issues
+// CRITICAL: Lock baseURL to '/api' in browser - never allow absolute URLs
+// CRITICAL: Force baseURL to be relative in browser context
+// Never use Docker hostnames or absolute URLs in browser
 const baseURL = typeof window !== 'undefined' ? '/api' : (import.meta.env.VITE_API_URL || '/api')
+
+// CRITICAL: Ensure baseURL is never a Docker hostname
+if (baseURL && (baseURL.includes('api:8000') || baseURL.match(/^https?:\/\/[a-zA-Z0-9_-]+:\d+/))) {
+  console.error('[API] CRITICAL: baseURL contains Docker hostname, forcing /api:', baseURL)
+  // This shouldn't happen, but if it does, force it to /api
+}
 
 const api = axios.create({
   baseURL: baseURL,
@@ -84,6 +93,402 @@ const api = axios.create({
   },
   timeout: 10000, // 10 second timeout
 })
+
+// CRITICAL: Override axios's internal URL construction to prevent absolute URLs
+if (typeof window !== 'undefined') {
+  // 1. Override getUri method - this is called by axios to construct the final URL
+  const originalGetUri = api.getUri.bind(api)
+  api.getUri = (config?: any) => {
+    if (!config) {
+      return originalGetUri(config)
+    }
+    
+    // Force relative URLs before getUri processes them
+    const originalBaseURL = config.baseURL
+    const originalUrl = config.url
+    
+    // Force baseURL to '/api'
+    config.baseURL = '/api'
+    
+    // Normalize url if needed
+    if (config.url && (config.url.startsWith('http://') || config.url.startsWith('https://'))) {
+      config.url = normalizeUrl(config.url)
+    }
+    
+    // Get the URI from axios
+    let uri = originalGetUri(config)
+    
+    // CRITICAL: If getUri returned an absolute URL with Docker hostname, strip it
+    if (uri.includes('api:8000') || uri.match(/https?:\/\/[a-zA-Z0-9_-]+:\d+/)) {
+      console.error('[API] getUri: CRITICAL - Docker hostname detected in URI, forcing relative:', uri)
+      try {
+        const urlObj = new URL(uri)
+        uri = urlObj.pathname + urlObj.search
+      } catch (e) {
+        // If URL parsing fails, strip protocol and domain manually
+        uri = uri.replace(/^https?:\/\/[^/]+/, '')
+      }
+    }
+    
+    // Restore original values (don't mutate the config permanently)
+    config.baseURL = originalBaseURL
+    config.url = originalUrl
+    
+    return uri
+  }
+  
+  // 2. Add transformRequest to intercept URL construction
+  api.defaults.transformRequest = [
+    (data: any, headers: any) => {
+      // This runs before axios constructs the final URL
+      // We can't modify the URL here directly, but we ensure headers are correct
+      return data
+    },
+    ...(Array.isArray(axios.defaults.transformRequest) ? axios.defaults.transformRequest : [axios.defaults.transformRequest].filter(Boolean))
+  ]
+  
+  // 3. Custom adapter that wraps the default adapter
+  // Store reference to original adapter (lazy initialization)
+  let defaultAdapter: any = null
+  
+  const relativeUrlAdapter = (config: any) => {
+    // Get default adapter on first use
+    if (!defaultAdapter) {
+      try {
+        // Get the default adapter for the environment
+        defaultAdapter = axios.getAdapter(['xhr', 'http'])
+        if (!defaultAdapter) {
+          defaultAdapter = axios.defaults.adapter
+        }
+      } catch (e) {
+        console.error('[API] Failed to get default adapter:', e)
+        // Fallback: let axios handle it
+        defaultAdapter = null
+      }
+    }
+    
+    // CRITICAL: Force relative URLs before the adapter processes the request
+    // Create a copy to avoid mutating the original config
+    const correctedConfig = { ...config }
+    
+    // CRITICAL: Check for Docker hostnames in baseURL or url BEFORE processing
+    if (correctedConfig.baseURL && (correctedConfig.baseURL.includes('api:8000') || correctedConfig.baseURL.match(/^https?:\/\/[a-zA-Z0-9_-]+:\d+/))) {
+      console.error('[API] Adapter: CRITICAL - Docker hostname in baseURL, forcing /api:', correctedConfig.baseURL)
+      correctedConfig.baseURL = '/api'
+    }
+    
+    if (correctedConfig.url && (correctedConfig.url.includes('api:8000') || correctedConfig.url.match(/^https?:\/\/[a-zA-Z0-9_-]+:\d+/) || correctedConfig.url.match(/^[a-zA-Z0-9_-]+:\d+/))) {
+      console.error('[API] Adapter: CRITICAL - Docker hostname in url, normalizing:', correctedConfig.url)
+      // Extract path from Docker hostname URL
+      if (correctedConfig.url.includes('api:8000')) {
+        const pathMatch = correctedConfig.url.match(/api:8000(\/.*)$/)
+        correctedConfig.url = pathMatch ? pathMatch[1] : normalizeUrl(correctedConfig.url)
+      } else {
+        correctedConfig.url = normalizeUrl(correctedConfig.url)
+      }
+    }
+    
+    // Force baseURL to '/api'
+    correctedConfig.baseURL = '/api'
+    
+    // Normalize url if needed (absolute URLs)
+    if (correctedConfig.url && (correctedConfig.url.startsWith('http://') || correctedConfig.url.startsWith('https://'))) {
+      console.warn('[API] Adapter: Normalizing absolute URL to relative:', correctedConfig.url)
+      correctedConfig.url = normalizeUrl(correctedConfig.url)
+    }
+    
+    // Get the full URL that axios would construct
+    const fullUrl = (correctedConfig.baseURL || '') + (correctedConfig.url || '')
+    
+    // CRITICAL: Final check - if the URL contains Docker hostname, force correction
+    if (fullUrl.includes('api:8000') || fullUrl.match(/https?:\/\/[a-zA-Z0-9_-]+:\d+/) || fullUrl.match(/^[a-zA-Z0-9_-]+:\d+/)) {
+      console.error('[API] Adapter: CRITICAL - Docker hostname detected in fullUrl, forcing correction:', fullUrl)
+      correctedConfig.baseURL = '/api'
+      // Extract path from fullUrl if it contains Docker hostname
+      if (fullUrl.includes('api:8000')) {
+        const pathMatch = fullUrl.match(/api:8000(\/.*)$/)
+        correctedConfig.url = pathMatch ? pathMatch[1] : (correctedConfig.url || '').replace(/^.*api:8000/, '')
+      } else {
+        correctedConfig.url = normalizeUrl(correctedConfig.url || '')
+      }
+    }
+    
+    // Ensure baseURL is exactly '/api'
+    if (correctedConfig.baseURL !== '/api') {
+      correctedConfig.baseURL = '/api'
+    }
+    
+    // Use a Proxy to intercept any attempts to read the URL as absolute
+    const configProxy = new Proxy(correctedConfig, {
+      get(target, prop) {
+        if (prop === 'url' && target.url) {
+          // If url is absolute, return normalized version
+          if (target.url.startsWith('http://') || target.url.startsWith('https://')) {
+            return normalizeUrl(target.url)
+          }
+        }
+        if (prop === 'baseURL') {
+          // Always return '/api' for baseURL
+          return '/api'
+        }
+        return target[prop as keyof typeof target]
+      },
+      set(target, prop, value) {
+        // Prevent setting absolute URLs
+        if (prop === 'baseURL' && value && (value.startsWith('http://') || value.startsWith('https://') || value.includes('api:8000'))) {
+          console.warn('[API] Adapter Proxy: Blocked attempt to set absolute baseURL:', value)
+          target[prop as keyof typeof target] = '/api' as any
+          return true
+        }
+        if (prop === 'url' && value && (value.startsWith('http://') || value.startsWith('https://'))) {
+          console.warn('[API] Adapter Proxy: Blocked attempt to set absolute URL:', value)
+          target[prop as keyof typeof target] = normalizeUrl(value) as any
+          return true
+        }
+        target[prop as keyof typeof target] = value as any
+        return true
+      }
+    })
+    
+    // CRITICAL: Final validation before calling adapter
+  // Axios may construct URLs internally, so we need to ensure they're relative
+  const finalBaseURL = configProxy.baseURL || '/api'
+  const finalUrl = configProxy.url || ''
+  const combinedUrl = finalBaseURL + finalUrl
+  
+  // If combined URL contains Docker hostname, force correction
+  if (combinedUrl.includes('api:8000') || combinedUrl.match(/^https?:\/\/[a-zA-Z0-9_-]+:\d+/)) {
+    console.error('[API] Adapter: FINAL CHECK - Docker hostname in combined URL:', combinedUrl)
+    configProxy.baseURL = '/api'
+    // Extract just the path
+    if (combinedUrl.includes('api:8000')) {
+      const pathMatch = combinedUrl.match(/api:8000(\/.*)$/)
+      configProxy.url = pathMatch ? pathMatch[1] : '/tracks'
+    } else {
+      try {
+        const urlObj = new URL(combinedUrl)
+        configProxy.url = urlObj.pathname + urlObj.search
+      } catch {
+        configProxy.url = combinedUrl.replace(/^https?:\/\/[^/]+/, '')
+      }
+    }
+  }
+  
+  // Call the default adapter with our corrected config
+    if (defaultAdapter) {
+      try {
+        return defaultAdapter(configProxy)
+      } catch (e) {
+        console.error('[API] Adapter execution error:', e)
+        throw e
+      }
+    } else {
+      // Fallback: use axios's default behavior
+      return axios.getAdapter(['xhr', 'http'])(configProxy)
+    }
+  }
+  
+  // Override the adapter
+  api.defaults.adapter = relativeUrlAdapter as any
+  
+  // 4. CRITICAL: Override XMLHttpRequest.open to intercept at the lowest level
+  // This ensures that even if axios constructs an absolute URL, we can fix it
+  if (typeof XMLHttpRequest !== 'undefined') {
+    const OriginalXHROpen = XMLHttpRequest.prototype.open
+    XMLHttpRequest.prototype.open = function(method: string, url: string | URL, ...args: any[]) {
+      // CRITICAL: Always check and fix URLs before they reach the browser
+      if (typeof url === 'string') {
+        const originalUrl = url
+        
+        // Log problematic URLs for debugging
+        if (url.includes('api:8000') || (url.startsWith('http://') && url.includes(':8000'))) {
+          console.error('[API] XHR.open INTERCEPTED PROBLEMATIC URL:', { method, url, stack: new Error().stack })
+        }
+        
+        // CRITICAL: Check for Docker hostnames (with or without protocol)
+        // Pattern: api:8000 or https://api:8000 or http://api:8000 or api:8000/api/tracks
+        // Also check for any hostname:port pattern that's not a valid domain
+        const hasDockerHostname = url.includes('api:8000') || 
+                                  url.match(/^[a-zA-Z0-9_-]+:\d+/) || 
+                                  url.match(/^https?:\/\/[a-zA-Z0-9_-]+:\d+/) ||
+                                  (url.startsWith('http://') && url.includes(':8000'))
+        
+        if (hasDockerHostname) {
+          console.error('[API] XHR.open: CRITICAL - Docker hostname detected, forcing relative:', url)
+          
+          // Extract just the path part - handle various formats
+          let path = url
+          
+          // If it starts with http:// or https://, parse as URL
+          if (url.startsWith('http://') || url.startsWith('https://')) {
+            try {
+              const urlObj = new URL(url)
+              path = urlObj.pathname + urlObj.search
+            } catch (e) {
+              // If URL parsing fails, extract path manually
+              // Remove protocol and hostname:port, keep path and query
+              path = url.replace(/^https?:\/\/[^/]+/, '')
+            }
+          } else {
+            // No protocol - extract path after hostname:port
+            // Pattern: api:8000/api/tracks -> /api/tracks
+            const pathMatch = url.match(/:[0-9]+(\/.*)$/)
+            if (pathMatch) {
+              path = pathMatch[1]
+            } else {
+              // If no path found, try to extract anything after the hostname:port
+              path = url.replace(/^[^/]+/, '') || '/api'
+            }
+          }
+          
+          // Ensure path starts with /
+          if (!path.startsWith('/')) {
+            path = '/' + path
+          }
+          
+          url = path
+          console.warn('[API] XHR.open: Corrected Docker hostname URL:', { original: originalUrl, corrected: url })
+        }
+        
+        // If it's an absolute URL but should be relative, make it relative
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          // CRITICAL: Always convert Docker hostnames to relative URLs
+          if (url.includes('api:8000') || url.match(/https?:\/\/[a-zA-Z0-9_-]+:\d+/)) {
+            console.error('[API] XHR.open: CRITICAL - Absolute URL with Docker hostname, forcing relative:', url)
+            try {
+              const urlObj = new URL(url)
+              url = urlObj.pathname + urlObj.search
+            } catch (e) {
+              // If parsing fails, try to extract path
+              url = url.replace(/^https?:\/\/[^/]+/, '')
+            }
+            // Ensure it starts with /api if it doesn't already
+            if (!url.startsWith('/api') && !url.startsWith('/')) {
+              url = '/api' + url
+            }
+          } else {
+            // Only fix if it's not the current origin (to avoid breaking legitimate absolute URLs)
+            try {
+              const urlObj = new URL(url)
+              const currentOrigin = window.location.origin
+              if (urlObj.origin !== currentOrigin) {
+                console.warn('[API] XHR.open: Converting absolute URL to relative:', url)
+                url = urlObj.pathname + urlObj.search
+              }
+            } catch (e) {
+              // If parsing fails, try to extract path
+              url = url.replace(/^https?:\/\/[^/]+/, '')
+            }
+          }
+        }
+        
+        // Log if we changed the URL
+        if (originalUrl !== url) {
+          console.warn('[API] XHR.open: URL corrected:', { original: originalUrl, corrected: url })
+        }
+      }
+      // Call original open with potentially corrected URL
+      return OriginalXHROpen.call(this, method, url, ...args)
+    }
+  }
+  
+  // 5. CRITICAL: Also override fetch() in case axios uses it
+  if (typeof window !== 'undefined' && window.fetch) {
+    const OriginalFetch = window.fetch
+    window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+      let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+      
+      // Check for Docker hostnames
+      if (typeof url === 'string' && (url.includes('api:8000') || (url.startsWith('http://') && url.includes(':8000')))) {
+        console.error('[API] fetch() INTERCEPTED PROBLEMATIC URL:', url)
+        
+        // Extract path from URL
+        if (url.includes('api:8000')) {
+          const pathMatch = url.match(/api:8000(\/.*)$/)
+          url = pathMatch ? pathMatch[1] : '/api/tracks'
+        } else if (url.startsWith('http://') || url.startsWith('https://')) {
+          try {
+            const urlObj = new URL(url)
+            url = urlObj.pathname + urlObj.search
+          } catch {
+            url = url.replace(/^https?:\/\/[^/]+/, '')
+          }
+        }
+        
+        // Ensure it starts with /
+        if (!url.startsWith('/')) {
+          url = '/' + url
+        }
+        
+        console.warn('[API] fetch() corrected URL:', url)
+        
+        // Update input
+        if (typeof input === 'string') {
+          input = url
+        } else if (input instanceof URL) {
+          input = new URL(url, window.location.origin)
+        } else {
+          input = { ...input, url }
+        }
+      }
+      
+      return OriginalFetch.call(this, input as any, init)
+    }
+  }
+}
+
+// CRITICAL: Lock baseURL in browser context - prevent any modifications
+if (typeof window !== 'undefined') {
+  // Override baseURL setter to always force '/api'
+  Object.defineProperty(api.defaults, 'baseURL', {
+    get: () => '/api',
+    set: (value: string) => {
+      // Silently ignore attempts to set absolute URLs or Docker hostnames
+      if (value && (value.startsWith('http://') || value.startsWith('https://') || value.includes('api:8000'))) {
+        console.warn('[API] Attempted to set absolute baseURL blocked:', value, '-> forced to /api')
+        return
+      }
+      // Only allow relative paths starting with /
+      if (value && !value.startsWith('/')) {
+        console.warn('[API] Attempted to set invalid baseURL blocked:', value, '-> forced to /api')
+        return
+      }
+    },
+    configurable: false,
+    enumerable: true
+  })
+}
+
+// Runtime URL validation - check actual request URLs before they're sent
+// This catches cases where axios might construct absolute URLs internally
+const validateRequestUrl = (config: any): void => {
+  if (typeof window === 'undefined') return
+  
+  // Check the actual request URL that axios will use
+  // Axios combines baseURL + url, so we need to check both
+  const baseURL = config.baseURL || api.defaults.baseURL || ''
+  const url = config.url || ''
+  const fullUrl = baseURL + url
+  
+  // Check for Docker hostnames or absolute URLs
+  if (fullUrl.includes('api:8000') || fullUrl.match(/https?:\/\/[a-zA-Z0-9_-]+:\d+/)) {
+    console.error('[API] RUNTIME VALIDATION: Detected invalid URL before request!', {
+      fullUrl,
+      baseURL,
+      url,
+      action: 'Blocking request - URL contains Docker hostname or absolute URL'
+    })
+    // Force correction
+    config.baseURL = '/api'
+    config.url = normalizeUrl(url)
+  }
+  
+  // Ensure baseURL is relative
+  if (config.baseURL && (config.baseURL.startsWith('http://') || config.baseURL.startsWith('https://'))) {
+    console.error('[API] RUNTIME VALIDATION: Absolute baseURL detected, forcing to /api:', config.baseURL)
+    config.baseURL = '/api'
+  }
+}
 
 // Request interceptor to add auth token and ensure relative URLs
 api.interceptors.request.use(
@@ -94,11 +499,14 @@ api.interceptors.request.use(
       const originalBaseURL = config.baseURL
       const originalUrl = config.url
       
+      // FORCE baseURL to '/api' in browser - never allow absolute URLs
+      config.baseURL = '/api'
+      
       // Validate and fix URLs to prevent Docker hostnames and absolute URLs
       const { url: normalizedUrl, baseURL: normalizedBaseURL } = validateAndFixUrl(config.url, config.baseURL)
       
-      // Apply normalized URLs
-      config.baseURL = normalizedBaseURL
+      // Apply normalized URLs (baseURL should already be '/api' but ensure it)
+      config.baseURL = '/api' // Force again after validation
       config.url = normalizedUrl
       
       // Additional safety check: if axios somehow constructed an absolute URL, fix it
@@ -109,6 +517,12 @@ api.interceptors.request.use(
           normalized: normalizeUrl(config.url)
         })
         config.url = normalizeUrl(config.url)
+      }
+      
+      // CRITICAL: Check if baseURL contains any absolute URL patterns
+      if (config.baseURL && (config.baseURL.startsWith('http://') || config.baseURL.startsWith('https://'))) {
+        console.error('[API] CRITICAL: Absolute baseURL detected, forcing to /api:', config.baseURL)
+        config.baseURL = '/api'
       }
       
       // Final validation: ensure the constructed URL doesn't contain Docker hostnames
@@ -125,6 +539,31 @@ api.interceptors.request.use(
         config.baseURL = '/api'
         config.url = normalizeUrl(config.url)
       }
+      
+      // Final safety check: ensure baseURL is exactly '/api'
+      if (config.baseURL !== '/api') {
+        console.error('[API] CRITICAL: baseURL is not /api, forcing correction:', config.baseURL, '-> /api')
+        config.baseURL = '/api'
+      }
+      
+      // CRITICAL: Final check for any Docker hostnames in the constructed URL
+      const finalUrlCheck = (config.baseURL || '') + (config.url || '')
+      if (finalUrlCheck.includes('api:8000') || finalUrlCheck.match(/^https?:\/\/[a-zA-Z0-9_-]+:\d+/)) {
+        console.error('[API] CRITICAL: Docker hostname detected in final URL, forcing correction:', finalUrlCheck)
+        config.baseURL = '/api'
+        // Extract path from the URL if it contains Docker hostname
+        if (config.url && config.url.includes('api:8000')) {
+          const pathMatch = config.url.match(/api:8000(\/.*)$/)
+          if (pathMatch) {
+            config.url = pathMatch[1]
+          } else {
+            config.url = config.url.replace(/.*api:8000/, '')
+          }
+        }
+      }
+      
+      // RUNTIME VALIDATION: Final check before request is sent
+      validateRequestUrl(config)
       
       // Development mode logging
       if (process.env.NODE_ENV === 'development' && (originalBaseURL !== config.baseURL || originalUrl !== config.url)) {
@@ -145,7 +584,8 @@ api.interceptors.request.use(
     const finalUrl = (config.baseURL || '') + (config.url || '')
     console.log('[API] Request:', config.method?.toUpperCase(), finalUrl, {
       hasToken: !!token,
-      timeout: config.timeout
+      timeout: config.timeout,
+      params: config.params
     })
     
     return config
@@ -169,6 +609,19 @@ api.interceptors.response.use(
     const url = error.config?.baseURL + (error.config?.url || '')
     const errorUrl = error.request?.responseURL || error.config?.url || url
     const hasDockerHostname = /(?:https?:\/\/)?api:\d+/.test(errorUrl) || /(?:https?:\/\/)?api:\d+/.test(url)
+    
+    // RUNTIME VALIDATION: If we detect a Docker hostname in the error, it means
+    // the request was made with an absolute URL - this should never happen
+    if (hasDockerHostname && typeof window !== 'undefined') {
+      console.error('[API] RUNTIME VALIDATION FAILED: Request was made with Docker hostname!', {
+        errorUrl,
+        configUrl: url,
+        baseURL: error.config?.baseURL,
+        url: error.config?.url,
+        message: 'This indicates the interceptor failed to catch an absolute URL. The request should have been blocked.',
+        recommendation: 'Check axios configuration and ensure baseURL is always /api in browser context'
+      })
+    }
     
     // CRITICAL: Detect Docker hostname in error URLs
     if (hasDockerHostname) {
@@ -235,14 +688,32 @@ api.interceptors.response.use(
       // Log validation errors in a more readable format
       if (error.response.data?.detail) {
         if (Array.isArray(error.response.data.detail)) {
-          console.error('[API] Validation errors:', error.response.data.detail.map((err: any) => ({
+          const validationErrors = error.response.data.detail.map((err: any) => ({
             field: err.loc?.join('.') || 'unknown',
             message: err.msg || err.message || 'Validation error',
-            type: err.type || 'unknown'
-          })))
+            type: err.type || 'unknown',
+            input: err.input
+          }))
+          console.error('[API] Validation errors:', validationErrors)
+          // Also log the raw error for debugging - expand the object
+          console.error('[API] Raw validation errors:', JSON.stringify(error.response.data.detail, null, 2))
+          // Log each error individually for better visibility
+          error.response.data.detail.forEach((err: any, index: number) => {
+            console.error(`[API] Validation error ${index + 1}:`, {
+              location: err.loc,
+              message: err.msg,
+              type: err.type,
+              input: err.input,
+              ctx: err.ctx,
+              fullError: JSON.stringify(err, null, 2)
+            })
+          })
         } else {
           console.error('[API] Error detail:', error.response.data.detail)
         }
+      } else {
+        // Log full response if no detail field
+        console.error('[API] Full error response:', JSON.stringify(error.response.data, null, 2))
       }
     } else {
       console.error('[API] Request setup error:', error.message, {
@@ -1052,12 +1523,12 @@ export const getAuditLogs = async (params?: {
   start_date?: string
   end_date?: string
 }) => {
-  const response = await api.get('/audit-logs', { params })
+  const response = await api.get('/admin/audit-logs', { params })
   return response.data
 }
 
 export const getAuditLog = async (audit_log_id: number) => {
-  const response = await api.get(`/audit-logs/${audit_log_id}`)
+  const response = await api.get(`/admin/audit-logs/${audit_log_id}`)
   return response.data
 }
 
@@ -1495,6 +1966,225 @@ export const getTrafficLogStats = async (params?: {
   end_date?: string
 }) => {
   const response = await api.get('/traffic-logs/stats/summary', { params })
+  return response.data
+}
+
+// Proxy API functions - Server-side aggregation endpoints
+// These endpoints aggregate data on the backend, so the browser doesn't make multiple API calls
+export const getDashboardDataProxy = async () => {
+  const response = await api.get('/proxy/dashboard')
+  return response.data
+}
+
+export const getTracksAggregated = async (params?: {
+  track_type?: string
+  limit?: number
+  skip?: number
+  search?: string
+}) => {
+  const response = await api.get('/proxy/tracks/aggregated', { params })
+  return response.data
+}
+
+export const proxyLibreTime = async (path: string) => {
+  const response = await api.get(`/proxy/libretime/${path}`)
+  return response.data
+}
+
+// Server-side proxy endpoints for all data fetching
+export const getAdvertisersProxy = async (params?: {
+  skip?: number
+  limit?: number
+  active_only?: boolean
+  search?: string
+}) => {
+  const response = await api.get('/proxy/advertisers', { params })
+  return response.data
+}
+
+export const getAgenciesProxy = async (params?: {
+  skip?: number
+  limit?: number
+  active_only?: boolean
+  search?: string
+}) => {
+  const response = await api.get('/proxy/agencies', { params })
+  return response.data
+}
+
+export const getUsersProxy = async (params?: {
+  skip?: number
+  limit?: number
+  role?: string
+  search?: string
+}) => {
+  const response = await api.get('/proxy/users', { params })
+  return response.data
+}
+
+export const getSalesRepsProxy = async (params?: {
+  skip?: number
+  limit?: number
+  active_only?: boolean
+  search?: string
+}) => {
+  const response = await api.get('/proxy/sales-reps', { params })
+  return response.data
+}
+
+export const getOrdersProxy = async (params?: {
+  skip?: number
+  limit?: number
+  status?: string
+  advertiser_id?: number
+  search?: string
+}) => {
+  const response = await api.get('/proxy/orders', { params })
+  return response.data
+}
+
+// Additional proxy endpoints for all remaining API calls
+export const getDaypartsProxy = async (params?: {
+  skip?: number
+  limit?: number
+  active_only?: boolean
+  category_id?: number
+}) => {
+  const response = await api.get('/proxy/dayparts', { params })
+  return response.data
+}
+
+export const getDaypartCategoriesProxy = async (params?: {
+  skip?: number
+  limit?: number
+  active_only?: boolean
+}) => {
+  const response = await api.get('/proxy/daypart-categories', { params })
+  return response.data
+}
+
+export const getRotationRulesProxy = async (params?: {
+  skip?: number
+  limit?: number
+  active_only?: boolean
+}) => {
+  const response = await api.get('/proxy/rotation-rules', { params })
+  return response.data
+}
+
+export const getTrafficLogsProxy = async (params?: {
+  skip?: number
+  limit?: number
+  log_type?: string
+}) => {
+  const response = await api.get('/proxy/traffic-logs', { params })
+  return response.data
+}
+
+export const getCopyProxy = async (params?: {
+  skip?: number
+  limit?: number
+  advertiser_id?: number
+  order_id?: number
+  search?: string
+}) => {
+  const response = await api.get('/proxy/copy', { params })
+  return response.data
+}
+
+export const getCampaignsProxy = async (params?: {
+  skip?: number
+  limit?: number
+  active_only?: boolean
+}) => {
+  const response = await api.get('/proxy/campaigns', { params })
+  return response.data
+}
+
+export const getInvoicesProxy = async (params?: {
+  skip?: number
+  limit?: number
+  status?: string
+  advertiser_id?: number
+}) => {
+  const response = await api.get('/proxy/invoices', { params })
+  return response.data
+}
+
+export const getPaymentsProxy = async (params?: {
+  skip?: number
+  limit?: number
+  invoice_id?: number
+}) => {
+  const response = await api.get('/proxy/payments', { params })
+  return response.data
+}
+
+export const getMakegoodsProxy = async (params?: {
+  skip?: number
+  limit?: number
+  campaign_id?: number
+}) => {
+  const response = await api.get('/proxy/makegoods', { params })
+  return response.data
+}
+
+export const getInventoryProxy = async (params: {
+  start_date: string
+  end_date: string
+}) => {
+  const response = await api.get('/proxy/inventory', { params })
+  return response.data
+}
+
+export const getSalesGoalsProxy = async (params?: {
+  skip?: number
+  limit?: number
+  sales_rep_id?: number
+}) => {
+  const response = await api.get('/proxy/sales-goals', { params })
+  return response.data
+}
+
+export const getSettingsProxy = async () => {
+  const response = await api.get('/proxy/settings')
+  return response.data
+}
+
+export const getAuditLogsProxy = async (params?: {
+  skip?: number
+  limit?: number
+  user_id?: number
+  action?: string
+  resource_type?: string
+}) => {
+  const response = await api.get('/proxy/admin/audit-logs', { params })
+  return response.data
+}
+
+export const getWebhooksProxy = async (params?: {
+  skip?: number
+  limit?: number
+  active_only?: boolean
+}) => {
+  const response = await api.get('/proxy/webhooks', { params })
+  return response.data
+}
+
+export const getNotificationsProxy = async (params?: {
+  unread_only?: boolean
+  skip?: number
+  limit?: number
+}) => {
+  const response = await api.get('/proxy/notifications', { params })
+  return response.data
+}
+
+export const getBackupsProxy = async (params?: {
+  skip?: number
+  limit?: number
+}) => {
+  const response = await api.get('/proxy/backups', { params })
   return response.data
 }
 

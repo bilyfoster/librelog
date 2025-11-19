@@ -27,11 +27,11 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material'
 import {
-  getDayparts,
+  getDaypartsProxy,
   createDaypart,
   updateDaypart,
   deleteDaypart,
-  getDaypartCategories,
+  getDaypartCategoriesProxy,
 } from '../../utils/api'
 import { MenuItem, Select, FormControl, InputLabel } from '@mui/material'
 
@@ -72,8 +72,9 @@ const Dayparts: React.FC = () => {
     try {
       setLoading(true)
       setError(null)
-      const data = await getDayparts()
-      setDayparts(Array.isArray(data) ? data : (data?.dayparts || []))
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getDaypartsProxy({ active_only: true })
+      setDayparts(Array.isArray(data) ? data : [])
     } catch (err) {
       console.error('Failed to load dayparts:', err)
       setError(err instanceof Error ? err.message : 'Failed to load dayparts')
@@ -84,8 +85,9 @@ const Dayparts: React.FC = () => {
 
   const loadCategories = async () => {
     try {
-      const data = await getDaypartCategories({ active_only: false })
-      setCategories(Array.isArray(data) ? data : (data?.categories || []))
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getDaypartCategoriesProxy({ active_only: false })
+      setCategories(Array.isArray(data) ? data : [])
     } catch (err) {
       console.error('Failed to load categories:', err)
     }

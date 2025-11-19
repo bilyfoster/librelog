@@ -33,7 +33,7 @@ import {
   Visibility as VisibilityIcon,
   ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material'
-import { getAuditLogs, getAuditLog } from '../../utils/api'
+import { getAuditLogsProxy, getAuditLog } from '../../utils/api'
 import api from '../../utils/api'
 
 interface AuditLog {
@@ -71,7 +71,8 @@ const AuditLogs: React.FC = () => {
       if (resourceTypeFilter) params.resource_type = resourceTypeFilter
       if (startDate) params.start_date = startDate
       if (endDate) params.end_date = endDate
-      const data = await getAuditLogs(params)
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getAuditLogsProxy(params)
       return data
     },
     retry: 1,

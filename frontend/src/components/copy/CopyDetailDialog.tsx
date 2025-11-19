@@ -35,6 +35,8 @@ import {
   getCopyById,
   updateCopy,
   getCopyAssignments,
+  getOrdersProxy,
+  getAdvertisersProxy,
 } from '../../utils/api'
 import api from '../../utils/api'
 import AudioPlayer from '../audio/AudioPlayer'
@@ -104,16 +106,18 @@ const CopyDetailDialog: React.FC<CopyDetailDialogProps> = ({
   const { data: orders } = useQuery({
     queryKey: ['orders'],
     queryFn: async () => {
-      const response = await api.get('/orders', { params: { limit: 100 } })
-      return response.data.orders || response.data || []
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getOrdersProxy({ limit: 100 })
+      return Array.isArray(data) ? data : []
     },
   })
 
   const { data: advertisers } = useQuery({
     queryKey: ['advertisers'],
     queryFn: async () => {
-      const response = await api.get('/advertisers', { params: { limit: 100 } })
-      return response.data.advertisers || response.data || []
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getAdvertisersProxy({ limit: 100 })
+      return Array.isArray(data) ? data : []
     },
   })
 

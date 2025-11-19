@@ -28,7 +28,7 @@ import {
   Chip,
 } from '@mui/material'
 import { Add, Edit, Delete } from '@mui/icons-material'
-import { getUsers, createUser, updateUser, deleteUser } from '../../utils/api'
+import { getUsersProxy, createUser, updateUser, deleteUser } from '../../utils/api'
 
 interface User {
   id: number
@@ -51,7 +51,9 @@ const Users: React.FC = () => {
     queryFn: async () => {
       const params: any = { limit: 100, skip: 0 }
       if (roleFilter) params.role_filter = roleFilter
-      return await getUsers(params)
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getUsersProxy(params)
+      return Array.isArray(data) ? data : []
     },
     retry: 1,
   })

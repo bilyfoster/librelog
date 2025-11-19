@@ -30,7 +30,7 @@ import {
   Delete as DeleteIcon,
   Schedule as ScheduleIcon,
 } from '@mui/icons-material'
-import { getOrders, createSpotsBulk, getSpots } from '../../utils/api'
+import { getOrdersProxy, createSpotsBulk, getSpots } from '../../utils/api'
 
 interface Order {
   id: number
@@ -75,8 +75,9 @@ const SpotScheduler: React.FC = () => {
   const loadOrders = async () => {
     try {
       setLoading(true)
-      const data = await getOrders({ status: 'APPROVED', limit: 100 })
-      setOrders(data.orders || data || [])
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getOrdersProxy({ status: 'APPROVED', limit: 100 })
+      setOrders(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Failed to load orders:', error)
     } finally {

@@ -22,6 +22,7 @@ import {
 } from '@mui/material'
 import { Add, Edit, Delete, CheckCircle, ContentCopy } from '@mui/icons-material'
 import api from '../../utils/api'
+import { getOrdersProxy, getAdvertisersProxy } from '../../utils/api'
 import OrderForm from '../../components/orders/OrderForm'
 
 interface Order {
@@ -58,15 +59,13 @@ const Orders: React.FC = () => {
   const { data: orders, isLoading, error } = useQuery({
     queryKey: ['orders', statusFilter],
     queryFn: async () => {
-      const response = await api.get('/orders', {
-        params: {
-          limit: 100,
-          skip: 0,
-          ...(statusFilter && { status_filter: statusFilter }),
-        },
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getOrdersProxy({
+        limit: 100,
+        skip: 0,
+        status: statusFilter || undefined,
       })
-      // API returns array directly
-      return Array.isArray(response.data) ? response.data : []
+      return Array.isArray(data) ? data : []
     },
     retry: 1,
   })
@@ -74,9 +73,9 @@ const Orders: React.FC = () => {
   const { data: advertisers } = useQuery({
     queryKey: ['advertisers'],
     queryFn: async () => {
-      const response = await api.get('/advertisers', { params: { limit: 1000, active_only: false } })
-      // API returns array directly
-      return Array.isArray(response.data) ? response.data : []
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getAdvertisersProxy({ limit: 1000, active_only: false })
+      return Array.isArray(data) ? data : []
     },
     retry: 1,
   })

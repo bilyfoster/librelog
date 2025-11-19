@@ -23,7 +23,7 @@ import {
 } from '@mui/material'
 import { Search, Sync } from '@mui/icons-material'
 import api from '../../utils/api'
-import { syncTracks } from '../../utils/api'
+import { syncTracks, getTracksAggregated } from '../../utils/api'
 
 const TRACK_TYPES = [
   { value: 'MUS', label: 'Music', color: 'primary' },
@@ -42,24 +42,20 @@ const SpotsLibrary: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedType, setSelectedType] = useState<string>('ADV') // Default to ADV since it's more likely to have data
 
-  // Fetch tracks by type
+  // Fetch tracks from server-side proxy endpoint (all processing happens on backend)
   const { data: tracksData, isLoading, error, refetch, isError } = useQuery({
     queryKey: ['spots-tracks', selectedType, searchTerm],
     queryFn: async () => {
       try {
-        const response = await api.get('/tracks', {
-          params: {
-            limit: 1000,
-            skip: 0,
-            track_type: selectedType,
-            ...(searchTerm && { search: searchTerm }),
-          },
-          timeout: 8000,
+        // Use server-side proxy endpoint - backend handles all API calls
+        const data = await getTracksAggregated({
+          track_type: selectedType,
+          limit: 999,
+          skip: 0,
+          search: searchTerm || undefined,
         })
-        console.log('[SpotsLibrary] API response:', response.data)
-        console.log('[SpotsLibrary] Response type:', typeof response.data, 'Is array:', Array.isArray(response.data))
-        const tracks = Array.isArray(response.data) ? response.data : (response.data?.tracks || response.data?.items || [])
-        console.log('[SpotsLibrary] Processed tracks:', tracks.length, tracks)
+        const tracks = Array.isArray(data.tracks) ? data.tracks : []
+        console.log('[SpotsLibrary] Loaded tracks:', tracks.length, 'Total count:', data.count)
         return tracks
       } catch (err: any) {
         console.error('[SpotsLibrary] API error:', err)

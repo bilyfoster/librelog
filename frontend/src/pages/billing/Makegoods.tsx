@@ -26,10 +26,10 @@ import {
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material'
 import {
-  getMakegoods,
+  getMakegoodsProxy,
   createMakegood,
   approveMakegood,
-  getCampaigns,
+  getCampaignsProxy,
 } from '../../utils/api'
 import MakegoodFormDialog from '../../components/billing/MakegoodFormDialog'
 
@@ -55,7 +55,8 @@ const Makegoods: React.FC = () => {
     queryFn: async () => {
       const params: any = { limit: 100 }
       if (campaignFilter) params.campaign_id = campaignFilter
-      const data = await getMakegoods(params)
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getMakegoodsProxy(params)
       // Ensure we return an array
       if (Array.isArray(data)) {
         return data
@@ -71,7 +72,8 @@ const Makegoods: React.FC = () => {
   const { data: campaigns } = useQuery({
     queryKey: ['campaigns', 'active'],
     queryFn: async () => {
-      const data = await getCampaigns({ active_only: true, limit: 1000 })
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getCampaignsProxy({ active_only: true, limit: 1000 })
       // Handle both array and object response formats
       if (Array.isArray(data)) {
         return data

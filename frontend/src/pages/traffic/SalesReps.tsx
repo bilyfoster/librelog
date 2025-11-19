@@ -25,7 +25,7 @@ import {
 } from '@mui/material'
 import { Add, Edit, Delete } from '@mui/icons-material'
 import api from '../../utils/api'
-import { getUsers } from '../../utils/api'
+import { getSalesRepsProxy, getUsersProxy } from '../../utils/api'
 
 interface SalesRep {
   id: number
@@ -53,24 +53,23 @@ const SalesReps: React.FC = () => {
   const { data: salesReps, isLoading, error } = useQuery({
     queryKey: ['sales-reps'],
     queryFn: async () => {
-      const response = await api.get('/sales-reps/', {
-        params: { limit: 100, skip: 0, active_only: false },
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getSalesRepsProxy({
+        limit: 100,
+        skip: 0,
+        active_only: false,
       })
-      console.log('[SalesReps] API response:', response.data)
-      console.log('[SalesReps] Response type:', typeof response.data)
-      console.log('[SalesReps] Is array:', Array.isArray(response.data))
-      // Handle both array and object responses
-      const data = Array.isArray(response.data) ? response.data : (response.data?.sales_reps || response.data?.data || [])
-      console.log('[SalesReps] Processed data:', data)
-      return data
+      console.log('[SalesReps] Loaded sales reps:', data.length)
+      return Array.isArray(data) ? data : []
     },
   })
 
   const { data: users } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
-      const response = await getUsers({ limit: 1000 })
-      return response.users || response || []
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getUsersProxy({ limit: 1000 })
+      return Array.isArray(data) ? data : []
     },
   })
 

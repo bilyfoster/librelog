@@ -37,7 +37,7 @@ import {
   Webhook as WebhookIcon,
 } from '@mui/icons-material'
 import {
-  getAllSettings,
+  getSettingsProxy,
   updateCategorySettings,
   testSMTPConnection,
   testS3Connection,
@@ -77,7 +77,11 @@ const Settings: React.FC = () => {
 
   const { data: allSettings, isLoading, error } = useQuery({
     queryKey: ['settings'],
-    queryFn: getAllSettings,
+    queryFn: async () => {
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getSettingsProxy()
+      return data
+    },
     retry: 1,
   })
 

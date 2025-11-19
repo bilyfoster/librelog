@@ -18,7 +18,7 @@ import {
   CircularProgress,
 } from '@mui/material'
 import { Close as CloseIcon } from '@mui/icons-material'
-import { createInvoice, updateInvoice, getOrders } from '../../utils/api'
+import { createInvoice, updateInvoice, getOrdersProxy, getAdvertisersProxy, getAgenciesProxy } from '../../utils/api'
 import api from '../../utils/api'
 
 interface InvoiceFormDialogProps {
@@ -48,22 +48,30 @@ const InvoiceFormDialog: React.FC<InvoiceFormDialogProps> = ({
   const { data: advertisers } = useQuery({
     queryKey: ['advertisers'],
     queryFn: async () => {
-      const response = await api.get('/advertisers', { params: { limit: 100 } })
-      return response.data.advertisers || response.data || []
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getAdvertisersProxy({ limit: 100 })
+      return Array.isArray(data) ? data : []
     },
   })
 
   const { data: agencies } = useQuery({
     queryKey: ['agencies'],
     queryFn: async () => {
-      const response = await api.get('/agencies', { params: { limit: 100 } })
-      return response.data.agencies || response.data || []
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getAgenciesProxy({ limit: 100 })
+      return Array.isArray(data) ? data : []
     },
   })
 
   const { data: orders } = useQuery({
     queryKey: ['orders', formData.advertiser_id],
-    queryFn: () => getOrders({ advertiser_id: formData.advertiser_id ? parseInt(formData.advertiser_id) : undefined }),
+    queryFn: async () => {
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getOrdersProxy({ 
+        advertiser_id: formData.advertiser_id ? parseInt(formData.advertiser_id) : undefined 
+      })
+      return Array.isArray(data) ? data : []
+    },
     enabled: !!formData.advertiser_id,
   })
 

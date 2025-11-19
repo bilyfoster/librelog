@@ -2,6 +2,7 @@ import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Box } from '@mui/material'
 import Layout from './components/Layout'
+import ProtectedRoute from './components/ProtectedRoute'
 import ErrorBoundary from './components/ErrorBoundary'
 import Login from './pages/auth/Login'
 import Setup from './pages/Setup'
@@ -47,7 +48,7 @@ function App() {
           <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/setup" element={<Setup />} />
-        <Route path="/" element={<Layout />}>
+        <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="library" element={<LibraryList />} />

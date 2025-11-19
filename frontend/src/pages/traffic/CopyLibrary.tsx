@@ -35,9 +35,10 @@ import {
   Assignment as AssignmentIcon,
 } from '@mui/icons-material'
 import {
-  getCopy,
+  getCopyProxy,
   deleteCopy,
-  getOrders,
+  getOrdersProxy,
+  getAdvertisersProxy,
 } from '../../utils/api'
 import api from '../../utils/api'
 import CopyUpload from '../../components/copy/CopyUpload'
@@ -83,7 +84,8 @@ const CopyLibrary: React.FC = () => {
       if (orderFilter) params.order_id = orderFilter
       if (advertiserFilter) params.advertiser_id = advertiserFilter
       
-      const data = await getCopy(params)
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getCopyProxy(params)
       // Filter by active status on client side if needed
       if (activeFilter === 'active') {
         return data.filter((item: Copy) => item.active)
@@ -98,16 +100,18 @@ const CopyLibrary: React.FC = () => {
   const { data: advertisers } = useQuery({
     queryKey: ['advertisers'],
     queryFn: async () => {
-      const response = await api.get('/advertisers', { params: { limit: 100 } })
-      return response.data.advertisers || response.data || []
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getAdvertisersProxy({ limit: 100 })
+      return Array.isArray(data) ? data : []
     },
   })
 
   const { data: orders } = useQuery({
     queryKey: ['orders'],
     queryFn: async () => {
-      const response = await getOrders({ limit: 100 })
-      return response.orders || response || []
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getOrdersProxy({ limit: 100 })
+      return Array.isArray(data) ? data : []
     },
   })
 

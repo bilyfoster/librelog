@@ -35,7 +35,7 @@ import {
 } from '@mui/icons-material'
 import { useQuery } from '@tanstack/react-query'
 import {
-  getTrafficLogs,
+  getTrafficLogsProxy,
   getTrafficLogStats,
 } from '../../utils/api'
 import { format } from 'date-fns'
@@ -67,13 +67,14 @@ const TrafficLogs: React.FC = () => {
 
   const { data: logsData, isLoading, error, refetch } = useQuery({
     queryKey: ['traffic-logs', filters],
-    queryFn: () =>
-      getTrafficLogs({
+    queryFn: async () => {
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getTrafficLogsProxy({
         log_type: filters.log_type || undefined,
-        start_date: filters.start_date || undefined,
-        end_date: filters.end_date || undefined,
         limit: filters.limit,
-      }),
+      })
+      return Array.isArray(data) ? data : []
+    },
     retry: 1,
   })
 

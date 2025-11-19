@@ -35,6 +35,8 @@ import {
   sendInvoice,
   markInvoicePaid,
   getAgingReport,
+  getAdvertisersProxy,
+  getInvoicesProxy,
 } from '../../utils/api'
 import api from '../../utils/api'
 import InvoiceDetailDialog from '../../components/billing/InvoiceDetailDialog'
@@ -76,7 +78,8 @@ const Invoices: React.FC = () => {
       const params: any = { limit: 100 }
       if (advertiserFilter) params.advertiser_id = advertiserFilter
       if (statusFilter !== 'all') params.status_filter = statusFilter
-      const data = await getInvoices(params)
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getInvoicesProxy(params)
       return data
     },
     retry: 1,
@@ -85,8 +88,9 @@ const Invoices: React.FC = () => {
   const { data: advertisers } = useQuery({
     queryKey: ['advertisers'],
     queryFn: async () => {
-      const response = await api.get('/advertisers', { params: { limit: 100 } })
-      return response.data.advertisers || response.data || []
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getAdvertisersProxy({ limit: 100 })
+      return Array.isArray(data) ? data : []
     },
   })
 

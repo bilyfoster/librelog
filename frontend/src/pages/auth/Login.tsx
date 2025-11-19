@@ -7,7 +7,9 @@ import {
   Button,
   Typography,
   Alert,
+  CircularProgress,
 } from '@mui/material'
+import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 
 const Login: React.FC = () => {
@@ -15,7 +17,25 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const { login } = useAuth()
+  const { login, user, isLoading: authLoading } = useAuth()
+
+  // Redirect to dashboard if already logged in
+  if (authLoading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+      >
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

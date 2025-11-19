@@ -24,7 +24,7 @@ import {
 } from '@mui/material'
 import { Search, Edit, Delete, PlayArrow, Sync } from '@mui/icons-material'
 import api from '../../utils/api'
-import { syncTracks, getTracksCount } from '../../utils/api'
+import { syncTracks, getTracksCount, getTracksAggregated } from '../../utils/api'
 import TrackEditDialog from '../../components/tracks/TrackEditDialog'
 import TrackPlayDialog from '../../components/tracks/TrackPlayDialog'
 
@@ -48,27 +48,25 @@ const LibraryList: React.FC = () => {
   const [editingTrackId, setEditingTrackId] = useState<number | null>(null)
   const [selectedTrack, setSelectedTrack] = useState<any>(null)
 
-  // Fetch tracks from API by type
+  // Fetch tracks from server-side proxy endpoint (all processing happens on backend)
   const { data: tracksData, isLoading, error, refetch, isError } = useQuery({
     queryKey: ['tracks', selectedType, searchTerm],
     queryFn: async () => {
       try {
-        const response = await api.get('/tracks', {
-          params: {
-            limit: 1000,
-            skip: 0,
-            track_type: selectedType,
-            ...(searchTerm && { search: searchTerm }),
-          },
-          timeout: 8000,
+        // Use server-side proxy endpoint - backend handles all API calls
+        const data = await getTracksAggregated({
+          track_type: selectedType,
+          limit: 999,
+          skip: 0,
+          search: searchTerm || undefined,
         })
-        const tracks = Array.isArray(response.data) ? response.data : []
-        console.log('Loaded tracks:', tracks.length, tracks.slice(0, 3))
-        return tracks
+        const tracks = Array.isArray(data.tracks) ? data.tracks : []
+        console.log('Loaded tracks:', tracks.length, 'Total count:', data.count)
+        return { tracks, count: data.count }
       } catch (err: any) {
         if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
           console.error('Tracks API timeout')
-          return []
+          return { tracks: [], count: 0 }
         }
         throw err
       }
@@ -77,17 +75,8 @@ const LibraryList: React.FC = () => {
     staleTime: 30000,
   })
 
-  const tracks = Array.isArray(tracksData) ? tracksData : []
-  
-  // Check track count separately (faster endpoint)
-  const { data: countData } = useQuery({
-    queryKey: ['tracks-count', selectedType],
-    queryFn: () => getTracksCount(selectedType),
-    retry: false,
-    staleTime: 60000,
-  })
-  
-  const totalTracksInDB = countData?.count || 0
+  const tracks = Array.isArray(tracksData?.tracks) ? tracksData.tracks : []
+  const totalTracksInDB = tracksData?.count || 0
 
   // Handle sync
   const handleSync = async () => {

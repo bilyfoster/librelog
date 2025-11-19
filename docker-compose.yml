@@ -1,7 +1,5 @@
 # LibreLog Docker Compose Configuration
 
-version: '3.8'
-
 services:
   # PostgreSQL Database
   db:
@@ -20,6 +18,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - libretime
 
   # Redis for Celery broker
   redis:
@@ -31,6 +31,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - libretime
 
   # FastAPI Backend
   api:
@@ -56,23 +58,10 @@ services:
       - ./shared:/app/shared
     working_dir: /app
     networks:
-      - default
       - libretime
-      - traefik
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=traefik"
-      # HTTP router
-      - "traefik.http.routers.librelog-api.rule=Host(`log-dev.gayphx.com`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.librelog-api.entrypoints=web"
-      - "traefik.http.routers.librelog-api.priority=10"
-      # HTTPS router
-      - "traefik.http.routers.librelog-api-https.rule=Host(`log-dev.gayphx.com`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.librelog-api-https.entrypoints=websecure"
-      - "traefik.http.routers.librelog-api-https.tls=true"
-      - "traefik.http.routers.librelog-api-https.priority=10"
-      # Service
-      - "traefik.http.services.librelog-api.loadbalancer.server.port=8000"
+    # API service - NOT exposed through Traefik
+    # All API calls go through frontend's Vite proxy (dev) or backend aggregation endpoints (server-side)
+    # Frontend makes requests to /api/* which Vite proxies to http://api:8000 (server-side, no browser sees this)
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 
   # Celery Worker
@@ -96,7 +85,6 @@ services:
       - ./shared:/app/shared
     working_dir: /app
     networks:
-      - default
       - libretime
     command: celery -A backend.tasks.celery worker --loglevel=info
 
@@ -112,36 +100,28 @@ services:
       - /app/node_modules
     # VITE_API_URL removed - using relative paths (/api) for Traefik proxy
     networks:
-      - default
+      - libretime
       - traefik
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      # HTTP router
-      - "traefik.http.routers.librelog.rule=Host(`log-dev.gayphx.com`)"
+      # HTTP router - Exclude ACME challenge path so Traefik can handle it
+      - "traefik.http.routers.librelog.rule=Host(`log.gayphx.com`) && !PathPrefix(`/.well-known/acme-challenge`)"
       - "traefik.http.routers.librelog.entrypoints=web"
+      - "traefik.http.routers.librelog.middlewares=libre-log-redirect-to-https"
       - "traefik.http.routers.librelog.priority=10"
-      # HTTPS router
-      - "traefik.http.routers.librelog-https.rule=Host(`log-dev.gayphx.com`)"
+      # HTTPS router - frontend handles all requests, Vite proxies /api/* to API container
+      - "traefik.http.routers.librelog-https.rule=Host(`log.gayphx.com`)"
       - "traefik.http.routers.librelog-https.entrypoints=websecure"
       - "traefik.http.routers.librelog-https.tls=true"
+      - "traefik.http.routers.librelog-https.tls.certResolver=letsencrypt"
       - "traefik.http.routers.librelog-https.priority=10"
-      # Service
+      # Frontend service
       - "traefik.http.services.librelog.loadbalancer.server.port=3000"
+      # Middlewares
+      - "traefik.http.middlewares.libre-log-redirect-to-https.redirectscheme.scheme=https"
     command: npm run dev -- --host 0.0.0.0
 
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "8081:80"
-      - "8443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - api
-      - frontend
 
 volumes:
   postgres_data:

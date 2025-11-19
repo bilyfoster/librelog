@@ -46,7 +46,7 @@ import {
   getExpiringContractsReport,
   exportReport,
 } from '../../utils/api'
-import { getOrders } from '../../utils/api'
+import { getOrdersProxy } from '../../utils/api'
 import api from '../../utils/api'
 
 interface TabPanelProps {
@@ -94,7 +94,11 @@ const ReportsHub: React.FC = () => {
 
   const { data: orders } = useQuery({
     queryKey: ['orders'],
-    queryFn: () => getOrders({ limit: 100 }),
+    queryFn: async () => {
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getOrdersProxy({ limit: 100 })
+      return Array.isArray(data) ? data : []
+    },
   })
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {

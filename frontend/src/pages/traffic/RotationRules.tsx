@@ -35,12 +35,12 @@ import {
 } from '@mui/icons-material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  getRotationRules,
+  getRotationRulesProxy,
   createRotationRule,
   updateRotationRule,
   deleteRotationRule,
-  getDayparts,
-  getCampaigns,
+  getDaypartsProxy,
+  getCampaignsProxy,
 } from '../../utils/api'
 
 interface RotationRule {
@@ -80,19 +80,31 @@ const RotationRules: React.FC = () => {
 
   const { data: rulesData, isLoading, error } = useQuery({
     queryKey: ['rotation-rules'],
-    queryFn: () => getRotationRules({ active_only: false }),
+    queryFn: async () => {
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getRotationRulesProxy({ active_only: false })
+      return Array.isArray(data) ? data : []
+    },
     retry: 1,
   })
 
   const { data: daypartsData, error: daypartsError } = useQuery({
     queryKey: ['dayparts'],
-    queryFn: () => getDayparts(),
+    queryFn: async () => {
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getDaypartsProxy({ active_only: false })
+      return Array.isArray(data) ? data : []
+    },
     retry: 1,
   })
 
   const { data: campaignsData, error: campaignsError } = useQuery({
     queryKey: ['campaigns'],
-    queryFn: () => getCampaigns({ active_only: false }),
+    queryFn: async () => {
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getCampaignsProxy({ active_only: false })
+      return Array.isArray(data?.campaigns) ? data.campaigns : (Array.isArray(data) ? data : [])
+    },
     retry: 1,
   })
 

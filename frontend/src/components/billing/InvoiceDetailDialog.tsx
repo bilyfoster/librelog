@@ -32,7 +32,7 @@ import {
   getInvoice,
   sendInvoice,
   markInvoicePaid,
-  getPayments,
+  getPaymentsProxy,
 } from '../../utils/api'
 import PaymentFormDialog from './PaymentFormDialog'
 
@@ -60,7 +60,11 @@ const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
 
   const { data: payments } = useQuery({
     queryKey: ['payments', invoiceId],
-    queryFn: () => getPayments({ invoice_id: invoiceId }),
+    queryFn: async () => {
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getPaymentsProxy({ invoice_id: invoiceId })
+      return Array.isArray(data) ? data : []
+    },
     enabled: open && !!invoiceId,
   })
 

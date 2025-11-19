@@ -31,7 +31,7 @@ import {
 } from '@mui/icons-material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  getDaypartCategories,
+  getDaypartCategoriesProxy,
   createDaypartCategory,
   updateDaypartCategory,
   deleteDaypartCategory,
@@ -64,7 +64,11 @@ const DaypartCategories: React.FC = () => {
 
   const { data: categoriesData, isLoading, error } = useQuery({
     queryKey: ['daypart-categories'],
-    queryFn: () => getDaypartCategories({ active_only: false }),
+    queryFn: async () => {
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getDaypartCategoriesProxy({ active_only: false })
+      return Array.isArray(data) ? data : []
+    },
     retry: 1,
   })
 

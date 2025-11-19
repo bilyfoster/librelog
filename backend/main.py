@@ -18,7 +18,7 @@ from backend.routers import (
     advertisers, agencies, sales_reps, orders, spots, dayparts, daypart_categories, rotation_rules, traffic_logs, break_structures, copy, copy_assignments,
     invoices, payments, makegoods, audit_logs, log_revisions, inventory, revenue, sales_goals,
     webhooks, notifications, collaboration, backups, settings, users,
-    audio_cuts, live_reads, political_compliance, audio_delivery, audio_qc, help
+    audio_cuts, live_reads, political_compliance, audio_delivery, audio_qc, help, proxy
 )
 from backend.middleware import AuthMiddleware, LoggingMiddleware
 from backend.models import user, track, campaign, clock_template, daily_log, voice_track, playback_history
@@ -101,56 +101,73 @@ app.add_middleware(
 # Add trusted host middleware
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["localhost", "127.0.0.1", "frontend", "api", "log-dev.gayphx.com"]
+    allowed_hosts=["localhost", "127.0.0.1", "frontend", "api", "log-dev.gayphx.com", "log.gayphx.com", ".gayphx.com"]
 )
 
 # Add custom middleware
 app.add_middleware(LoggingMiddleware)
 app.add_middleware(AuthMiddleware)
 
+# Register health endpoint BEFORE routers with empty prefixes to avoid route conflicts
+@app.get("/health")
+@app.get("/api/health")  # Keep both for compatibility
+async def health_check():
+    """Health check endpoint - no auth required"""
+    try:
+        # Simple health check - no database access needed
+        return {"status": "healthy", "service": "librelog-api"}
+    except Exception as e:
+        logger.error("Health check failed", error=str(e))
+        # Still return 200 even if there's an error, so monitoring doesn't think we're down
+        return {"status": "degraded", "service": "librelog-api", "error": str(e)}
+
 # Include routers
-app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
-app.include_router(setup.router, prefix="/api/setup", tags=["Setup"])
-app.include_router(tracks.router, prefix="/api/tracks", tags=["Tracks"])
-app.include_router(campaigns.router, prefix="/api/campaigns", tags=["Campaigns"])
-app.include_router(clocks.router, prefix="/api/clocks", tags=["Clock Templates"])
-app.include_router(logs.router, prefix="/api/logs", tags=["Logs"])
-app.include_router(voice_tracks.router, prefix="/api/voice", tags=["Voice Tracks"])
-app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
-app.include_router(sync.router, prefix="/api/sync", tags=["Sync"])
-app.include_router(activity.router, prefix="/api/activity", tags=["Activity"])
-app.include_router(advertisers.router, prefix="/api/advertisers", tags=["Advertisers"])
-app.include_router(agencies.router, prefix="/api/agencies", tags=["Agencies"])
-app.include_router(sales_reps.router, prefix="/api/sales-reps", tags=["Sales Reps"])
-app.include_router(orders.router, prefix="/api/orders", tags=["Orders"])
-app.include_router(spots.router, prefix="/api/spots", tags=["Spots"])
-app.include_router(dayparts.router, prefix="/api/dayparts", tags=["Dayparts"])
-app.include_router(daypart_categories.router, prefix="/api", tags=["Daypart Categories"])
-app.include_router(rotation_rules.router, prefix="/api", tags=["Rotation Rules"])
-app.include_router(traffic_logs.router, prefix="/api", tags=["Traffic Logs"])
-app.include_router(break_structures.router, prefix="/api/break-structures", tags=["Break Structures"])
-app.include_router(copy.router, prefix="/api/copy", tags=["Copy"])
-app.include_router(copy_assignments.router, prefix="/api/copy-assignments", tags=["Copy Assignments"])
-app.include_router(invoices.router, prefix="/api/invoices", tags=["Invoices"])
-app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
-app.include_router(makegoods.router, prefix="/api/makegoods", tags=["Makegoods"])
-app.include_router(audit_logs.router, prefix="/api/audit-logs", tags=["Audit Logs"])
-app.include_router(log_revisions.router, prefix="/api", tags=["Log Revisions"])
-app.include_router(inventory.router, prefix="/api/inventory", tags=["Inventory"])
-app.include_router(revenue.router, prefix="/api/revenue", tags=["Revenue"])
-app.include_router(sales_goals.router, prefix="/api/sales-goals", tags=["Sales Goals"])
-app.include_router(webhooks.router, prefix="/api", tags=["Webhooks"])
-app.include_router(notifications.router, prefix="/api", tags=["Notifications"])
-app.include_router(collaboration.router, prefix="/api", tags=["Collaboration"])
-app.include_router(backups.router, prefix="/api", tags=["Backups"])
-app.include_router(settings.router, prefix="/api", tags=["Settings"])
-app.include_router(users.router, prefix="/api", tags=["Users"])
-app.include_router(audio_cuts.router, prefix="/api", tags=["Audio Cuts"])
-app.include_router(live_reads.router, prefix="/api", tags=["Live Reads"])
-app.include_router(political_compliance.router, prefix="/api", tags=["Political Compliance"])
-app.include_router(audio_delivery.router, prefix="/api", tags=["Audio Delivery"])
-app.include_router(audio_qc.router, prefix="/api", tags=["Audio QC"])
-app.include_router(help.router, prefix="/api/help", tags=["Help"])
+# NOTE: Traefik strips /api prefix before forwarding, so routes are registered without /api
+# The paths will be /auth/login, /setup, etc. when they reach the backend
+app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+app.include_router(setup.router, prefix="/setup", tags=["Setup"])
+# NOTE: Traefik strips /api prefix, so all routes are registered without /api
+app.include_router(tracks.router, prefix="/tracks", tags=["Tracks"])
+app.include_router(campaigns.router, prefix="/campaigns", tags=["Campaigns"])
+app.include_router(clocks.router, prefix="/clocks", tags=["Clock Templates"])
+app.include_router(logs.router, prefix="/logs", tags=["Logs"])
+app.include_router(voice_tracks.router, prefix="/voice", tags=["Voice Tracks"])
+app.include_router(reports.router, prefix="/reports", tags=["Reports"])
+app.include_router(sync.router, prefix="/sync", tags=["Sync"])
+app.include_router(activity.router, prefix="/activity", tags=["Activity"])
+app.include_router(advertisers.router, prefix="/advertisers", tags=["Advertisers"])
+app.include_router(agencies.router, prefix="/agencies", tags=["Agencies"])
+app.include_router(sales_reps.router, prefix="/sales-reps", tags=["Sales Reps"])
+app.include_router(orders.router, prefix="/orders", tags=["Orders"])
+app.include_router(spots.router, prefix="/spots", tags=["Spots"])
+app.include_router(dayparts.router, prefix="/dayparts", tags=["Dayparts"])
+app.include_router(daypart_categories.router, prefix="", tags=["Daypart Categories"])
+app.include_router(rotation_rules.router, prefix="", tags=["Rotation Rules"])
+app.include_router(traffic_logs.router, prefix="", tags=["Traffic Logs"])
+app.include_router(break_structures.router, prefix="/break-structures", tags=["Break Structures"])
+app.include_router(copy.router, prefix="/copy", tags=["Copy"])
+app.include_router(copy_assignments.router, prefix="/copy-assignments", tags=["Copy Assignments"])
+app.include_router(invoices.router, prefix="/invoices", tags=["Invoices"])
+app.include_router(payments.router, prefix="/payments", tags=["Payments"])
+app.include_router(makegoods.router, prefix="/makegoods", tags=["Makegoods"])
+app.include_router(audit_logs.router, prefix="/admin/audit-logs", tags=["Audit Logs"])
+app.include_router(log_revisions.router, prefix="", tags=["Log Revisions"])
+app.include_router(inventory.router, prefix="/inventory", tags=["Inventory"])
+app.include_router(revenue.router, prefix="/revenue", tags=["Revenue"])
+app.include_router(sales_goals.router, prefix="/sales-goals", tags=["Sales Goals"])
+app.include_router(webhooks.router, prefix="", tags=["Webhooks"])
+app.include_router(notifications.router, prefix="", tags=["Notifications"])
+app.include_router(collaboration.router, prefix="", tags=["Collaboration"])
+app.include_router(backups.router, prefix="", tags=["Backups"])
+app.include_router(settings.router, prefix="", tags=["Settings"])
+app.include_router(users.router, prefix="", tags=["Users"])
+app.include_router(audio_cuts.router, prefix="", tags=["Audio Cuts"])
+app.include_router(live_reads.router, prefix="", tags=["Live Reads"])
+app.include_router(political_compliance.router, prefix="", tags=["Political Compliance"])
+app.include_router(audio_delivery.router, prefix="", tags=["Audio Delivery"])
+app.include_router(audio_qc.router, prefix="", tags=["Audio QC"])
+app.include_router(help.router, prefix="/help", tags=["Help"])
+app.include_router(proxy.router, prefix="/proxy", tags=["Proxy"])
 
 
 @app.exception_handler(Exception)
@@ -161,18 +178,6 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"detail": "Internal server error"}
     )
-
-
-@app.get("/api/health")
-async def health_check():
-    """Health check endpoint - no auth required"""
-    try:
-        # Simple health check - no database access needed
-        return {"status": "healthy", "service": "librelog-api"}
-    except Exception as e:
-        logger.error("Health check failed", error=str(e))
-        # Still return 200 even if there's an error, so monitoring doesn't think we're down
-        return {"status": "degraded", "service": "librelog-api", "error": str(e)}
 
 
 @app.get("/")

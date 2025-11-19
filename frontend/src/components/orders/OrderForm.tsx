@@ -17,6 +17,7 @@ import {
   FormHelperText,
 } from '@mui/material'
 import api from '../../utils/api'
+import { getAgenciesProxy, getSalesRepsProxy } from '../../utils/api'
 import InfoButton from '../Help/InfoButton'
 
 interface Order {
@@ -65,18 +66,21 @@ const OrderForm: React.FC<OrderFormProps> = ({ open, onClose, order, advertisers
   const { data: agencies } = useQuery({
     queryKey: ['agencies'],
     queryFn: async () => {
-      const response = await api.get('/agencies', { params: { limit: 1000 } })
-      return response.data
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getAgenciesProxy({ limit: 1000 })
+      return Array.isArray(data) ? data : []
     },
   })
 
   const { data: salesReps } = useQuery({
     queryKey: ['sales-reps'],
     queryFn: async () => {
-      const response = await api.get('/sales-reps/', { params: { limit: 1000 } })
-      return response.data
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getSalesRepsProxy({ limit: 1000 })
+      return Array.isArray(data) ? data : []
     },
   })
+
 
   useEffect(() => {
     if (order) {

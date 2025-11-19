@@ -17,7 +17,7 @@ import {
   CloudUpload as CloudUploadIcon,
   AudioFile as AudioFileIcon,
 } from '@mui/icons-material'
-import { uploadCopy, createCopy } from '../../utils/api'
+import { uploadCopy, createCopy, getOrdersProxy, getAdvertisersProxy } from '../../utils/api'
 import api from '../../utils/api'
 
 interface CopyUploadProps {
@@ -44,12 +44,13 @@ const CopyUpload: React.FC<CopyUploadProps> = ({ onSuccess, onCancel }) => {
   React.useEffect(() => {
     const loadData = async () => {
       try {
-        const [ordersRes, advertisersRes] = await Promise.all([
-          api.get('/orders', { params: { limit: 100 } }),
-          api.get('/advertisers', { params: { limit: 100 } }),
+        // Use server-side proxy endpoints - all processing happens on backend
+        const [ordersData, advertisersData] = await Promise.all([
+          getOrdersProxy({ limit: 100 }),
+          getAdvertisersProxy({ limit: 100 }),
         ])
-        setOrders(ordersRes.data.orders || ordersRes.data || [])
-        setAdvertisers(advertisersRes.data.advertisers || advertisersRes.data || [])
+        setOrders(Array.isArray(ordersData) ? ordersData : [])
+        setAdvertisers(Array.isArray(advertisersData) ? advertisersData : [])
       } catch (err) {
         console.error('Failed to load orders/advertisers:', err)
       }

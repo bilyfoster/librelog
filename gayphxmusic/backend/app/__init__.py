@@ -1,2 +1,0 @@
-# GayPHX Music Platform Backend
-

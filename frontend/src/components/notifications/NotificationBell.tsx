@@ -16,7 +16,7 @@ import {
 } from '@mui/material'
 import { Notifications as NotificationsIcon } from '@mui/icons-material'
 import {
-  getNotifications,
+  getNotificationsProxy,
   getUnreadCount,
   markNotificationRead,
   markAllNotificationsRead,
@@ -37,7 +37,11 @@ const NotificationBell: React.FC = () => {
 
   const { data: notifications } = useQuery({
     queryKey: ['notifications', { unread_only: false, limit: 20 }],
-    queryFn: () => getNotifications({ unread_only: false, limit: 20 }),
+    queryFn: async () => {
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getNotificationsProxy({ unread_only: false, limit: 20 })
+      return Array.isArray(data) ? data : []
+    },
     enabled: open,
   })
 

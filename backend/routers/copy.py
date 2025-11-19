@@ -21,13 +21,29 @@ import structlog
 logger = structlog.get_logger()
 
 # File storage directory for copy audio files
-COPY_FILES_DIR = os.getenv("COPY_FILES_DIR", "/var/lib/librelog/copy_files")
-try:
-    Path(COPY_FILES_DIR).mkdir(parents=True, exist_ok=True)
-except PermissionError:
-    # Fallback to /tmp if /var/lib is not writable
-    COPY_FILES_DIR = os.getenv("COPY_FILES_DIR", "/tmp/librelog/copy_files")
-    Path(COPY_FILES_DIR).mkdir(parents=True, exist_ok=True)
+def _ensure_directory(path: str, fallback: str, env_var: str) -> str:
+    """Ensure directory exists, with fallback if creation fails."""
+    try:
+        Path(path).mkdir(parents=True, exist_ok=True)
+        return path
+    except (PermissionError, FileNotFoundError, OSError) as e:
+        # Fallback to /tmp if /var/lib is not writable or doesn't exist
+        # Try fallback even if env var is set, to ensure the app can start
+        logger.warning(f"Failed to create directory {path}: {e}, trying fallback {fallback}")
+        try:
+            Path(fallback).mkdir(parents=True, exist_ok=True)
+            return fallback
+        except Exception as e2:
+            # Last resort: use /tmp directly
+            logger.warning(f"Fallback also failed: {e2}, using {fallback} anyway")
+            Path("/tmp").mkdir(parents=True, exist_ok=True)
+            return fallback
+
+COPY_FILES_DIR = _ensure_directory(
+    os.getenv("COPY_FILES_DIR", "/var/lib/librelog/copy_files"),
+    "/tmp/librelog/copy_files",
+    "COPY_FILES_DIR"
+)
 
 router = APIRouter()
 

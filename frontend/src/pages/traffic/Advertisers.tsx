@@ -24,6 +24,7 @@ import {
 } from '@mui/material'
 import { Add, Edit, Delete, Search } from '@mui/icons-material'
 import api from '../../utils/api'
+import { getAdvertisersProxy } from '../../utils/api'
 
 interface Advertiser {
   id: number
@@ -50,16 +51,14 @@ const Advertisers: React.FC = () => {
   const { data: advertisers, isLoading, error } = useQuery({
     queryKey: ['advertisers', searchTerm],
     queryFn: async () => {
-      const response = await api.get('/advertisers', {
-        params: {
-          limit: 100,
-          skip: 0,
-          active_only: false,
-          ...(searchTerm && { search: searchTerm }),
-        },
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getAdvertisersProxy({
+        limit: 100,
+        skip: 0,
+        active_only: false,
+        search: searchTerm || undefined,
       })
-      // API returns array directly
-      return Array.isArray(response.data) ? response.data : []
+      return Array.isArray(data) ? data : []
     },
     retry: 1,
   })

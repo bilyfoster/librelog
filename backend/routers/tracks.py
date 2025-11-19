@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.responses import StreamingResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from typing import Optional
 from backend.database import get_db
 from backend.models.track import Track
 from backend.schemas.track import TrackCreate, TrackUpdate, TrackResponse
@@ -17,7 +18,7 @@ router = APIRouter()
 
 @router.get("/count")
 async def get_tracks_count(
-    track_type: str = Query(None),
+    track_type: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
     """Get total count of tracks - fast endpoint for checking if tracks exist"""
@@ -36,11 +37,17 @@ async def get_tracks_count(
 async def list_tracks(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    track_type: str = Query(None),
-    search: str = Query(None),  # Text search in title/artist
+    track_type: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),  # Text search in title/artist
     db: AsyncSession = Depends(get_db)
 ):
     """List all tracks with optional filtering by type and text search"""
+    import structlog
+    logger = structlog.get_logger()
+    
+    # Log received parameters for debugging
+    logger.info("list_tracks called", skip=skip, limit=limit, track_type=track_type, search=search)
+    
     # Optimize query - only select needed columns if possible
     query = select(Track)
     
@@ -64,7 +71,26 @@ async def list_tracks(
     result = await db.execute(query)
     tracks = result.scalars().all()
     
-    return [TrackResponse.model_validate(track) for track in tracks]
+    logger.info("Found tracks", count=len(tracks))
+    
+    # Validate and serialize tracks
+    try:
+        validated_tracks = [TrackResponse.model_validate(track) for track in tracks]
+        logger.info("Successfully validated tracks", count=len(validated_tracks))
+        return validated_tracks
+    except Exception as e:
+        logger.error("Error validating tracks", error=str(e), error_type=type(e).__name__, exc_info=True)
+        # Log first track that fails validation for debugging
+        if tracks:
+            first_track = tracks[0]
+            logger.error("First track data", 
+                        id=first_track.id,
+                        title=first_track.title,
+                        artist=first_track.artist,
+                        type=first_track.type,
+                        filepath=first_track.filepath,
+                        has_filepath=bool(first_track.filepath))
+        raise
 
 
 @router.post("/", response_model=TrackResponse, status_code=status.HTTP_201_CREATED)

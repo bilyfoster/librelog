@@ -51,8 +51,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
     
     async def dispatch(self, request: Request, call_next):
         # Skip auth for health check and docs
+        # NOTE: Traefik strips /api prefix before forwarding, so paths come as /auth/login not /api/auth/login
         path = request.url.path
-        if path in ["/api/health", "/docs", "/redoc", "/openapi.json", "/"] or path.startswith("/api/auth") or path.startswith("/api/setup"):
+        if path in ["/api/health", "/health", "/docs", "/redoc", "/openapi.json", "/"] or path.startswith("/api/auth") or path.startswith("/api/setup") or path.startswith("/auth") or path.startswith("/setup"):
             return await call_next(request)
         
         # Extract token from Authorization header

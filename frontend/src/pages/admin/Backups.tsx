@@ -43,7 +43,7 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material'
 import {
-  getBackups,
+  getBackupsProxy,
   createBackup,
   restoreBackup,
   deleteBackup,
@@ -80,7 +80,8 @@ const Backups: React.FC = () => {
   const { data: backups, isLoading, error } = useQuery({
     queryKey: ['backups', statusFilter],
     queryFn: async () => {
-      const response = await getBackups({
+      // Use server-side proxy endpoint - all processing happens on backend
+      const response = await getBackupsProxy({
         limit: 100,
         skip: 0,
         ...(statusFilter && { status_filter: statusFilter }),

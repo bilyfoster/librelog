@@ -22,13 +22,28 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 # File storage directory for voice tracks
-VOICE_TRACKS_DIR = os.getenv("VOICE_TRACKS_DIR", "/var/lib/librelog/voice_tracks")
-try:
-    Path(VOICE_TRACKS_DIR).mkdir(parents=True, exist_ok=True)
-except PermissionError:
-    # Fallback to /tmp if /var/lib is not writable
-    VOICE_TRACKS_DIR = os.getenv("VOICE_TRACKS_DIR", "/tmp/librelog/voice_tracks")
-    Path(VOICE_TRACKS_DIR).mkdir(parents=True, exist_ok=True)
+def _ensure_directory(path: str, fallback: str) -> str:
+    """Ensure directory exists, with fallback if creation fails."""
+    try:
+        Path(path).mkdir(parents=True, exist_ok=True)
+        return path
+    except (PermissionError, FileNotFoundError, OSError) as e:
+        # Fallback to /tmp if /var/lib is not writable or doesn't exist
+        # Try fallback even if env var is set, to ensure the app can start
+        logger.warning(f"Failed to create directory {path}: {e}, trying fallback {fallback}")
+        try:
+            Path(fallback).mkdir(parents=True, exist_ok=True)
+            return fallback
+        except Exception as e2:
+            # Last resort: use /tmp directly
+            logger.warning(f"Fallback also failed: {e2}, using {fallback} anyway")
+            Path("/tmp").mkdir(parents=True, exist_ok=True)
+            return fallback
+
+VOICE_TRACKS_DIR = _ensure_directory(
+    os.getenv("VOICE_TRACKS_DIR", "/var/lib/librelog/voice_tracks"),
+    "/tmp/librelog/voice_tracks"
+)
 
 
 class VoiceTrackResponse(BaseModel):

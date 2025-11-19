@@ -34,11 +34,11 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material'
 import {
-  getSalesGoals,
+  getSalesGoalsProxy,
   createSalesGoal,
   getSalesGoalsProgress,
+  getSalesRepsProxy,
 } from '../../utils/api'
-import { getSalesReps } from '../../utils/api'
 import SalesGoalFormDialog from '../../components/analytics/SalesGoalFormDialog'
 
 interface SalesGoal {
@@ -64,7 +64,8 @@ const SalesGoals: React.FC = () => {
     queryFn: async () => {
       const params: any = { limit: 100 }
       if (salesRepFilter) params.sales_rep_id = salesRepFilter
-      const data = await getSalesGoals(params)
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getSalesGoalsProxy(params)
       return data
     },
     retry: 1,
@@ -72,7 +73,11 @@ const SalesGoals: React.FC = () => {
 
   const { data: salesReps } = useQuery({
     queryKey: ['sales-reps'],
-    queryFn: () => getSalesReps({ limit: 100 }),
+    queryFn: async () => {
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getSalesRepsProxy({ limit: 100 })
+      return Array.isArray(data) ? data : []
+    },
   })
 
   const { data: progress } = useQuery({

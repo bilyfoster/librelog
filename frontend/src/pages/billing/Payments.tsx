@@ -27,9 +27,9 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material'
 import {
-  getPayments,
+  getPaymentsProxy,
   deletePayment,
-  getInvoices,
+  getInvoicesProxy,
 } from '../../utils/api'
 import PaymentFormDialog from '../../components/billing/PaymentFormDialog'
 
@@ -56,7 +56,8 @@ const Payments: React.FC = () => {
     queryFn: async () => {
       const params: any = { limit: 100 }
       if (invoiceFilter) params.invoice_id = invoiceFilter
-      const data = await getPayments(params)
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getPaymentsProxy(params)
       return data
     },
     retry: 1,
@@ -64,7 +65,11 @@ const Payments: React.FC = () => {
 
   const { data: invoices } = useQuery({
     queryKey: ['invoices'],
-    queryFn: () => getInvoices({ limit: 100 }),
+    queryFn: async () => {
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getInvoicesProxy({ limit: 100 })
+      return Array.isArray(data) ? data : []
+    },
   })
 
   const deleteMutation = useMutation({

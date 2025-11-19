@@ -39,7 +39,7 @@ import {
   Cancel as InactiveIcon,
 } from '@mui/icons-material'
 import {
-  getWebhooks,
+  getWebhooksProxy,
   createWebhook,
   updateWebhook,
   deleteWebhook,
@@ -263,7 +263,11 @@ const Webhooks: React.FC = () => {
 
   const { data: webhooks, isLoading, error } = useQuery({
     queryKey: ['webhooks', { active_only: activeOnly }],
-    queryFn: () => getWebhooks({ active_only: activeOnly, limit: 100 }),
+    queryFn: async () => {
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getWebhooksProxy({ active_only: activeOnly, limit: 100 })
+      return Array.isArray(data) ? data : []
+    },
     retry: 1,
   })
 

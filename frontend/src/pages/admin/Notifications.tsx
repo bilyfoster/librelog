@@ -18,7 +18,7 @@ import {
 } from '@mui/material'
 import { CheckCircle as ReadIcon } from '@mui/icons-material'
 import {
-  getNotifications,
+  getNotificationsProxy,
   markNotificationRead,
   markAllNotificationsRead,
 } from '../../utils/api'
@@ -30,7 +30,11 @@ const Notifications: React.FC = () => {
 
   const { data: notifications, isLoading, error } = useQuery({
     queryKey: ['notifications', { unread_only: unreadOnly }],
-    queryFn: () => getNotifications({ unread_only: unreadOnly, limit: 100 }),
+    queryFn: async () => {
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getNotificationsProxy({ unread_only: unreadOnly, limit: 100 })
+      return Array.isArray(data) ? data : []
+    },
     retry: 1,
   })
 

@@ -24,7 +24,7 @@ import {
   Inventory as InventoryIcon,
   Sell as SellIcon,
 } from '@mui/icons-material'
-import { getInventory, getInventoryHeatmap, getSelloutPercentages } from '../../utils/api'
+import { getInventoryProxy, getInventoryHeatmap, getSelloutPercentages } from '../../utils/api'
 import InventoryHeatmap from '../../components/analytics/InventoryHeatmap'
 
 const InventoryDashboard: React.FC = () => {
@@ -37,7 +37,11 @@ const InventoryDashboard: React.FC = () => {
 
   const { data: inventory, isLoading: inventoryLoading, error: inventoryError } = useQuery({
     queryKey: ['inventory', startDate, endDate],
-    queryFn: () => getInventory(startDate, endDate),
+    queryFn: async () => {
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getInventoryProxy({ start_date: startDate, end_date: endDate })
+      return data
+    },
     retry: 1,
   })
 
