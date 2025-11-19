@@ -193,7 +193,8 @@ class AudioProcessingService:
         audio_file: str,
         start: float,
         end: float,
-        output_path: str
+        output_path: str,
+        output_format: str = "webm"
     ) -> bool:
         """
         Trim audio file
@@ -203,6 +204,7 @@ class AudioProcessingService:
             start: Start time in seconds
             end: End time in seconds
             output_path: Path to save trimmed output
+            output_format: Output format (webm, mp3, etc.)
         
         Returns:
             True if successful, False otherwise
@@ -212,12 +214,32 @@ class AudioProcessingService:
             start_ms = int(start * 1000)
             end_ms = int(end * 1000)
             
+            # Ensure valid range
+            if start_ms < 0:
+                start_ms = 0
+            if end_ms > len(audio):
+                end_ms = len(audio)
+            if start_ms >= end_ms:
+                logger.error("Invalid trim range", start=start_ms, end=end_ms)
+                return False
+            
             trimmed = audio[start_ms:end_ms]
-            trimmed.export(output_path, format="mp3", bitrate="320k")
             
-            logger.info("Audio trimmed", input=audio_file, start=start, end=end)
+            # Export in requested format
+            # Note: pydub uses ffmpeg for format conversion
+            if output_format == "mp3":
+                trimmed.export(str(output_path), format="mp3", bitrate="320k")
+            elif output_format == "webm":
+                # WebM export - use opus codec
+                trimmed.export(str(output_path), format="webm", codec="libopus", bitrate="128k")
+            elif output_format == "ogg":
+                trimmed.export(str(output_path), format="ogg", codec="libopus", bitrate="128k")
+            else:
+                # Default to webm if format not recognized
+                trimmed.export(str(output_path), format="webm", codec="libopus", bitrate="128k")
+            
+            logger.info("Audio trimmed", input=audio_file, start=start, end=end, output=output_path)
             return True
-            
         except Exception as e:
             logger.error("Trim failed", error=str(e), exc_info=True)
             return False
@@ -432,4 +454,36 @@ class AudioProcessingService:
             result["errors"].append(f"Verification error: {str(e)}")
             logger.error("Compatibility verification failed", error=str(e), exc_info=True)
             return result
+    
+    def get_audio_duration(self, audio_file: str) -> Optional[float]:
+        """
+        Get audio duration in seconds using ffprobe.
+        
+        Args:
+            audio_file: Path to audio file
+            
+        Returns:
+            Duration in seconds, or None if failed
+        """
+        try:
+            cmd = [
+                self.ffprobe_path,
+                "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                audio_file
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            duration = float(result.stdout.strip())
+            logger.info("Audio duration retrieved", file=audio_file, duration=duration)
+            return duration
+        except subprocess.CalledProcessError as e:
+            logger.error("Failed to get audio duration (ffprobe)", error=e.stderr, exc_info=True)
+            return None
+        except ValueError as e:
+            logger.error("Failed to parse audio duration", error=str(e), exc_info=True)
+            return None
+        except Exception as e:
+            logger.error("Failed to get audio duration", error=str(e), exc_info=True)
+            return None
 

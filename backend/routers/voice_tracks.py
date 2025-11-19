@@ -74,6 +74,7 @@ class VoiceTrackResponse(BaseModel):
     raw_file_url: Optional[str] = None
     mixed_file_url: Optional[str] = None
     libretime_id: Optional[str] = None
+    track_metadata: Optional[dict] = None
 
     class Config:
         from_attributes = True
@@ -231,10 +232,12 @@ async def delete_voice_track(
 @router.get("/{filename}/file")
 async def serve_voice_track_file(
     filename: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
-    """Serve voice track file"""
+    """
+    Serve voice track file - public endpoint (no auth required for browser Audio elements)
+    Still verifies file exists in database for security
+    """
     from fastapi.responses import FileResponse
     
     file_path = Path(VOICE_TRACKS_DIR) / filename
@@ -252,10 +255,32 @@ async def serve_voice_track_file(
     if not voice_track:
         raise HTTPException(status_code=404, detail="Voice track not found")
     
-    return FileResponse(
-        path=str(file_path),
-        media_type="audio/mpeg",
-        filename=filename
+    # Determine media type from file extension
+    ext = file_path.suffix.lower()
+    media_types = {
+        '.webm': 'audio/webm',
+        '.mp3': 'audio/mpeg',
+        '.wav': 'audio/wav',
+        '.ogg': 'audio/ogg',
+        '.m4a': 'audio/mp4',
+    }
+    media_type = media_types.get(ext, 'audio/webm')
+    
+    from fastapi.responses import Response
+    import aiofiles
+    
+    # Read file and return with proper headers for audio playback
+    async with aiofiles.open(file_path, 'rb') as f:
+        content = await f.read()
+    
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'inline; filename="{filename}"',
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "public, max-age=3600"
+        }
     )
 
 
@@ -279,37 +304,65 @@ async def upload_voice_track_to_libretime(
             detail=f"Voice track already uploaded to LibreTime (ID: {voice_track.libretime_id})"
         )
     
-    # Extract filename from file_url
-    filename = voice_track.file_url.split('/')[-2] if '/' in voice_track.file_url else None
-    if not filename:
-        raise HTTPException(status_code=400, detail="Invalid file URL format")
+    # Get file path (use mixed if available, otherwise raw, then file_url)
+    file_path = voice_track.mixed_file_url or voice_track.raw_file_url or voice_track.file_url
+    if not file_path:
+        raise HTTPException(status_code=400, detail="No file path found for voice track")
     
-    file_path = Path(VOICE_TRACKS_DIR) / filename
+    # Convert to absolute path
+    if not Path(file_path).is_absolute():
+        file_path = Path(VOICE_TRACKS_DIR) / Path(file_path).name
+    
+    file_path = Path(file_path)
     
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Voice track file not found")
     
     try:
+        # Prepare metadata
+        metadata = {
+            "title": voice_track.show_name or f"Voice Track {voice_track_id}",
+            "artist": "LibreLog Voice Track",
+            "genre": "Voice Over Track"
+        }
+        
+        # Prepare file for LibreTime (encode to MP3 320kbps CBR with ID3 tags)
+        audio_processor = AudioProcessingService()
+        prepared_path = audio_processor.prepare_for_libretime_upload(
+            str(file_path),
+            metadata
+        )
+        
+        if not prepared_path:
+            raise HTTPException(status_code=500, detail="Failed to prepare audio file for LibreTime")
+        
+        # Verify compatibility
+        verification = audio_processor.verify_libretime_compatibility(prepared_path)
+        if not verification.get("compatible"):
+            errors = verification.get("errors", [])
+            raise HTTPException(
+                status_code=500,
+                detail=f"File not compatible with LibreTime: {', '.join(errors)}"
+            )
+        
         # Upload to LibreTime
         result = await libretime_client.upload_voice_track(
-            file_path=str(file_path),
-            title=voice_track.show_name or f"Voice Track {voice_track_id}",
-            description=f"Voice track uploaded from LibreLog",
-            artist_name=None,
-            genre=None
+            file_path=prepared_path,
+            title=metadata["title"],
+            description=f"Voice track uploaded from LibreLog - {voice_track.show_name or 'Test Recording'}",
+            artist_name=metadata["artist"],
+            genre=metadata["genre"]
         )
         
         if result and result.get("success"):
-            # Store LibreTime file ID (we'll need to get it from the response or query)
-            # For now, we'll store the library_id as a reference
+            # Store LibreTime file ID
             library_id = result.get("library_id")
             if library_id:
-                # Note: The actual file ID will be available after analyzer processes it
-                # We might need to query for it later or store a temporary reference
                 voice_track.libretime_id = f"lib_{library_id}"
             else:
-                voice_track.libretime_id = "uploaded"  # Temporary marker
+                voice_track.libretime_id = "uploaded"
             
+            voice_track.status = VoiceTrackStatus.READY
             await db.commit()
             await db.refresh(voice_track)
             
@@ -325,7 +378,8 @@ async def upload_voice_track_to_libretime(
                 status_code=500,
                 detail="Failed to upload to LibreTime: " + result.get("error", "Unknown error")
             )
-            
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(
             "Failed to upload voice track to LibreTime",
@@ -503,13 +557,22 @@ async def create_take(
     filename = f"{timestamp}_break{break_id}_take{take_number}{file_ext}"
     file_path = break_dir / filename
     
-    # Save file
+    # Save file - stream to avoid memory issues with large files
     try:
         async with aiofiles.open(file_path, 'wb') as f:
-            content = await file.read()
-            await f.write(content)
+            # Read and write in chunks (8MB chunks)
+            chunk_size = 8 * 1024 * 1024
+            while True:
+                chunk = await file.read(chunk_size)
+                if not chunk:
+                    break
+                await f.write(chunk)
         
         file_url = f"/api/voice/{break_id}/{filename}/file"
+        
+        # Calculate audio duration
+        audio_processor = AudioProcessingService()
+        duration = audio_processor.get_audio_duration(str(file_path))
         
         # Create voice track record
         voice_track = VoiceTrack(
@@ -520,7 +583,12 @@ async def create_take(
             take_number=take_number,
             is_final=False,
             status=VoiceTrackStatus.DRAFT,
-            raw_file_url=file_url
+            raw_file_url=str(file_path),
+            track_metadata={
+                "original_filename": file.filename,
+                "file_ext": file_ext,
+                "duration": duration
+            }
         )
         
         db.add(voice_track)
@@ -692,24 +760,45 @@ async def create_standalone_recording(
     Create a standalone test recording (not tied to a break)
     """
     try:
-        # Save file
+        # Save file - stream to avoid memory issues with large files
         file_ext = Path(file.filename).suffix or ".webm"
         filename = f"standalone_{current_user.id}_{int(datetime.now().timestamp())}{file_ext}"
         file_path = Path(VOICE_TRACKS_DIR) / filename
         
+        # Ensure directory exists
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Stream file in chunks to avoid memory issues
         async with aiofiles.open(file_path, 'wb') as f:
-            content = await file.read()
-            await f.write(content)
+            # Read and write in chunks (8MB chunks)
+            chunk_size = 8 * 1024 * 1024
+            while True:
+                chunk = await file.read(chunk_size)
+                if not chunk:
+                    break
+                await f.write(chunk)
         
         # Create voice track record (without break_id)
+        # Generate file URL for serving (API endpoint format)
+        # The file serving endpoint expects: /api/voice/{filename}/file
+        file_url = f"/api/voice/{filename}/file"
+        
+        # Calculate audio duration
+        audio_processor = AudioProcessingService()
+        duration = audio_processor.get_audio_duration(str(file_path))
+        
         voice_track = VoiceTrack(
             show_name=f"Test Recording - {current_user.username}",
-            file_url=str(file_path),
+            file_url=file_url,
             raw_file_url=str(file_path),
             scheduled_time=datetime.now(),
             uploaded_by=current_user.id,
             status=VoiceTrackStatus.DRAFT,
-            track_metadata={"type": "standalone_test", "user_id": current_user.id}
+            track_metadata={
+                "type": "standalone_test", 
+                "user_id": current_user.id,
+                "duration": duration
+            }
         )
         
         db.add(voice_track)
@@ -733,6 +822,92 @@ async def create_standalone_recording(
     except Exception as e:
         logger.error("Standalone recording failed", error=str(e), exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.post("/trim", response_model=dict)
+async def trim_audio(
+    file: UploadFile = File(...),
+    start_time: float = Form(...),
+    end_time: float = Form(...),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Trim audio file to specified start and end times
+    Returns the trimmed audio file as a blob
+    """
+    try:
+        # Save uploaded file temporarily
+        file_ext = Path(file.filename).suffix or ".webm"
+        temp_filename = f"trim_temp_{current_user.id}_{int(datetime.now().timestamp())}{file_ext}"
+        temp_path = Path(VOICE_TRACKS_DIR) / temp_filename
+        
+        async with aiofiles.open(temp_path, 'wb') as f:
+            content = await file.read()
+            await f.write(content)
+        
+        # Create output path for trimmed file
+        output_filename = f"trimmed_{temp_filename}"
+        output_path = Path(VOICE_TRACKS_DIR) / output_filename
+        
+        # Trim audio using AudioProcessingService
+        audio_processor = AudioProcessingService()
+        # Determine output format from input - always use webm for browser compatibility
+        output_format = "webm"
+        success = audio_processor.trim_audio(
+            str(temp_path),
+            start_time,
+            end_time,
+            str(output_path),
+            output_format=output_format
+        )
+        
+        # Clean up temp file
+        try:
+            temp_path.unlink()
+        except:
+            pass
+        
+        if not success:
+            # Clean up output file if it exists
+            try:
+                if output_path.exists():
+                    output_path.unlink()
+            except:
+                pass
+            raise HTTPException(status_code=500, detail="Failed to trim audio - check server logs for details")
+        
+        # Read trimmed file and return as response
+        async with aiofiles.open(output_path, 'rb') as f:
+            trimmed_content = await f.read()
+        
+        # Clean up output file
+        try:
+            output_path.unlink()
+        except:
+            pass
+        
+        from fastapi.responses import Response
+        return Response(
+            content=trimmed_content,
+            media_type="audio/webm",
+            headers={
+                "Content-Disposition": f"attachment; filename=trimmed_audio{file_ext}"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Audio trim failed", error=str(e), exc_info=True)
+        # Clean up any temp files
+        try:
+            if 'temp_path' in locals() and temp_path.exists():
+                temp_path.unlink()
+            if 'output_path' in locals() and output_path.exists():
+                output_path.unlink()
+        except:
+            pass
+        raise HTTPException(status_code=500, detail=f"Failed to trim audio: {str(e)}")
 
 
 @router.post("/breaks/{break_id}/record", response_model=VoiceTrackResponse, status_code=status.HTTP_201_CREATED)

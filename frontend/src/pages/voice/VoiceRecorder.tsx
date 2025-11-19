@@ -12,8 +12,20 @@ import {
   Tabs,
   Tab,
   Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  Tooltip,
+  Chip,
 } from '@mui/material'
+import { PlayArrow, Pause, Download, CloudUpload, CheckCircle, Delete, Link as LinkIcon } from '@mui/icons-material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import SharedVoiceRecorder from '../../components/voice/SharedVoiceRecorder'
 import PreviewPanels from '../../components/voice/PreviewPanels'
 import TimingDisplay from '../../components/voice/TimingDisplay'
@@ -24,7 +36,58 @@ const VoiceRecorder: React.FC = () => {
   const [selectedBreakId, setSelectedBreakId] = useState<number | null>(null)
   const [selectedLogId, setSelectedLogId] = useState<number | null>(null)
   const [selectedHour, setSelectedHour] = useState<number | null>(null)
+  const [playingId, setPlayingId] = useState<number | null>(null)
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null)
+  const [audioProgress, setAudioProgress] = useState<number>(0)
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
+
+  // Cleanup audio element on unmount
+  useEffect(() => {
+    return () => {
+      if (audioElement) {
+        audioElement.pause()
+        // Don't clear src to avoid "Empty src attribute" error
+        // Just pause and let it be garbage collected
+      }
+    }
+  }, [audioElement])
+
+  // Update audio progress
+  useEffect(() => {
+    if (!audioElement) {
+      setAudioProgress(0)
+      return
+    }
+
+    const updateProgress = () => {
+      if (audioElement.duration && !isNaN(audioElement.duration) && audioElement.duration > 0) {
+        const progress = (audioElement.currentTime / audioElement.duration) * 100
+        setAudioProgress(Math.min(100, Math.max(0, progress)))
+      }
+    }
+
+    const handleEnded = () => {
+      console.log('Audio ended')
+      setPlayingId(null)
+      setAudioElement(null)
+      setAudioProgress(0)
+    }
+
+    const handlePlaying = () => {
+      console.log('Audio is playing, duration:', audioElement.duration, 'currentTime:', audioElement.currentTime)
+    }
+
+    audioElement.addEventListener('timeupdate', updateProgress)
+    audioElement.addEventListener('ended', handleEnded)
+    audioElement.addEventListener('playing', handlePlaying)
+
+    return () => {
+      audioElement.removeEventListener('timeupdate', updateProgress)
+      audioElement.removeEventListener('ended', handleEnded)
+      audioElement.removeEventListener('playing', handlePlaying)
+    }
+  }, [audioElement])
 
   // Fetch available logs
   const { data: logsData } = useQuery({
@@ -72,6 +135,7 @@ const VoiceRecorder: React.FC = () => {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
+          timeout: 300000, // 5 minutes for large audio file uploads
         }
       )
       return response.data
@@ -81,6 +145,33 @@ const VoiceRecorder: React.FC = () => {
     },
   })
 
+  // Fetch standalone recordings
+  const { data: standaloneRecordings, refetch: refetchStandalone, isLoading: isLoadingRecordings } = useQuery({
+    queryKey: ['standalone-recordings'],
+    queryFn: async () => {
+      const response = await api.get('/voice/recordings/production')
+      // Filter for standalone test recordings
+      const recordings = response.data || []
+      console.log('All recordings from API:', recordings)
+      // Handle both object and string JSON formats
+      const filtered = recordings.filter((r: any) => {
+        const metadata = r.track_metadata
+        if (!metadata) return false
+        // Handle if metadata is already an object or needs parsing
+        const type = typeof metadata === 'string' ? JSON.parse(metadata)?.type : metadata?.type
+        const matches = type === 'standalone_test'
+        if (!matches) {
+          console.log('Recording filtered out:', r.id, 'metadata:', metadata, 'type:', type)
+        }
+        return matches
+      })
+      console.log('Filtered standalone recordings:', filtered)
+      return filtered
+    },
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+  })
+
   // Upload standalone recording mutation
   const uploadStandaloneMutation = useMutation({
     mutationFn: async (blob: Blob) => {
@@ -88,6 +179,7 @@ const VoiceRecorder: React.FC = () => {
       formData.append('file', blob, `test_recording_${Date.now()}.webm`)
       
       // Save as a test recording (not tied to a break)
+      // Use longer timeout for file uploads (5 minutes for large audio files)
       const response = await api.post(
         `/voice/recordings/standalone`,
         formData,
@@ -95,12 +187,31 @@ const VoiceRecorder: React.FC = () => {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
+          timeout: 300000, // 5 minutes for large audio file uploads
         }
       )
       return response.data
     },
+    onSuccess: async () => {
+      // Invalidate and refetch immediately
+      await queryClient.invalidateQueries({ queryKey: ['standalone-recordings'] })
+      await queryClient.invalidateQueries({ queryKey: ['production-recordings'] })
+      // Invalidate all voice-tracks queries (including 'all' and paginated)
+      await queryClient.invalidateQueries({ queryKey: ['voice-tracks'] })
+      // Also refetch the standalone recordings query
+      await refetchStandalone()
+    },
+  })
+
+  // Upload to LibreTime mutation
+  const uploadToLibreTimeMutation = useMutation({
+    mutationFn: async (recordingId: number) => {
+      const response = await api.post(`/voice/${recordingId}/upload-to-libretime`)
+      return response.data
+    },
     onSuccess: () => {
-      // Could show success message
+      queryClient.invalidateQueries({ queryKey: ['standalone-recordings'] })
+      queryClient.invalidateQueries({ queryKey: ['production-recordings'] })
     },
   })
 
@@ -154,12 +265,244 @@ const VoiceRecorder: React.FC = () => {
         <Box>
           <Alert severity="info" sx={{ mb: 3 }}>
             Test recording mode - Record without selecting a log or break. This is useful for testing your setup or recording practice takes.
+            You can upload your recordings directly to LibreTime library after recording.
+            <Box sx={{ mt: 1 }}>
+              <Button
+                size="small"
+                startIcon={<LinkIcon />}
+                onClick={() => navigate('/voice/tracks')}
+                variant="outlined"
+              >
+                View All Recordings
+              </Button>
+            </Box>
           </Alert>
+          
+          {uploadStandaloneMutation.isSuccess && (
+            <Alert severity="success" sx={{ mb: 3 }}>
+              Recording saved successfully! The list below will refresh automatically.
+              <Button
+                size="small"
+                onClick={() => {
+                  queryClient.invalidateQueries({ queryKey: ['standalone-recordings'] })
+                  queryClient.invalidateQueries({ queryKey: ['production-recordings'] })
+                  queryClient.invalidateQueries({ queryKey: ['voice-tracks', 'all'] })
+                  navigate('/voice/tracks')
+                }}
+                sx={{ ml: 1 }}
+              >
+                View in Manager
+              </Button>
+            </Alert>
+          )}
+          
+          {uploadStandaloneMutation.isError && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              Failed to save recording: {uploadStandaloneMutation.error?.message}
+            </Alert>
+          )}
           <SharedVoiceRecorder
             context="voice_track"
             onUpload={handleUpload}
             takes={[]}
           />
+          
+          {/* Standalone recordings list */}
+          <Box sx={{ mt: 4 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">
+                My Test Recordings {standaloneRecordings ? `(${standaloneRecordings.length})` : ''}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  size="small"
+                  onClick={() => refetchStandalone()}
+                  variant="outlined"
+                >
+                  Refresh
+                </Button>
+                <Button
+                  size="small"
+                  startIcon={<LinkIcon />}
+                  onClick={() => navigate('/voice/tracks')}
+                  variant="outlined"
+                >
+                  View All in Manager
+                </Button>
+              </Box>
+            </Box>
+            {isLoadingRecordings ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                <CircularProgress />
+              </Box>
+            ) : standaloneRecordings && standaloneRecordings.length > 0 ? (
+              <TableContainer component={Paper}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Duration</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>LibreTime</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {standaloneRecordings.map((recording: any) => (
+                      <TableRow key={recording.id}>
+                        <TableCell>{recording.show_name || `Recording #${recording.id}`}</TableCell>
+                        <TableCell>
+                          {recording.created_at
+                            ? new Date(recording.created_at).toLocaleString()
+                            : 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          {recording.track_metadata?.duration 
+                            ? `${(recording.track_metadata.duration).toFixed(1)}s`
+                            : 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={recording.status || 'DRAFT'}
+                            size="small"
+                            color={recording.status === 'READY' ? 'success' : 'default'}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {recording.libretime_id ? (
+                            <Chip
+                              label={recording.libretime_id}
+                              size="small"
+                              color="success"
+                              icon={<CheckCircle />}
+                            />
+                          ) : (
+                            <Chip label="Not uploaded" size="small" />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title={playingId === recording.id ? 'Pause' : 'Play'}>
+                            <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                              <IconButton
+                                size="small"
+                                onClick={async () => {
+                                  try {
+                                    // If this recording is already playing, pause it
+                                    if (playingId === recording.id && audioElement) {
+                                      audioElement.pause()
+                                      setPlayingId(null)
+                                      setAudioElement(null)
+                                      setAudioProgress(0)
+                                      return
+                                    }
+
+                                    // Stop any currently playing audio
+                                    if (audioElement) {
+                                      audioElement.pause()
+                                      // Don't clear src or remove listeners - let React cleanup handle it
+                                    }
+
+                                    // Ensure file_url is properly formatted
+                                    const fileUrl = recording.file_url?.startsWith('/api/') 
+                                      ? recording.file_url 
+                                      : `/api${recording.file_url}`
+                                    
+                                    // Create a fresh audio element
+                                    const audio = new Audio(fileUrl)
+                                    
+                                    // Set volume to 100% (some browsers default to muted)
+                                    audio.volume = 1.0
+                                    
+                                    // Store handlers for cleanup
+                                    const errorHandler = (e: Event) => {
+                                      console.error('Audio error:', e, 'code:', audio.error?.code, 'message:', audio.error?.message)
+                                      setPlayingId(null)
+                                      setAudioElement(null)
+                                      setAudioProgress(0)
+                                      alert(`Failed to play audio: ${audio.error?.message || 'Unknown error'}`)
+                                    }
+                                    
+                                    // Add event listeners
+                                    audio.addEventListener('loadstart', () => console.log('Audio: loadstart'))
+                                    audio.addEventListener('loadeddata', () => {
+                                      console.log('Audio: loadeddata', 'duration:', audio.duration)
+                                    })
+                                    audio.addEventListener('canplay', () => console.log('Audio: canplay'))
+                                    audio.addEventListener('playing', () => {
+                                      console.log('Audio: playing - audio is actually playing now')
+                                    })
+                                    audio.addEventListener('pause', () => {
+                                      console.log('Audio: paused')
+                                    })
+                                    audio.addEventListener('error', errorHandler)
+                                    
+                                    // Set state before playing to ensure UI updates
+                                    setPlayingId(recording.id)
+                                    setAudioElement(audio)
+                                    setAudioProgress(0)
+                                    
+                                    await audio.play()
+                                    console.log('Audio playback started, duration:', audio.duration, 'seconds')
+                                  } catch (err: any) {
+                                    console.error('Failed to play audio:', err)
+                                    setPlayingId(null)
+                                    setAudioElement(null)
+                                    setAudioProgress(0)
+                                    alert(`Failed to play audio: ${err.message || 'Unknown error'}`)
+                                  }
+                                }}
+                                color={playingId === recording.id ? 'primary' : 'default'}
+                              >
+                                {playingId === recording.id ? <Pause /> : <PlayArrow />}
+                              </IconButton>
+                              {playingId === recording.id && (
+                                <CircularProgress
+                                  variant="determinate"
+                                  value={audioProgress}
+                                  size={40}
+                                  thickness={4}
+                                  sx={{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '50%',
+                                    marginTop: '-20px',
+                                    marginLeft: '-20px',
+                                    color: 'primary.main',
+                                    zIndex: 1,
+                                  }}
+                                />
+                              )}
+                            </Box>
+                          </Tooltip>
+                          {!recording.libretime_id && (
+                            <Tooltip title="Upload to LibreTime">
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => {
+                                  if (window.confirm('Upload this recording to LibreTime library?')) {
+                                    uploadToLibreTimeMutation.mutate(recording.id)
+                                  }
+                                }}
+                                disabled={uploadToLibreTimeMutation.isPending}
+                              >
+                                <CloudUpload />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Alert severity="info">
+                No recordings yet. Record a test take to get started. After saving, your recordings will appear here.
+              </Alert>
+            )}
+          </Box>
         </Box>
       ) : (
         <>
@@ -263,6 +606,18 @@ const VoiceRecorder: React.FC = () => {
       {(uploadMutation.isError || uploadStandaloneMutation.isError) && (
         <Alert severity="error" sx={{ mt: 2 }}>
           Failed to upload recording: {(uploadMutation.error || uploadStandaloneMutation.error)?.message}
+        </Alert>
+      )}
+
+      {uploadToLibreTimeMutation.isSuccess && (
+        <Alert severity="success" sx={{ mt: 2 }}>
+          Recording uploaded to LibreTime successfully!
+        </Alert>
+      )}
+
+      {uploadToLibreTimeMutation.isError && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          Failed to upload to LibreTime: {uploadToLibreTimeMutation.error?.message}
         </Alert>
       )}
     </Box>

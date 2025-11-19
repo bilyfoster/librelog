@@ -319,6 +319,22 @@ async def get_public_branding(
         header_color = branding_settings["header_color"]["value"]
     if branding_settings.get("logo_url") and branding_settings["logo_url"].get("value"):
         logo_url = branding_settings["logo_url"]["value"]
+        # Verify the logo file actually exists
+        if logo_url:
+            # Extract filename from URL (e.g., /api/settings/branding/logo/filename.png -> filename.png)
+            import re
+            filename_match = re.search(r'/([^/]+\.(png|jpg|jpeg|gif|svg|webp))$', logo_url)
+            if filename_match:
+                filename = filename_match.group(1)
+                logo_dir = _get_logo_dir()
+                file_path = logo_dir / filename
+                # Check fallback directory too
+                if not file_path.exists():
+                    fallback_dir = Path("/tmp/librelog/logos")
+                    file_path = fallback_dir / filename
+                # If file doesn't exist, clear the logo_url
+                if not file_path.exists() or not file_path.is_file():
+                    logo_url = ""
     
     return {
         "system_name": system_name,
@@ -333,11 +349,17 @@ async def get_logo(filename: str):
     logo_dir = _get_logo_dir()
     file_path = logo_dir / filename
     
+    # Try fallback directory if primary doesn't have the file
     if not file_path.exists() or not file_path.is_file():
-        raise HTTPException(
-            status_code=404,
-            detail="Logo not found"
-        )
+        fallback_dir = Path("/tmp/librelog/logos")
+        fallback_path = fallback_dir / filename
+        if fallback_path.exists() and fallback_path.is_file():
+            file_path = fallback_path
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Logo not found: {filename}"
+            )
     
     # Determine content type
     ext = file_path.suffix.lower()

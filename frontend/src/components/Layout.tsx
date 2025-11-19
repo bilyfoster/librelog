@@ -165,6 +165,7 @@ const menuItems: MenuItem[] = [
   // 3. Log Management (Yellow) - Workflow: Generate logs, voice tracking
   { text: 'Log Generator', icon: <LogGeneratorIcon />, path: '/logs', group: 'logs', color: moduleColors.logs },
   { text: 'Voice Tracking', icon: <VoiceIcon />, path: '/voice', group: 'logs', color: moduleColors.logs },
+  { text: 'Voice Tracks Manager', icon: <VoiceIcon />, path: '/voice/tracks', group: 'logs', color: moduleColors.logs },
   
   // 4. Billing (Green) - Workflow: Invoices, payments, makegoods
   { text: 'Invoices', icon: <InvoiceIcon />, path: '/billing/invoices', group: 'billing', color: moduleColors.billing },
@@ -475,6 +476,10 @@ const Layout: React.FC = () => {
                 src={logoUrl} 
                 alt="Logo" 
                 style={{ maxHeight: 40, maxWidth: 200 }}
+                onError={(e) => {
+                  console.error('Failed to load logo:', logoUrl)
+                  e.currentTarget.style.display = 'none'
+                }}
               />
             )}
             <Typography variant="h6" noWrap component="div">

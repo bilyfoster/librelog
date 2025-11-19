@@ -109,6 +109,10 @@ const Login: React.FC = () => {
                 src={logoUrl} 
                 alt="Logo" 
                 style={{ maxHeight: 80, maxWidth: 300 }}
+                onError={(e) => {
+                  console.error('Failed to load logo:', logoUrl)
+                  e.currentTarget.style.display = 'none'
+                }}
               />
             </Box>
           )}

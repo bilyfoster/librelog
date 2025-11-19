@@ -26,7 +26,8 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material'
-import { Upload, CheckCircle, Schedule, Mic, PlayArrow, Download, Delete, LibraryMusic } from '@mui/icons-material'
+import { Upload, CheckCircle, Schedule, Mic, PlayArrow, Download, Delete, LibraryMusic, Link as LinkIcon } from '@mui/icons-material'
+import { useNavigate } from 'react-router-dom'
 import { getVoiceTalentRequests, uploadTake, approveTake } from '../../utils/api'
 import SharedVoiceRecorder from '../../components/voice/SharedVoiceRecorder'
 import api from '../../utils/api'
@@ -39,6 +40,7 @@ const VoiceTalentPortal: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<any>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   const { data: requests, isLoading, error } = useQuery({
     queryKey: ['voice-talent-requests'],
@@ -179,9 +181,19 @@ const VoiceTalentPortal: React.FC = () => {
 
   return (
     <Box p={3}>
-      <Typography variant="h4" gutterBottom>
-        Voice Talent Portal
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4">
+          Voice Talent Portal
+        </Typography>
+        <Button
+          startIcon={<LinkIcon />}
+          onClick={() => navigate('/voice/tracks')}
+          variant="outlined"
+          size="small"
+        >
+          View All Recordings
+        </Button>
+      </Box>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>

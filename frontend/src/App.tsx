@@ -24,6 +24,7 @@ import RotationRules from './pages/traffic/RotationRules'
 import TrafficLogs from './pages/traffic/TrafficLogs'
 import CopyLibrary from './pages/traffic/CopyLibrary'
 import VoiceRecorder from './pages/voice/VoiceRecorder'
+import VoiceTracksManager from './pages/voice/VoiceTracksManager'
 import ReportsHub from './pages/reports/ReportsHub'
 import Invoices from './pages/billing/Invoices'
 import Payments from './pages/billing/Payments'
@@ -74,6 +75,7 @@ function App() {
           <Route path="logs" element={<LogGenerator />} />
           <Route path="logs/:logId/edit" element={<LogEditor />} />
           <Route path="voice" element={<VoiceRecorder />} />
+          <Route path="voice/tracks" element={<VoiceTracksManager />} />
           <Route path="reports" element={<ReportsHub />} />
           <Route path="billing/invoices" element={<Invoices />} />
           <Route path="billing/payments" element={<Payments />} />

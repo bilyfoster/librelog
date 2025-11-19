@@ -67,7 +67,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
             path.startswith("/api/settings/branding/logo/") or  # Logo files are public
             path_without_api.startswith("/settings/branding/logo/") or  # Also check without /api prefix
             path == "/api/settings/branding/public" or  # Public branding endpoint
-            path_without_api == "/settings/branding/public"):  # Also check without /api prefix
+            path_without_api == "/settings/branding/public" or  # Also check without /api prefix
+            path.endswith("/file") or  # Voice track file endpoints are public (for browser Audio elements)
+            path_without_api.endswith("/file")):  # Also check without /api prefix
             return await call_next(request)
         
         # Extract token from Authorization header

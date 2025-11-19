@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useState } from 'react'
 import {
   Box,
   Button,
@@ -20,9 +20,11 @@ import {
   PlayArrow,
   Delete,
   CheckCircle,
+  ContentCut,
 } from '@mui/icons-material'
 import { useVoiceRecorder } from '../../hooks/useVoiceRecorder'
 import WaveformDisplay from './WaveformDisplay'
+import AudioTrimmer from './AudioTrimmer'
 
 interface SharedVoiceRecorderProps {
   context: 'voice_track' | 'production'
@@ -66,6 +68,9 @@ const SharedVoiceRecorder: React.FC<SharedVoiceRecorderProps> = ({
     },
   })
 
+  const [isTrimming, setIsTrimming] = useState(false)
+  const [trimmedBlob, setTrimmedBlob] = useState<Blob | null>(null)
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
@@ -95,6 +100,8 @@ const SharedVoiceRecorder: React.FC<SharedVoiceRecorderProps> = ({
 
   const handleReset = () => {
     reset()
+    setTrimmedBlob(null)
+    setIsTrimming(false)
   }
 
   return (
@@ -153,14 +160,39 @@ const SharedVoiceRecorder: React.FC<SharedVoiceRecorderProps> = ({
           )}
 
           {audioBlob && (
-            <Button
-              variant="outlined"
-              startIcon={<Delete />}
-              onClick={handleReset}
-              size="small"
-            >
-              Reset
-            </Button>
+            <>
+              <Button
+                variant="outlined"
+                startIcon={<Delete />}
+                onClick={handleReset}
+                size="small"
+              >
+                Reset
+              </Button>
+              {(trimmedBlob || audioBlob) && onUpload && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={async () => {
+                    const blobToUpload = trimmedBlob || audioBlob
+                    if (onUpload) {
+                      try {
+                        await onUpload(blobToUpload)
+                        // Clear the trimmed blob after successful save
+                        if (trimmedBlob) {
+                          setTrimmedBlob(null)
+                        }
+                      } catch (error) {
+                        console.error('Failed to save recording:', error)
+                      }
+                    }
+                  }}
+                  size="small"
+                >
+                  {trimmedBlob ? 'Save Trimmed Recording' : 'Save Recording'}
+                </Button>
+              )}
+            </>
           )}
         </Box>
 
@@ -174,11 +206,47 @@ const SharedVoiceRecorder: React.FC<SharedVoiceRecorderProps> = ({
           </Box>
         )}
 
-        {/* Waveform display */}
-        {audioBlob && (
+        {/* Waveform display or trimmer */}
+        {audioBlob && !isTrimming && (
           <Box sx={{ mb: 2 }}>
-            <WaveformDisplay audioBlob={audioBlob} />
+            <WaveformDisplay audioBlob={trimmedBlob || audioBlob} />
+            <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                startIcon={<ContentCut />}
+                onClick={() => setIsTrimming(true)}
+                size="small"
+              >
+                Trim Audio
+              </Button>
+              {trimmedBlob && (
+                <Button
+                  variant="outlined"
+                  startIcon={<Delete />}
+                  onClick={() => {
+                    setTrimmedBlob(null)
+                    setIsTrimming(false)
+                  }}
+                  size="small"
+                  color="warning"
+                >
+                  Reset Trim
+                </Button>
+              )}
+            </Box>
           </Box>
+        )}
+
+        {/* Audio trimmer */}
+        {audioBlob && isTrimming && (
+          <AudioTrimmer
+            audioBlob={audioBlob}
+            onTrim={(trimmedBlob, startTime, endTime) => {
+              setTrimmedBlob(trimmedBlob)
+              setIsTrimming(false)
+            }}
+            onCancel={() => setIsTrimming(false)}
+          />
         )}
 
         {/* Takes list */}
