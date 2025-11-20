@@ -9,6 +9,7 @@ import Setup from './pages/Setup'
 import Dashboard from './pages/Dashboard'
 import LibraryList from './pages/library/LibraryList'
 import SpotsLibrary from './pages/library/SpotsLibrary'
+import MusicManager from './pages/library/MusicManager'
 import ClockBuilder from './pages/clocks/ClockBuilder'
 import TrafficManager from './pages/traffic/TrafficManager'
 import Advertisers from './pages/traffic/Advertisers'
@@ -59,6 +60,7 @@ function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="library" element={<LibraryList />} />
+          <Route path="library/music" element={<MusicManager />} />
           <Route path="library/spots" element={<Navigate to="/library" replace />} />
           <Route path="clocks" element={<ClockBuilder />} />
           <Route path="traffic" element={<TrafficManager />} />

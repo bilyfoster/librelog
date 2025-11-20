@@ -80,32 +80,32 @@ const drawerWidth = 240
  * Example: To change Admin color to dark blue, change admin: '#d32f2f' to admin: '#1565c0'
  */
 const moduleColors = {
-  // Core Operations
-  dashboard: '#1976d2',      // Blue - Main dashboard
-  library: '#7b1fa2',         // Purple - Audio library
-  clocks: '#f57c00',          // Orange - Clock templates
+  // Core Operations - Rainbow colors
+  dashboard: '#ff0000',       // Red - Main dashboard
+  library: '#ff7f00',         // Orange - Audio library
+  clocks: '#ffff00',          // Yellow - Clock templates
   
-  // Workflow Sections (ROYGBP order)
-  // 1. Traffic Management - Red
-  traffic: '#d32f2f',         // Red - Traffic Management (orders, campaigns, scheduling)
+  // Workflow Sections - Rainbow order
+  // 1. Traffic Management - Red/Orange
+  traffic: '#ff0000',         // Red - Traffic Management (orders, campaigns, scheduling)
   
-  // 2. Production - Orange
-  production: '#f57c00',      // Orange - Production (orders, voice talent)
+  // 2. Production - Orange/Yellow
+  production: '#ff7f00',      // Orange - Production (orders, voice talent)
   
-  // 3. Log Management - Yellow
-  logs: '#f57f17',           // Yellow/Amber - Log Management (log generator, voice tracking)
+  // 3. Log Management - Yellow/Green
+  logs: '#ffff00',            // Yellow - Log Management (log generator, voice tracking)
   
   // 4. Billing - Green
-  billing: '#388e3c',         // Green - Billing (invoices, payments, makegoods)
+  billing: '#00ff00',         // Green - Billing (invoices, payments, makegoods)
   
   // 5. Analytics - Blue
-  analytics: '#1976d2',       // Blue - Analytics (inventory, revenue, sales goals)
+  analytics: '#0000ff',       // Blue - Analytics (inventory, revenue, sales goals)
   
-  // 6. Admin - Purple (stays at end)
-  admin: '#7b1fa2',          // Purple - Admin (users, settings, audit logs, webhooks, notifications, backups)
+  // 6. Admin - Indigo/Purple
+  admin: '#4b0082',           // Indigo - Admin (users, settings, audit logs, webhooks, notifications, backups)
   
   // Reports (standalone)
-  reports: '#5e35b1',         // Indigo - Reports hub
+  reports: '#9400d3',         // Violet - Reports hub
   
   // Help
   help: '#616161',            // Grey - Help section
@@ -125,10 +125,11 @@ interface MenuItem {
 // Function to get module color based on path or group
 const getModuleColor = (path: string, group?: string): string => {
   if (path === '/dashboard') return moduleColors.dashboard
-  if (path === '/library') return moduleColors.library
+  if (path === '/library' || path.startsWith('/library')) return moduleColors.library
   if (path === '/clocks') return moduleColors.clocks
   if (path === '/reports') return moduleColors.reports
   if (path === '/help') return moduleColors.help
+  if (group === 'library') return moduleColors.library
   if (group === 'traffic') return moduleColors.traffic
   if (group === 'logs') return moduleColors.logs
   if (group === 'production') return moduleColors.production
@@ -141,7 +142,11 @@ const getModuleColor = (path: string, group?: string): string => {
 const menuItems: MenuItem[] = [
   // Core Operations
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard', color: moduleColors.dashboard },
-  { text: 'Audio Library', icon: <LibraryIcon />, path: '/library', color: moduleColors.library },
+  
+  // Library & Programming (grouped together)
+  { text: 'Audio Library', icon: <LibraryIcon />, path: '/library', group: 'library', color: moduleColors.library },
+  { text: 'Music Manager', icon: <LibraryIcon />, path: '/library/music', group: 'library', color: moduleColors.library },
+  { text: 'Clock Templates', icon: <ClockIcon />, path: '/clocks', group: 'library', color: moduleColors.clocks },
   
   // 1. Traffic Management (Red) - Workflow: Orders, campaigns, scheduling
   { text: 'Traffic Manager', icon: <TrafficIcon />, path: '/traffic', group: 'traffic', color: moduleColors.traffic },
@@ -186,12 +191,13 @@ const menuItems: MenuItem[] = [
   { text: 'Backups', icon: <BackupIcon />, path: '/admin/backups', group: 'admin', color: moduleColors.admin },
   
   // Standalone items (below collapsible sections)
-  { text: 'Clock Templates', icon: <ClockIcon />, path: '/clocks', color: moduleColors.clocks },
   { text: 'Reports', icon: <ReportIcon />, path: '/reports', color: moduleColors.reports },
   { text: 'Help', icon: <HelpIcon />, path: '/help', color: moduleColors.help },
 ]
 
 const menuGroups = {
+  // Library & Programming (grouped together)
+  library: 'Library & Programming',   // Orange - Audio Library, Music Manager, Clock Templates
   // Workflow order (ROYGBP)
   traffic: 'Traffic Management',      // Red - 1. Orders, campaigns, scheduling
   production: 'Production',            // Orange - 2. Create production orders
@@ -284,10 +290,10 @@ const Layout: React.FC = () => {
   }
 
   // Group menu items
-  // Core items are Dashboard and Audio Library only (at the top)
-  const coreItems = menuItems.filter(item => !item.group && (item.path === '/dashboard' || item.path === '/library'))
-  // Standalone items (Clock Templates, Reports, Help) go at the bottom
-  const standaloneItems = menuItems.filter(item => !item.group && item.path !== '/dashboard' && item.path !== '/library')
+  // Core items are Dashboard only (at the top)
+  const coreItems = menuItems.filter(item => !item.group && item.path === '/dashboard')
+  // Standalone items (Reports, Help) go at the bottom
+  const standaloneItems = menuItems.filter(item => !item.group && item.path !== '/dashboard')
   const groupedItems = Object.keys(menuGroups).map(group => ({
     group,
     label: menuGroups[group as keyof typeof menuGroups],

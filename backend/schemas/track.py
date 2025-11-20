@@ -3,7 +3,7 @@ Pydantic schemas for Track model
 """
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 
 class TrackBase(BaseModel):
@@ -16,6 +16,10 @@ class TrackBase(BaseModel):
     duration: Optional[int] = None
     filepath: str
     libretime_id: Optional[str] = None
+    bpm: Optional[int] = None
+    daypart_eligible: Optional[List[int]] = None
+    is_new_release: Optional[bool] = False
+    allow_back_to_back: Optional[bool] = False
 
 
 class TrackCreate(TrackBase):
@@ -33,6 +37,10 @@ class TrackUpdate(BaseModel):
     duration: Optional[int] = None
     filepath: Optional[str] = None
     libretime_id: Optional[str] = None
+    bpm: Optional[int] = None
+    daypart_eligible: Optional[List[int]] = None
+    is_new_release: Optional[bool] = None
+    allow_back_to_back: Optional[bool] = None
 
 
 class TrackResponse(TrackBase):
