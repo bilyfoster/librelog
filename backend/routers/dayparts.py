@@ -87,9 +87,19 @@ async def list_dayparts(
     dayparts_data = []
     for dp in dayparts:
         try:
-            dp_dict = DaypartResponse.model_validate(dp).model_dump()
-            dp_dict["start_time"] = str(dp.start_time)
-            dp_dict["end_time"] = str(dp.end_time)
+            # Manually serialize to ensure datetime fields are strings
+            dp_dict = {
+                "id": dp.id,
+                "name": dp.name,
+                "start_time": str(dp.start_time),
+                "end_time": str(dp.end_time),
+                "days_of_week": getattr(dp, 'days_of_week', None),
+                "category_id": getattr(dp, 'category_id', None),
+                "description": getattr(dp, 'description', None),
+                "active": getattr(dp, 'active', True),
+                "created_at": dp.created_at.isoformat() if dp.created_at else "",
+                "updated_at": dp.updated_at.isoformat() if dp.updated_at else "",
+            }
             # Safely get category name - handle case where category might not be loaded
             try:
                 if hasattr(dp, 'category') and dp.category is not None:
@@ -154,9 +164,19 @@ async def create_daypart(
     await db.refresh(new_daypart)
     await db.refresh(new_daypart, ["category"])
     
-    dp_dict = DaypartResponse.model_validate(new_daypart).model_dump()
-    dp_dict["start_time"] = str(new_daypart.start_time)
-    dp_dict["end_time"] = str(new_daypart.end_time)
+    # Manually serialize to ensure datetime fields are strings
+    dp_dict = {
+        "id": new_daypart.id,
+        "name": new_daypart.name,
+        "start_time": str(new_daypart.start_time),
+        "end_time": str(new_daypart.end_time),
+        "days_of_week": getattr(new_daypart, 'days_of_week', None),
+        "category_id": getattr(new_daypart, 'category_id', None),
+        "description": getattr(new_daypart, 'description', None),
+        "active": getattr(new_daypart, 'active', True),
+        "created_at": new_daypart.created_at.isoformat() if new_daypart.created_at else "",
+        "updated_at": new_daypart.updated_at.isoformat() if new_daypart.updated_at else "",
+    }
     # Safely get category name
     try:
         dp_dict["category_name"] = getattr(new_daypart.category, 'name', None) if new_daypart.category else None
@@ -183,9 +203,19 @@ async def get_daypart(
     if not daypart:
         raise HTTPException(status_code=404, detail="Daypart not found")
     
-    dp_dict = DaypartResponse.model_validate(daypart).model_dump()
-    dp_dict["start_time"] = str(daypart.start_time)
-    dp_dict["end_time"] = str(daypart.end_time)
+    # Manually serialize to ensure datetime fields are strings
+    dp_dict = {
+        "id": daypart.id,
+        "name": daypart.name,
+        "start_time": str(daypart.start_time),
+        "end_time": str(daypart.end_time),
+        "days_of_week": getattr(daypart, 'days_of_week', None),
+        "category_id": getattr(daypart, 'category_id', None),
+        "description": getattr(daypart, 'description', None),
+        "active": getattr(daypart, 'active', True),
+        "created_at": daypart.created_at.isoformat() if daypart.created_at else "",
+        "updated_at": daypart.updated_at.isoformat() if daypart.updated_at else "",
+    }
     # Safely get category name
     try:
         dp_dict["category_name"] = getattr(daypart.category, 'name', None) if daypart.category else None
@@ -231,9 +261,19 @@ async def update_daypart(
     await db.refresh(daypart)
     await db.refresh(daypart, ["category"])
     
-    dp_dict = DaypartResponse.model_validate(daypart).model_dump()
-    dp_dict["start_time"] = str(daypart.start_time)
-    dp_dict["end_time"] = str(daypart.end_time)
+    # Manually serialize to ensure datetime fields are strings
+    dp_dict = {
+        "id": daypart.id,
+        "name": daypart.name,
+        "start_time": str(daypart.start_time),
+        "end_time": str(daypart.end_time),
+        "days_of_week": getattr(daypart, 'days_of_week', None),
+        "category_id": getattr(daypart, 'category_id', None),
+        "description": getattr(daypart, 'description', None),
+        "active": getattr(daypart, 'active', True),
+        "created_at": daypart.created_at.isoformat() if daypart.created_at else "",
+        "updated_at": daypart.updated_at.isoformat() if daypart.updated_at else "",
+    }
     # Safely get category name
     try:
         dp_dict["category_name"] = getattr(daypart.category, 'name', None) if daypart.category else None

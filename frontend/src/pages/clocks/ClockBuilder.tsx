@@ -32,6 +32,8 @@ import {
   Preview as PreviewIcon,
   Publish as PublishIcon,
   Save as SaveIcon,
+  ArrowUpward as ArrowUpIcon,
+  ArrowDownward as ArrowDownIcon,
 } from '@mui/icons-material'
 import api from '../../utils/api'
 import { TRACK_TYPES, getTrackType, getTrackTypeChipColor } from '../../utils/trackTypes'
@@ -200,6 +202,29 @@ const ClockBuilder: React.FC = () => {
     })
   }
 
+  const handleMoveElement = (elementId: string, direction: 'up' | 'down') => {
+    const elements = [...currentTemplate.json_layout.elements]
+    const currentIndex = elements.findIndex(e => e.id === elementId)
+    
+    if (currentIndex === -1) return
+    
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+    
+    // Check bounds
+    if (newIndex < 0 || newIndex >= elements.length) return
+    
+    // Swap elements
+    [elements[currentIndex], elements[newIndex]] = [elements[newIndex], elements[currentIndex]]
+    
+    setCurrentTemplate({
+      ...currentTemplate,
+      json_layout: {
+        ...currentTemplate.json_layout,
+        elements: elements
+      }
+    })
+  }
+
   const handlePreview = async () => {
     if (!currentTemplate.id) {
       setError('Please save the template before previewing')
@@ -353,6 +378,8 @@ const ClockBuilder: React.FC = () => {
               <List>
                 {currentTemplate.json_layout.elements.map((element, index) => {
                   const typeInfo = getTrackType(element.type)
+                  const canMoveUp = index > 0
+                  const canMoveDown = index < currentTemplate.json_layout.elements.length - 1
                   return (
                     <ListItem 
                       key={element.id}
@@ -398,12 +425,36 @@ const ClockBuilder: React.FC = () => {
                         secondary={element.fallback ? `Fallback: ${element.fallback}` : undefined}
                       />
                       <ListItemSecondaryAction>
-                        <IconButton onClick={() => handleEditElement(element)}>
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton onClick={() => handleDeleteElement(element.id)}>
-                          <DeleteIcon />
-                        </IconButton>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleMoveElement(element.id, 'up')}
+                            disabled={!canMoveUp}
+                            title="Move up"
+                            sx={{ 
+                              opacity: canMoveUp ? 1 : 0.3
+                            }}
+                          >
+                            <ArrowUpIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleMoveElement(element.id, 'down')}
+                            disabled={!canMoveDown}
+                            title="Move down"
+                            sx={{ 
+                              opacity: canMoveDown ? 1 : 0.3
+                            }}
+                          >
+                            <ArrowDownIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton onClick={() => handleEditElement(element)} title="Edit">
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton onClick={() => handleDeleteElement(element.id)} title="Delete">
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
                       </ListItemSecondaryAction>
                     </ListItem>
                   )

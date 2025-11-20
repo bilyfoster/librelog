@@ -12,7 +12,9 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 import structlog
 
-from backend.database import engine, Base
+from backend.database import engine, Base, get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import Depends
 from backend.routers import (
     auth, tracks, campaigns, clocks, logs, voice_tracks, reports, setup, sync, activity,
     advertisers, agencies, sales_reps, orders, spots, dayparts, daypart_categories, rotation_rules, traffic_logs, break_structures, copy, copy_assignments,
@@ -124,6 +126,50 @@ async def health_check():
         # Still return 200 even if there's an error, so monitoring doesn't think we're down
         return {"status": "degraded", "service": "librelog-api", "error": str(e)}
 
+# Register public branding endpoint at app level to handle /api path
+@app.get("/api/settings/branding/public")
+async def get_public_branding_api_path(db = Depends(get_db)):
+    """Get public branding settings via /api path - no auth required"""
+    from backend.services.settings_service import SettingsService
+    from pathlib import Path
+    
+    branding_settings = await SettingsService.get_category_settings(db, "branding")
+    
+    # Apply defaults if not set
+    system_name = "GayPHX Radio Traffic System"
+    header_color = "#424242"
+    logo_url = ""
+    
+    if branding_settings.get("system_name") and branding_settings["system_name"].get("value"):
+        system_name = branding_settings["system_name"]["value"]
+    if branding_settings.get("header_color") and branding_settings["header_color"].get("value"):
+        header_color = branding_settings["header_color"]["value"]
+    if branding_settings.get("logo_url") and branding_settings["logo_url"].get("value"):
+        logo_url = branding_settings["logo_url"]["value"]
+        # Verify the logo file actually exists
+        if logo_url:
+            import re
+            filename_match = re.search(r'/([^/]+\.(png|jpg|jpeg|gif|svg|webp))$', logo_url)
+            if filename_match:
+                filename = filename_match.group(1)
+                logo_dir = Path(os.getenv("LOGO_DIR", "/var/lib/librelog/logos"))
+                try:
+                    logo_dir.mkdir(parents=True, exist_ok=True)
+                except (PermissionError, FileNotFoundError, OSError):
+                    logo_dir = Path("/tmp/librelog/logos")
+                file_path = logo_dir / filename
+                if not file_path.exists():
+                    fallback_dir = Path("/tmp/librelog/logos")
+                    file_path = fallback_dir / filename
+                if not file_path.exists() or not file_path.is_file():
+                    logo_url = ""
+    
+    return {
+        "system_name": system_name,
+        "header_color": header_color,
+        "logo_url": logo_url
+    }
+
 # Include routers
 # NOTE: Traefik strips /api prefix before forwarding, so routes are registered without /api
 # The paths will be /auth/login, /setup, etc. when they reach the backend
@@ -135,7 +181,9 @@ app.include_router(tracks.router, prefix="/tracks", tags=["Tracks"])
 app.include_router(tracks.router, prefix="/api/tracks", tags=["Tracks"])  # For direct API access
 app.include_router(campaigns.router, prefix="/campaigns", tags=["Campaigns"])
 app.include_router(clocks.router, prefix="/clocks", tags=["Clock Templates"])
+app.include_router(clocks.router, prefix="/api/clocks", tags=["Clock Templates"])  # For direct API access
 app.include_router(logs.router, prefix="/logs", tags=["Logs"])
+app.include_router(logs.router, prefix="/api/logs", tags=["Logs"])  # For direct API access
 app.include_router(voice_tracks.router, prefix="/voice", tags=["Voice Tracks"])
 app.include_router(reports.router, prefix="/reports", tags=["Reports"])
 app.include_router(sync.router, prefix="/sync", tags=["Sync"])

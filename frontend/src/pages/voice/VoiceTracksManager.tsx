@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
@@ -61,14 +61,45 @@ const VoiceTracksManager: React.FC = () => {
   const [selectedTrack, setSelectedTrack] = useState<VoiceTrack | null>(null)
   const queryClient = useQueryClient()
 
-  // Fetch all voice tracks
+  // Fetch all voice tracks (with high limit to get all recordings)
   const { data: voiceTracksData, isLoading, error, refetch } = useQuery({
     queryKey: ['voice-tracks', 'all'],
     queryFn: async () => {
-      const response = await api.get('/voice')
-      // Ensure we always return an array
-      const data = response.data
-      return Array.isArray(data) ? data : []
+      try {
+        console.log('VoiceTracksManager: Making API request to /voice')
+        console.log('VoiceTracksManager: API baseURL:', api.defaults.baseURL)
+        const response = await api.get('/voice', {
+          params: {
+            limit: 1000, // Get up to 1000 recordings
+            skip: 0
+          },
+          // Ensure we get JSON response
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        })
+        console.log('VoiceTracksManager: API response status:', response.status)
+        console.log('VoiceTracksManager: API response headers:', response.headers)
+        console.log('VoiceTracksManager: API response data type:', typeof response.data)
+        console.log('VoiceTracksManager: API response data:', response.data)
+        
+        // Check if response is HTML (error case)
+        if (typeof response.data === 'string' && response.data.trim().startsWith('<!DOCTYPE')) {
+          console.error('VoiceTracksManager: Received HTML instead of JSON! This indicates a routing/proxy issue.')
+          return []
+        }
+        
+        // Ensure we always return an array
+        const data = response.data
+        console.log('VoiceTracksManager: Is array?', Array.isArray(data))
+        console.log('VoiceTracksManager: Data length:', Array.isArray(data) ? data.length : 'N/A')
+        return Array.isArray(data) ? data : []
+      } catch (err: any) {
+        console.error('VoiceTracksManager: API request failed:', err)
+        console.error('VoiceTracksManager: Error response:', err.response)
+        return []
+      }
     },
   })
 
@@ -116,6 +147,18 @@ const VoiceTracksManager: React.FC = () => {
 
     return matchesSearch && matchesStatus && matchesLibretime
   })
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('VoiceTracksManager: voiceTracksData:', voiceTracksData)
+    console.log('VoiceTracksManager: voiceTracks:', voiceTracks)
+    console.log('VoiceTracksManager: filteredTracks count:', filteredTracks.length)
+    console.log('VoiceTracksManager: isLoading:', isLoading)
+    console.log('VoiceTracksManager: error:', error)
+    if (filteredTracks.length > 0) {
+      console.log('VoiceTracksManager: First track sample:', filteredTracks[0])
+    }
+  }, [voiceTracksData, voiceTracks, filteredTracks, isLoading, error])
 
   const handlePlay = (track: VoiceTrack) => {
     if (playingId === track.id && audioElement) {

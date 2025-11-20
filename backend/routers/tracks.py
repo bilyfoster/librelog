@@ -429,3 +429,21 @@ async def preview_track(
         status_code=501,
         detail=f"Preview not available. Track ID: {track_id}, LibreTime ID: {track.libretime_id or 'None'}, Filepath: {track.filepath or 'None'}"
     )
+
+
+@router.get("/preview-by-path")
+async def preview_track_by_path(
+    path: str = Query(..., description="File path to preview"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Preview a track by file path - finds the track and redirects to preview
+    """
+    result = await db.execute(select(Track).where(Track.filepath == path))
+    track = result.scalar_one_or_none()
+    
+    if not track:
+        raise HTTPException(status_code=404, detail=f"Track not found for path: {path}")
+    
+    # Redirect to the track preview endpoint
+    return RedirectResponse(url=f"/api/tracks/{track.id}/preview", status_code=302)

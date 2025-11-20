@@ -256,6 +256,15 @@ if (typeof window !== 'undefined') {
   const finalUrl = configProxy.url || ''
   const combinedUrl = finalBaseURL + finalUrl
   
+  // Debug logging
+  console.log('[API] Adapter: Final URL construction', {
+    baseURL: finalBaseURL,
+    url: finalUrl,
+    combined: combinedUrl,
+    configBaseURL: configProxy.baseURL,
+    configUrl: configProxy.url
+  })
+  
   // If combined URL contains Docker hostname, force correction
   if (combinedUrl.includes('api:8000') || combinedUrl.match(/^https?:\/\/[a-zA-Z0-9_-]+:\d+/)) {
     console.error('[API] Adapter: FINAL CHECK - Docker hostname in combined URL:', combinedUrl)
@@ -267,9 +276,81 @@ if (typeof window !== 'undefined') {
     } else {
       try {
         const urlObj = new URL(combinedUrl)
-        configProxy.url = urlObj.pathname + urlObj.search
+        // CRITICAL: Preserve /api prefix when extracting pathname
+        let pathname = urlObj.pathname
+        // If pathname doesn't start with /api, ensure it does (unless it's already a full path)
+        if (!pathname.startsWith('/api') && !pathname.startsWith('http')) {
+          // Check if the original URL had /api
+          if (combinedUrl.includes('/api/')) {
+            // Extract path starting from /api
+            const apiMatch = combinedUrl.match(/\/api(\/.*)$/)
+            pathname = apiMatch ? '/api' + apiMatch[1] : '/api' + pathname
+          } else {
+            pathname = '/api' + pathname
+          }
+        }
+        configProxy.url = pathname + urlObj.search
       } catch {
-        configProxy.url = combinedUrl.replace(/^https?:\/\/[^/]+/, '')
+        // When replacing, preserve /api prefix
+        let path = combinedUrl.replace(/^https?:\/\/[^/]+/, '')
+        if (!path.startsWith('/api')) {
+          path = '/api' + path
+        }
+        configProxy.url = path
+      }
+    }
+  }
+  
+  // CRITICAL: Final check before calling adapter - ensure URL has /api prefix
+  // This catches cases where axios might construct absolute URLs
+  // Check both the combined URL and what axios might construct
+  let finalUrlCheck = (configProxy.baseURL || '') + (configProxy.url || '')
+  
+  // Also check if axios might construct an absolute URL from current page
+  // If the URL is relative but doesn't start with /api, ensure baseURL is /api
+  if (configProxy.url && !configProxy.url.startsWith('http') && !configProxy.url.startsWith('/api')) {
+    console.warn('[API] Adapter: URL does not start with /api, ensuring baseURL is /api', {
+      url: configProxy.url,
+      baseURL: configProxy.baseURL
+    })
+    configProxy.baseURL = '/api'
+    finalUrlCheck = '/api' + configProxy.url
+  }
+  
+  if (finalUrlCheck.startsWith('http://') || finalUrlCheck.startsWith('https://')) {
+    try {
+      const urlObj = new URL(finalUrlCheck)
+      if (!urlObj.pathname.startsWith('/api') && !urlObj.pathname.startsWith('/api/')) {
+        console.error('[API] Adapter: CRITICAL - Final URL check missing /api!', {
+          original: finalUrlCheck,
+          pathname: urlObj.pathname,
+          hostname: urlObj.hostname
+        })
+        // Force /api prefix
+        urlObj.pathname = '/api' + urlObj.pathname
+        // Extract just the path part for configProxy.url (keep baseURL as /api)
+        configProxy.baseURL = '/api'
+        configProxy.url = urlObj.pathname.replace('/api', '') + urlObj.search
+        console.error('[API] Adapter: Corrected - baseURL:', configProxy.baseURL, 'url:', configProxy.url)
+      }
+    } catch (e) {
+      // If URL parsing fails, try to fix manually
+      if (!finalUrlCheck.includes('/api/') && !finalUrlCheck.endsWith('/api')) {
+        console.error('[API] Adapter: CRITICAL - Final URL check failed, manually fixing:', finalUrlCheck)
+        const fixedUrl = finalUrlCheck.replace(/(https?:\/\/[^/]+)(\/[^?]*)/, '$1/api$2')
+        // Extract path from fixed URL
+        const pathMatch = fixedUrl.match(/https?:\/\/[^/]+(\/.*)$/)
+        if (pathMatch) {
+          const fullPath = pathMatch[1]
+          // If path starts with /api, remove it from url (baseURL will be /api)
+          if (fullPath.startsWith('/api')) {
+            configProxy.baseURL = '/api'
+            configProxy.url = fullPath.replace(/^\/api/, '') || '/'
+          } else {
+            configProxy.url = fullPath
+          }
+          console.error('[API] Adapter: Manually corrected - baseURL:', configProxy.baseURL, 'url:', configProxy.url)
+        }
       }
     }
   }
@@ -305,6 +386,44 @@ if (typeof window !== 'undefined') {
           console.error('[API] XHR.open INTERCEPTED PROBLEMATIC URL:', { method, url, stack: new Error().stack })
         }
         
+        // CRITICAL: Check for absolute URLs that are missing /api prefix
+        // Pattern: https://log.gayphx.com/voice/ should be https://log.gayphx.com/api/voice/
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          const originalUrl = url
+          try {
+            const urlObj = new URL(url)
+            // If pathname doesn't start with /api, add it
+            if (!urlObj.pathname.startsWith('/api') && !urlObj.pathname.startsWith('/api/')) {
+              console.error('[API] XHR.open: CRITICAL - Absolute URL missing /api prefix!', {
+                original: url,
+                pathname: urlObj.pathname,
+                hostname: urlObj.hostname
+              })
+              urlObj.pathname = '/api' + urlObj.pathname
+              url = urlObj.toString()
+              console.error('[API] XHR.open: Corrected URL:', url)
+            }
+          } catch (e) {
+            // If URL parsing fails, try to fix manually
+            if (!url.includes('/api/') && !url.endsWith('/api')) {
+              console.error('[API] XHR.open: CRITICAL - URL parsing failed, manually fixing:', url)
+              // Insert /api after the domain
+              url = url.replace(/(https?:\/\/[^/]+)(\/.*)$/, '$1/api$2')
+              if (url === originalUrl) {
+                // If replace didn't work, try a different approach
+                url = url.replace(/(https?:\/\/[^/]+)\//, '$1/api/')
+              }
+              console.error('[API] XHR.open: Manually corrected URL:', url)
+            }
+          }
+          // Final check - if still missing /api, force it
+          if (!url.includes('/api/') && !url.endsWith('/api') && url.includes('://')) {
+            console.error('[API] XHR.open: FINAL FIX - Still missing /api, forcing correction:', url)
+            url = url.replace(/(https?:\/\/[^/]+)(\/[^?]*)/, '$1/api$2')
+            console.error('[API] XHR.open: Final corrected URL:', url)
+          }
+        }
+        
         // CRITICAL: Check for Docker hostnames (with or without protocol)
         // Pattern: api:8000 or https://api:8000 or http://api:8000 or api:8000/api/tracks
         // Also check for any hostname:port pattern that's not a valid domain
@@ -323,11 +442,29 @@ if (typeof window !== 'undefined') {
           if (url.startsWith('http://') || url.startsWith('https://')) {
             try {
               const urlObj = new URL(url)
+              // CRITICAL: Preserve /api prefix in pathname
               path = urlObj.pathname + urlObj.search
+              // If pathname doesn't start with /api but the original URL had /api, add it back
+              if (!path.startsWith('/api') && url.includes('/api/')) {
+                // Extract path starting from /api
+                const apiMatch = url.match(/\/api(\/.*)$/)
+                if (apiMatch) {
+                  path = '/api' + apiMatch[1] + (urlObj.search || '')
+                } else {
+                  path = '/api' + path
+                }
+              }
             } catch (e) {
               // If URL parsing fails, extract path manually
               // Remove protocol and hostname:port, keep path and query
               path = url.replace(/^https?:\/\/[^/]+/, '')
+              // Ensure /api prefix is preserved
+              if (!path.startsWith('/api') && url.includes('/api/')) {
+                const apiMatch = url.match(/\/api(\/.*)$/)
+                if (apiMatch) {
+                  path = '/api' + apiMatch[1]
+                }
+              }
             }
           } else {
             // No protocol - extract path after hostname:port
@@ -772,6 +909,23 @@ export const getTracksCount = async (track_type?: string) => {
 }
 
 // Tracks API functions
+export const getTracks = async (params?: {
+  skip?: number
+  limit?: number
+  type?: string  // Alias for track_type
+  track_type?: string
+  search?: string
+}) => {
+  // Map 'type' to 'track_type' for backend compatibility
+  const apiParams = params ? { ...params } : {}
+  if (apiParams.type && !apiParams.track_type) {
+    apiParams.track_type = apiParams.type
+    delete apiParams.type
+  }
+  const response = await api.get('/tracks', { params: apiParams })
+  return { tracks: response.data }
+}
+
 export const getTrack = async (track_id: number) => {
   const response = await api.get(`/tracks/${track_id}`)
   return response.data
@@ -976,6 +1130,36 @@ export const previewLog = async (target_date: string, clock_template_id: number,
 export const publishLog = async (log_id: number) => {
   const response = await api.post(`/logs/${log_id}/publish`)
   return response.data
+}
+
+export const publishLogHour = async (log_id: number, hour: string) => {
+  const response = await api.post(`/logs/${log_id}/publish-hour`, { hour })
+  return response.data
+}
+
+export const getVoiceSlotContext = async (log_id: number, slot_id: number) => {
+  const response = await api.get(`/logs/${log_id}/voice-slots/${slot_id}/context`)
+  return response.data
+}
+
+export const reorderElements = async (log_id: number, hour: string, from_index: number, to_index: number) => {
+  const response = await api.post(`/logs/${log_id}/elements/${hour}/reorder`, {
+    from_index,
+    to_index
+  })
+  return response.data
+}
+
+export const addElementToLog = async (log_id: number, hour: string, element: any, position?: number) => {
+  const response = await api.post(`/logs/${log_id}/elements/${hour}`, {
+    element,
+    position
+  })
+  return response.data
+}
+
+export const removeElementFromLog = async (log_id: number, hour: string, element_index: number) => {
+  await api.delete(`/logs/${log_id}/elements/${hour}/${element_index}`)
 }
 
 // Clock Templates API functions

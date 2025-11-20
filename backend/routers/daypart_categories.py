@@ -66,7 +66,24 @@ async def list_daypart_categories(
     
     result = await db.execute(query)
     categories = result.scalars().all()
-    return categories
+    
+    # Serialize datetime fields to strings
+    categories_data = []
+    for cat in categories:
+        cat_dict = {
+            "id": cat.id,
+            "name": cat.name,
+            "description": cat.description,
+            "color": cat.color,
+            "icon": cat.icon,
+            "sort_order": cat.sort_order,
+            "active": cat.active,
+            "created_at": cat.created_at.isoformat() if cat.created_at else "",
+            "updated_at": cat.updated_at.isoformat() if cat.updated_at else "",
+        }
+        categories_data.append(DaypartCategoryResponse(**cat_dict))
+    
+    return categories_data
 
 
 @router.get("/{category_id}", response_model=DaypartCategoryResponse)
@@ -82,7 +99,19 @@ async def get_daypart_category(
     if not category:
         raise HTTPException(status_code=404, detail="Daypart category not found")
     
-    return category
+    # Serialize datetime fields to strings
+    cat_dict = {
+        "id": category.id,
+        "name": category.name,
+        "description": category.description,
+        "color": category.color,
+        "icon": category.icon,
+        "sort_order": category.sort_order,
+        "active": category.active,
+        "created_at": category.created_at.isoformat() if category.created_at else "",
+        "updated_at": category.updated_at.isoformat() if category.updated_at else "",
+    }
+    return DaypartCategoryResponse(**cat_dict)
 
 
 @router.post("/", response_model=DaypartCategoryResponse, status_code=status.HTTP_201_CREATED)
@@ -102,7 +131,20 @@ async def create_daypart_category(
     db.add(new_category)
     await db.commit()
     await db.refresh(new_category)
-    return new_category
+    
+    # Serialize datetime fields to strings
+    cat_dict = {
+        "id": new_category.id,
+        "name": new_category.name,
+        "description": new_category.description,
+        "color": new_category.color,
+        "icon": new_category.icon,
+        "sort_order": new_category.sort_order,
+        "active": new_category.active,
+        "created_at": new_category.created_at.isoformat() if new_category.created_at else "",
+        "updated_at": new_category.updated_at.isoformat() if new_category.updated_at else "",
+    }
+    return DaypartCategoryResponse(**cat_dict)
 
 
 @router.put("/{category_id}", response_model=DaypartCategoryResponse)
@@ -133,7 +175,20 @@ async def update_daypart_category(
     
     await db.commit()
     await db.refresh(category)
-    return category
+    
+    # Serialize datetime fields to strings
+    cat_dict = {
+        "id": category.id,
+        "name": category.name,
+        "description": category.description,
+        "color": category.color,
+        "icon": category.icon,
+        "sort_order": category.sort_order,
+        "active": category.active,
+        "created_at": category.created_at.isoformat() if category.created_at else "",
+        "updated_at": category.updated_at.isoformat() if category.updated_at else "",
+    }
+    return DaypartCategoryResponse(**cat_dict)
 
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)

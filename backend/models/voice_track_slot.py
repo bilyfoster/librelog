@@ -16,6 +16,7 @@ class VoiceTrackSlot(Base):
     log_id = Column(Integer, ForeignKey("daily_logs.id"), nullable=False, index=True)
     hour = Column(Integer, nullable=False, index=True)  # 0-23
     break_position = Column(String(10), nullable=True)  # A/B/C/D/E or time offset
+    standardized_name = Column(String(50), nullable=True, index=True)  # Format: "HH-00_BreakX" for fallback lookup
     assigned_dj_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     voice_track_id = Column(Integer, ForeignKey("voice_tracks.id"), nullable=True, index=True)
     previous_track_id = Column(Integer, ForeignKey("tracks.id"), nullable=True)  # For preview

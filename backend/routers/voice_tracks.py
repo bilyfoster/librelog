@@ -3,7 +3,7 @@ Voice tracks router
 """
 
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -120,7 +120,7 @@ async def upload_voice_track(
 ):
     """Upload a voice track"""
     # Validate file type (audio files)
-    allowed_extensions = {'.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac'}
+    allowed_extensions = {'.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac', '.webm'}
     file_ext = Path(file.filename).suffix.lower() if file.filename else ''
     
     if file_ext not in allowed_extensions:
@@ -235,6 +235,60 @@ async def delete_voice_track(
     return None
 
 
+@router.get("/{break_id}/{filename}/file")
+async def serve_voice_track_file_with_break(
+    break_id: int,
+    filename: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Serve voice track file from break directory - public endpoint (no auth required for browser Audio elements)
+    Handles path pattern: /api/voice/{break_id}/{filename}/file
+    """
+    # File is stored in break-specific directory
+    file_path = Path(VOICE_TRACKS_DIR) / str(break_id) / filename
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Voice track file not found")
+    
+    # Verify the file belongs to a voice track in the database
+    result = await db.execute(
+        select(VoiceTrack).where(VoiceTrack.file_url.contains(filename))
+    )
+    voice_track = result.scalar_one_or_none()
+    
+    if not voice_track:
+        raise HTTPException(status_code=404, detail="Voice track not found")
+    
+    # Determine media type from file extension
+    ext = file_path.suffix.lower()
+    media_types = {
+        '.webm': 'audio/webm',
+        '.mp3': 'audio/mpeg',
+        '.wav': 'audio/wav',
+        '.ogg': 'audio/ogg',
+        '.m4a': 'audio/mp4',
+    }
+    media_type = media_types.get(ext, 'audio/webm')
+    
+    from fastapi.responses import Response
+    import aiofiles
+    
+    # Read file and return with proper headers for audio playback
+    async with aiofiles.open(file_path, 'rb') as f:
+        content = await f.read()
+    
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'inline; filename="{filename}"',
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "public, max-age=3600"
+        }
+    )
+
+
 @router.get("/{filename}/file")
 async def serve_voice_track_file(
     filename: str,
@@ -242,6 +296,7 @@ async def serve_voice_track_file(
 ):
     """
     Serve voice track file - public endpoint (no auth required for browser Audio elements)
+    Handles path pattern: /api/voice/{filename}/file
     Still verifies file exists in database for security
     """
     from fastapi.responses import FileResponse
@@ -368,14 +423,41 @@ async def upload_voice_track_to_libretime(
             else:
                 voice_track.libretime_id = "uploaded"
             
+            # Get standardized_name from slot if linked
+            if voice_track.break_id:
+                from backend.models.voice_track_slot import VoiceTrackSlot
+                slot_result = await db.execute(
+                    select(VoiceTrackSlot).where(VoiceTrackSlot.id == voice_track.break_id)
+                )
+                slot = slot_result.scalar_one_or_none()
+                if slot and slot.standardized_name:
+                    voice_track.standardized_name = slot.standardized_name
+                    voice_track.recorded_date = datetime.now(timezone.utc)
+            
             voice_track.status = VoiceTrackStatus.READY
             await db.commit()
             await db.refresh(voice_track)
             
+            # Sync voice track back to log element if linked to a slot
+            if voice_track.break_id:
+                from backend.services.log_editor import LogEditor
+                slot_result = await db.execute(
+                    select(VoiceTrackSlot).where(VoiceTrackSlot.id == voice_track.break_id)
+                )
+                slot = slot_result.scalar_one_or_none()
+                if slot:
+                    editor = LogEditor(db)
+                    await editor.sync_voice_track_to_log_element(
+                        slot.log_id,
+                        voice_track_id,
+                        voice_track.break_id
+                    )
+            
             logger.info(
                 "Voice track uploaded to LibreTime",
                 voice_track_id=voice_track_id,
-                libretime_id=voice_track.libretime_id
+                libretime_id=voice_track.libretime_id,
+                standardized_name=voice_track.standardized_name
             )
             
             return VoiceTrackResponse.model_validate(voice_track)
@@ -535,7 +617,7 @@ async def create_take(
         raise HTTPException(status_code=404, detail="Break slot not found")
     
     # Validate file
-    allowed_extensions = {'.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac'}
+    allowed_extensions = {'.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac', '.webm'}
     file_ext = Path(file.filename).suffix.lower() if file.filename else ''
     
     if file_ext not in allowed_extensions:
@@ -550,12 +632,12 @@ async def create_take(
     
     # Get next take number if not provided
     if take_number is None:
-        existing_takes = await db.execute(
+        existing_takes_result = await db.execute(
             select(VoiceTrack).where(
                 VoiceTrack.break_id == break_id
-            ).order_by(VoiceTrack.take_number.desc())
+            ).order_by(VoiceTrack.take_number.desc()).limit(1)
         )
-        last_take = existing_takes.scalar_one_or_none()
+        last_take = existing_takes_result.scalar_one_or_none()
         take_number = (last_take.take_number + 1) if last_take else 1
     
     # Generate filename
@@ -576,9 +658,13 @@ async def create_take(
         
         file_url = f"/api/voice/{break_id}/{filename}/file"
         
-        # Calculate audio duration
+        # Calculate audio duration (handle errors gracefully)
         audio_processor = AudioProcessingService()
-        duration = audio_processor.get_audio_duration(str(file_path))
+        duration = None
+        try:
+            duration = audio_processor.get_audio_duration(str(file_path))
+        except Exception as e:
+            logger.warning("Failed to get audio duration, continuing without it", error=str(e))
         
         # Create voice track record
         voice_track = VoiceTrack(

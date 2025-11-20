@@ -37,8 +37,11 @@ const Login: React.FC = () => {
   })
   
   const systemName = brandingData?.system_name || 'GayPHX Radio Traffic System'
-  const logoUrl = brandingData?.logo_url || ''
+  const logoUrl = brandingData?.logo_url || null
   const headerColor = brandingData?.header_color || '#424242'
+  
+  // Show logo section even if logoUrl is not available (for spacing/consistency)
+  // The logo will be hidden by onError handler if it fails to load
 
   // Redirect to dashboard if already logged in
   if (authLoading) {
@@ -103,19 +106,36 @@ const Login: React.FC = () => {
         }}
       >
         <CardContent sx={{ p: 4 }}>
-          {logoUrl && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, minHeight: 80 }}>
+            {logoUrl ? (
               <img 
                 src={logoUrl} 
                 alt="Logo" 
-                style={{ maxHeight: 80, maxWidth: 300 }}
+                style={{ maxHeight: 80, maxWidth: 300, objectFit: 'contain' }}
                 onError={(e) => {
                   console.error('Failed to load logo:', logoUrl)
                   e.currentTarget.style.display = 'none'
                 }}
               />
-            </Box>
-          )}
+            ) : (
+              // Placeholder when logo is not configured or API fails
+              <Box
+                sx={{
+                  width: 200,
+                  height: 60,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: `2px dashed ${headerColor}40`,
+                  borderRadius: 1,
+                  color: headerColor,
+                  fontSize: '0.875rem',
+                }}
+              >
+                Logo
+              </Box>
+            )}
+          </Box>
           <Typography 
             variant="h4" 
             component="h1" 

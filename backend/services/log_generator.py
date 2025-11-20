@@ -239,7 +239,12 @@ class LogGenerator:
                         "hard_start": hard_start,
                         "timing_drift": timing_drift,
                         "file_path": element.get("file_path", ""),
-                        "fallback_used": element.get("fallback_used", False)
+                        "libretime_id": element.get("libretime_id"),
+                        "media_id": element.get("media_id"),
+                        "fallback_used": element.get("fallback_used", False),
+                        "pending": element.get("pending", False),
+                        "standardized_name": element.get("standardized_name"),  # For VOT fallback lookup
+                        "fallback_info": element.get("fallback_info")  # Info about fallback if used
                     }
                     
                     hour_log["elements"].append(element_log)
@@ -287,6 +292,10 @@ class LogGenerator:
             return await self._select_promo()
         elif element_type == "BED":
             return await self._select_bed()
+        elif element_type == "VOT":
+            # For VOT, we'll create a placeholder that will be linked to voice track slots
+            # The actual VOT lookup with fallback happens when slots are created or when publishing
+            return await self._select_voice_over_track(target_date, target_hour)
         else:
             return None
     
@@ -468,6 +477,32 @@ class LogGenerator:
         
         return None
     
+    async def _select_voice_over_track(
+        self,
+        target_date: Optional[date] = None,
+        target_hour: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Select a voice over track - always returns a placeholder if no track found
+        
+        Note: Actual VOT lookup with fallback happens when voice track slots are created
+        or when the log is published. This creates the initial placeholder.
+        """
+        # Always return a placeholder for VOT
+        # The actual voice track will be linked when slots are created or when publishing
+        # This ensures VOT elements appear in the log for duration tracking
+        return {
+            "title": "Voice Track - Pending Recording",
+            "artist": "Pending",
+            "duration": 30,  # Estimated duration for VOT
+            "file_path": None,
+            "libretime_id": None,
+            "media_id": None,
+            "fallback_used": False,
+            "pending": True,  # Flag to indicate this is a placeholder
+            "standardized_name": None  # Will be set when linked to slot
+        }
+    
     async def _select_station_id(self) -> Optional[Dict[str, Any]]:
         """Select a station ID (for top or bottom of hour)"""
         result = await self.db.execute(
@@ -561,6 +596,7 @@ class LogGenerator:
     
     async def publish_log(self, log_id: int) -> bool:
         """Publish a generated log to LibreTime"""
+        from backend.services.log_editor import LogEditor
         
         # Get the log
         result = await self.db.execute(
@@ -572,6 +608,13 @@ class LogGenerator:
             return False
         
         try:
+            # Update VOT elements with fallback lookup before publishing
+            editor = LogEditor(self.db)
+            await editor.update_vot_elements_with_fallback(log_id)
+            
+            # Reload log to get updated VOT elements
+            await self.db.refresh(log)
+            
             # Convert to LibreTime format
             libretime_entries = await self._convert_to_libretime_format(log.json_data, log.date)
             
@@ -595,6 +638,169 @@ class LogGenerator:
             logger.error("Failed to publish log", log_id=log_id, error=str(e))
             await self.db.rollback()
             return False
+    
+    async def publish_log_hour(self, log_id: int, hour: int) -> bool:
+        """Publish a specific hour of a log to LibreTime"""
+        
+        # Get the log
+        result = await self.db.execute(
+            select(DailyLog).where(DailyLog.id == log_id)
+        )
+        log = result.scalar_one_or_none()
+        
+        if not log:
+            return False
+        
+        if hour < 0 or hour > 23:
+            logger.error("Invalid hour", hour=hour)
+            return False
+        
+        try:
+            # Get current schedule from LibreTime for the day
+            current_schedule = await libretime_client.get_schedule(log.date)
+            
+            # Convert the hour from log to LibreTime format
+            hour_str = f"{hour:02d}:00"
+            hourly_logs = log.json_data.get("hourly_logs", {})
+            hour_data = hourly_logs.get(hour_str, {})
+            
+            if not hour_data:
+                logger.warning("Hour not found in log", log_id=log_id, hour=hour)
+                return False
+            
+            # Convert this hour's elements to LibreTime format
+            hour_entries = await self._convert_hour_to_libretime_format(
+                hour_data, log.date, hour
+            )
+            
+            # Remove existing entries for this hour from current schedule
+            # LibreTime schedule entries have "start" field with ISO datetime
+            target_date_start = datetime.combine(log.date, time(hour=hour, minute=0, second=0))
+            target_date_end = datetime.combine(log.date, time(hour=hour, minute=59, second=59))
+            
+            # Helper function to parse datetime from string
+            def parse_entry_time(entry_start: str) -> Optional[datetime]:
+                try:
+                    # Handle various ISO formats
+                    if entry_start.endswith("Z"):
+                        entry_start = entry_start[:-1] + "+00:00"
+                    elif "+" not in entry_start and "-" in entry_start and "T" in entry_start:
+                        # Assume UTC if no timezone
+                        entry_start = entry_start + "+00:00"
+                    return datetime.fromisoformat(entry_start)
+                except (ValueError, AttributeError):
+                    return None
+            
+            # Remove filtered entries from current schedule (keep entries outside this hour)
+            filtered_entries = []
+            for entry in current_schedule:
+                entry_start_str = entry.get("start")
+                if entry_start_str:
+                    entry_time = parse_entry_time(entry_start_str)
+                    if entry_time and (entry_time < target_date_start or entry_time > target_date_end):
+                        filtered_entries.append(entry)
+                else:
+                    # Keep entry if no start time (shouldn't happen, but be safe)
+                    filtered_entries.append(entry)
+            
+            # Add new hour entries
+            filtered_entries.extend(hour_entries)
+            
+            # Sort by start time
+            filtered_entries.sort(key=lambda x: x.get("start", ""))
+            
+            # Push updated schedule to LibreTime
+            success = await libretime_client.publish_schedule(log.date, filtered_entries)
+            
+            if success:
+                logger.info("Hour published to LibreTime", log_id=log_id, hour=hour, entries=len(hour_entries))
+                return True
+            else:
+                logger.error("LibreTime API returned failure for hour", log_id=log_id, hour=hour)
+                return False
+            
+        except Exception as e:
+            logger.error("Failed to publish hour", log_id=log_id, hour=hour, error=str(e))
+            await self.db.rollback()
+            return False
+    
+    async def _convert_hour_to_libretime_format(
+        self,
+        hour_data: Dict[str, Any],
+        target_date: date,
+        hour: int
+    ) -> List[Dict[str, Any]]:
+        """Convert a single hour's log data to LibreTime format"""
+        
+        entries = []
+        elements = hour_data.get("elements", [])
+        
+        for element in elements:
+            # Calculate absolute start time
+            element_start_seconds = element.get("start_time", 0)
+            element_duration = element.get("duration", 180)
+            
+            # Create datetime for this element
+            element_start_time = datetime.combine(
+                target_date,
+                time(hour=hour, minute=0, second=0)
+            ) + timedelta(seconds=element_start_seconds)
+            
+            # Get media_id from element or look up by file_path
+            media_id = element.get("media_id") or element.get("libretime_id")
+            
+            if not media_id and element.get("file_path"):
+                # Try to find track by file_path
+                track_result = await self.db.execute(
+                    select(Track).where(Track.filepath == element["file_path"])
+                )
+                track = track_result.scalar_one_or_none()
+                if track and track.libretime_id:
+                    try:
+                        media_id = int(track.libretime_id)
+                    except (ValueError, TypeError):
+                        pass
+            
+            # Skip if we can't find media_id
+            if not media_id:
+                logger.warning(
+                    "Skipping element without media_id",
+                    element=element.get("title"),
+                    file_path=element.get("file_path")
+                )
+                continue
+            
+            # Map element type to LibreTime type
+            element_type = element.get("type", "track")
+            type_mapping = {
+                "MUS": "track",
+                "ADV": "track",
+                "PSA": "track",
+                "PRO": "track",
+                "LIN": "track",
+                "IDS": "track",
+                "NEW": "track",
+                "INT": "track",
+                "BED": "track",
+                "VOT": "track"
+            }
+            libretime_type = type_mapping.get(element_type, "track")
+            
+            # Determine hard_start from element configuration
+            hard_start = element.get("hard_start", False)
+            
+            try:
+                entries.append({
+                    "start": element_start_time.isoformat(),
+                    "media_id": int(media_id),
+                    "type": libretime_type,
+                    "hard_start": hard_start
+                })
+            except (ValueError, TypeError):
+                logger.warning("Failed to convert media_id to int", media_id=media_id)
+                continue
+        
+        return entries
     
     async def _convert_to_libretime_format(self, log_data: Dict[str, Any], target_date: date) -> List[Dict[str, Any]]:
         """Convert LibreLog format to LibreTime replace-day format"""
@@ -655,7 +861,8 @@ class LogGenerator:
                     "IDS": "track",
                     "NEW": "track",
                     "INT": "track",
-                    "BED": "track"
+                    "BED": "track",
+                    "VOT": "track"
                 }
                 libretime_type = type_mapping.get(element_type, "track")
                 

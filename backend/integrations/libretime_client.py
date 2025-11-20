@@ -105,12 +105,30 @@ class LibreTimeClient(APIConnector):
             # Transform schedule_data to match replace-day format
             entries = []
             for item in schedule_data:
+                start = item.get("start") or item.get("starts_at")
+                if isinstance(start, str):
+                    # Ensure ISO format
+                    if not start.endswith("Z") and "+" not in start:
+                        # Add timezone if missing
+                        start = start + "Z"
+                elif hasattr(start, "isoformat"):
+                    start = start.isoformat()
+                
+                media_id = item.get("media_id") or item.get("file_id")
+                if media_id is None:
+                    logger.warning("Skipping entry without media_id", item=item)
+                    continue
+                
                 entries.append({
-                    "start": item.get("start") or item.get("starts_at"),
-                    "media_id": item.get("media_id") or item.get("file_id"),
+                    "start": start,
+                    "media_id": int(media_id),
                     "type": item.get("type", "track"),
                     "hard_start": item.get("hard_start", False)
                 })
+            
+            if not entries:
+                logger.warning("No entries to publish", date=date.isoformat())
+                return False
             
             response = await self.post("/schedule/replace-day", data={
                 "date": date.isoformat(),
@@ -119,6 +137,56 @@ class LibreTimeClient(APIConnector):
             return response.get("success", False)
         except Exception as e:
             logger.error("Failed to publish schedule to LibreTime", date=date.isoformat(), error=str(e))
+            return False
+    
+    async def publish_hour_range(
+        self,
+        date: date,
+        hour_entries: List[Dict[str, Any]],
+        hours_to_replace: List[int]
+    ) -> bool:
+        """
+        Publish specific hours to LibreTime by replacing them in the existing schedule
+        
+        Args:
+            date: Target date
+            hour_entries: New entries for the hours being replaced
+            hours_to_replace: List of hours (0-23) to replace
+        
+        Returns:
+            True if successful
+        """
+        try:
+            # Get current schedule
+            current_schedule = await self.get_schedule(date)
+            
+            # Filter out entries for hours being replaced
+            filtered_schedule = []
+            for entry in current_schedule:
+                if entry.get("start"):
+                    try:
+                        entry_time = datetime.fromisoformat(entry["start"].replace("Z", "+00:00"))
+                        entry_hour = entry_time.hour
+                        if entry_hour not in hours_to_replace:
+                            filtered_schedule.append(entry)
+                    except (ValueError, AttributeError):
+                        # Keep entry if we can't parse it
+                        filtered_schedule.append(entry)
+                else:
+                    # Keep entry if no start time
+                    filtered_schedule.append(entry)
+            
+            # Add new hour entries
+            filtered_schedule.extend(hour_entries)
+            
+            # Sort by start time
+            filtered_schedule.sort(key=lambda x: x.get("start", ""))
+            
+            # Publish updated schedule
+            return await self.publish_schedule(date, filtered_schedule)
+            
+        except Exception as e:
+            logger.error("Failed to publish hour range to LibreTime", date=date.isoformat(), error=str(e))
             return False
     
     async def get_schedule_status(self, date: date) -> Dict[str, Any]:

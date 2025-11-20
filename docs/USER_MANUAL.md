@@ -13,9 +13,12 @@
 9. [Voice Tracking](#voice-tracking)
 10. [Reports](#reports)
 11. [Billing](#billing)
-12. [Analytics](#analytics)
-13. [Administration](#administration)
-14. [Help Center](#help-center)
+12. [Production Orders](#production-orders)
+13. [Audio Management](#audio-management)
+14. [Analytics](#analytics)
+15. [Administration](#administration)
+16. [Profile Management](#profile)
+17. [Help Center](#help-center)
 
 ---
 
@@ -294,27 +297,32 @@ Orders are contracts for advertising that specify how many spots to run, when, a
 2. Fill in order details:
 
    **Basic Information**
-   - **Order Number**: Auto-generated if left blank (format: YYYYMMDD-XXXX)
+   - **Order Number**: Auto-generated if left blank (format: YYYYMMDD-XXXX, e.g., 20241215-0001)
    - **Advertiser** (required): Select from existing advertisers
    - **Agency** (optional): Select if advertiser is represented by an agency
    - **Sales Rep** (optional): Assign to a sales representative
+   - **Campaign** (optional): Link to a campaign if this order is part of a larger campaign
 
    **Schedule**
-   - **Start Date**: When commercials should begin
-   - **End Date**: When commercials should end
-   - **Total Spots**: How many commercials to run
+   - **Start Date** (required): When commercials should begin
+   - **End Date** (required): When commercials should end
+   - **Total Spots**: How many commercials to run (default: 0)
 
    **Spot Details**
-   - **Spot Lengths**: Select 15, 30, or 60 seconds (can select multiple)
-   - **Rate Type**: 
+   - **Spot Lengths**: Array of spot lengths in seconds (default: [30, 60])
+   - **Rate Type** (required): 
      - **ROS** (Run of Schedule): Any time, most flexible
      - **DAYPART**: Specific time periods
      - **PROGRAM**: Program-specific
      - **FIXED_TIME**: Exact times
 
    **Pricing**
-   - **Rates**: Enter rate structure based on rate type
-   - **Total Value**: Total cost of the order
+   - **Rates**: Enter rate structure based on rate type (stored as JSON object)
+   - **Total Value**: Total cost of the order (default: 0.00)
+
+   **Status**
+   - **Status**: Order status (DRAFT, PENDING, APPROVED, ACTIVE, COMPLETED, CANCELLED)
+   - **Approval Status**: Approval workflow status (NOT_REQUIRED, PENDING, APPROVED, REJECTED)
 
 3. Click "Save"
 
@@ -331,10 +339,20 @@ Orders are contracts for advertising that specify how many spots to run, when, a
 
 #### Order Actions
 
-- **Approve**: Change status from PENDING to APPROVED (Sales Manager)
-- **Duplicate**: Create a copy of the order
+- **Approve**: Change status from PENDING to APPROVED (Sales Manager) - uses `/orders/{id}/approve` endpoint
+- **Duplicate**: Create a copy of the order - uses `/orders/{id}/duplicate` endpoint
 - **Edit**: Modify order details (limited once spots are scheduled)
 - **Delete**: Remove order (only if no spots scheduled)
+
+#### Approval Workflow
+
+- Orders can have an **Approval Status** separate from the main status
+- **NOT_REQUIRED**: Order doesn't need approval (default for new orders)
+- **PENDING**: Awaiting approval
+- **APPROVED**: Approved by sales manager
+- **REJECTED**: Order was rejected
+
+When an order status is changed to **PENDING**, it becomes available for approval. Sales Managers can approve orders, which changes both the status to **APPROVED** and the approval_status to **APPROVED**.
 
 #### Filtering Orders
 
@@ -390,14 +408,23 @@ Schedule individual spots from approved orders into the daily schedule.
 
 #### Scheduling Spots
 
-1. **Select Order**: Choose an approved order from the dropdown
-2. **Set Date Range**: Select start and end dates
+1. **Select Order**: Choose an approved order from the dropdown (only orders with status **APPROVED** appear)
+2. **Set Date Range**: 
+   - **Start Date**: First date for spot scheduling
+   - **End Date**: Last date for spot scheduling
+   - Date range should be within the order's start_date and end_date
 3. **Configure Spots**:
-   - **Spot Length**: Select 15, 30, or 60 seconds
-   - **Break Position**: Optional (A, B, C, D, E)
-   - **Daypart**: Optional daypart restriction
-4. **Generate Spots**: Click "Schedule" to create spots
-5. **Review**: Preview scheduled spots before confirming
+   - **Spot Length**: Select from available spot lengths (15, 30, or 60 seconds)
+   - **Break Position**: Optional - Select A, B, C, D, or E position within commercial break
+   - **Daypart**: Optional - Restrict spots to specific daypart
+4. **Generate Spots**: Click "Schedule" button to create spots
+   - System uses bulk spot creation (`/spots/bulk` endpoint)
+   - Spots are distributed across the date range
+   - Each spot gets a unique scheduled_date and scheduled_time
+5. **Review**: Preview scheduled spots in the preview dialog before confirming
+   - Review shows all spots that will be created
+   - Verify dates, times, and break positions
+   - Confirm to create all spots
 
 ![Spot Scheduling Form](../screenshots/traffic/spot-scheduler/scheduling-form.png)
 
@@ -488,6 +515,62 @@ Organize dayparts into groups for better management.
 
 ---
 
+### Break Structures (`/break-structures`)
+
+Break structures define when commercial breaks occur within each hour of programming. They are used to organize spots into specific break positions (A, B, C, D, E) and ensure proper spacing between commercials.
+
+#### Understanding Break Structures
+
+- **Hour**: The hour of the day (0-23) this break structure applies to
+- **Break Positions**: Array of seconds from the start of the hour when breaks occur
+- **Example**: For hour 8 (8:00 AM), breaks at [900, 1800, 2700] means breaks at 8:15, 8:30, and 8:45
+
+#### Creating a Break Structure
+
+1. Navigate to **Traffic > Break Structures** (or `/break-structures`)
+2. Click "Add Break Structure" button
+3. Fill in the form:
+   - **Name**: Descriptive name (e.g., "Morning Drive Breaks")
+   - **Hour**: Select hour (0-23) this structure applies to
+   - **Break Positions**: Enter array of seconds from hour start
+     - Example: `[900, 1800, 2700]` for breaks at 15, 30, and 45 minutes
+     - Use comma-separated values or JSON array format
+   - **Active**: Enable or disable this break structure
+4. Click "Save"
+
+#### Break Position Labels
+
+When break structures are used:
+- First break position → **A Position** (premium)
+- Second break position → **B Position**
+- Third break position → **C Position**
+- Fourth break position → **D Position**
+- Fifth break position → **E Position**
+
+#### Using Break Structures
+
+- Break structures are automatically used when scheduling spots
+- System assigns spots to break positions based on the structure for that hour
+- Voice track slots are also created based on break structures
+- Log generation uses break structures to organize commercial breaks
+
+#### Managing Break Structures
+
+- **Edit**: Modify break positions and timing
+- **Delete**: Remove break structure (only if not in use)
+- **Filter by Hour**: View break structures for specific hours
+- **Active/Inactive**: Toggle break structures on/off
+
+#### Best Practices
+
+- Create break structures for each hour that has different break patterns
+- Morning drive hours (6-10 AM) typically have more frequent breaks
+- Evening hours may have fewer breaks
+- Ensure break positions don't conflict with program content
+- Test break structures with log preview before publishing
+
+---
+
 ### Rotation Rules (`/traffic/rotation-rules`)
 
 ![Rotation Rules](../screenshots/traffic/rotation-rules/rotation-rules-list.png)
@@ -560,24 +643,32 @@ Manage commercial audio files and scripts (copy).
 
 #### Uploading Copy
 
-1. Click "Upload Copy" button
-2. Fill in details:
+1. Navigate to **Traffic > Copy Library** (`/traffic/copy`)
+2. Click "Upload Copy" button
+3. Fill in details:
    - **Order**: Select associated order (optional)
-   - **Advertiser**: Select advertiser
-   - **Title**: Descriptive name
-   - **Type**: Audio file or Script
-   - **File**: Upload audio file (if audio type)
-   - **Script Text**: Enter script text (if script type)
-   - **Version**: Version number
-   - **Expiration Date**: When copy expires
-3. Click "Save"
+   - **Advertiser**: Select advertiser (optional if order selected)
+   - **Title** (required): Descriptive name for the copy
+   - **Script Text**: Enter script text for live reads (optional)
+   - **Audio File**: Upload audio file (MP3, WAV, etc.)
+   - **Expiration Date**: When copy expires (optional)
+4. Click "Save"
+
+**Note**: Copy can be either an audio file or script text, or both. Audio files are stored in `/var/lib/librelog/copy_files` (or fallback location).
 
 ![Copy Upload Form](../screenshots/traffic/copy/copy-upload-form.png)
 
 #### Copy Types
 
 - **Pre-Produced Audio**: Recorded commercial (MP3, WAV, etc.)
+  - Upload audio file directly
+  - File is stored and can be assigned to spots
+  - Supports multiple audio formats
 - **Live Read Script**: Text for DJ/host to read on-air
+  - Enter script text in the form
+  - Can be linked to live read records
+  - Used for on-air talent to read
+- **Both**: Copy can have both audio file and script text
 
 #### Copy Versions
 
@@ -587,9 +678,12 @@ Manage commercial audio files and scripts (copy).
 
 #### Copy Assignment
 
-- Assign copy to specific spots
+- Assign copy to specific spots using the Copy Assignment component
 - View assignments in copy detail dialog
 - Manage multi-cut rotations
+- Copy can be marked as "Needs Production" to create production orders
+- Copy approval workflow: PENDING, APPROVED, REJECTED
+- Production orders can be created from copy that needs production
 
 #### Expiring Copy Alert
 
@@ -802,28 +896,91 @@ Edit generated logs before publishing.
 
 ![Voice Recorder](../screenshots/voice/voice-recorder.png)
 
-Record voice tracks for inclusion in logs.
+Record voice tracks for inclusion in logs. The voice recorder provides a web-based interface for recording station IDs, liners, promos, and other voice content.
 
 #### Recording Voice Tracks
 
-1. Click "Start Recording"
-2. Record your voice track
-3. Click "Stop Recording"
-4. Review the recording
-5. Save or re-record
+1. Navigate to **Voice > Voice Recorder** (`/voice`)
+2. Click "Start Recording" button
+3. Record your voice track (microphone access required)
+4. Click "Stop Recording" when finished
+5. Review the recording:
+   - Playback to verify quality
+   - Use waveform display to check levels
+   - Trim audio if needed using the audio trimmer
+6. Enter track details:
+   - **Show Name**: Name of the show or segment
+   - **Scheduled Time**: When this track should play (optional)
+   - **Break Position**: Assign to specific break (A, B, C, D, E)
+7. Click "Save" to save the recording
+8. Optionally click "Re-record" to start over
+
+#### Voice Track Features
+
+- **Real-time Waveform**: Visual feedback while recording
+- **Audio Trimming**: Trim start/end of recording
+- **Timing Display**: Shows recording duration
+- **Preview Panels**: Preview how track will sound
+- **Break Position Assignment**: Assign to specific break positions
 
 #### Voice Track Management
 
 - View all recorded voice tracks
-- Assign to specific logs
+- Assign to specific logs and times
 - Delete old tracks
 - Download tracks
+- Upload to LibreTime
 
 #### Assigning to Logs
 
-- Select voice track
-- Assign to specific log and time
-- Voice track plays at scheduled time
+- Voice tracks can be assigned when generating logs
+- Select voice track during log generation
+- Assign to specific log, hour, and break position
+- Voice track plays at scheduled time in the log
+
+---
+
+### Voice Tracks Manager (`/voice/tracks`)
+
+![Voice Tracks Manager](../screenshots/voice/voice-tracks-manager.png)
+
+Manage and organize all recorded voice tracks in one place.
+
+#### Features
+
+- **View All Tracks**: See all voice tracks in the system
+- **Search**: Search tracks by show name or metadata
+- **Filter**: Filter by status, LibreTime sync status
+- **Playback**: Play tracks directly in the browser
+- **Upload to LibreTime**: Sync tracks to LibreTime automation
+- **Delete**: Remove unwanted tracks
+- **Metadata**: View track metadata and LibreTime IDs
+
+#### Using Voice Tracks Manager
+
+1. Navigate to **Voice > Voice Tracks Manager** (`/voice/tracks`)
+2. View all voice tracks in a table
+3. Use search box to find specific tracks
+4. Filter by:
+   - **Status**: All, Active, Inactive
+   - **LibreTime Sync**: Synced, Not Synced
+5. Click play icon to preview track
+6. Click upload icon to sync to LibreTime
+7. Click delete icon to remove track
+
+#### Break Position Assignment
+
+- Voice tracks can be assigned to specific break positions
+- Break positions (A, B, C, D, E) correspond to positions in commercial breaks
+- Assignment happens during log generation or manually in the manager
+- Break positions help organize voice content within hourly logs
+
+#### LibreTime Integration
+
+- Voice tracks can be uploaded to LibreTime
+- Tracks appear in LibreTime media library
+- LibreTime ID is stored for tracking
+- Sync status is displayed in the manager
 
 ---
 
@@ -953,6 +1110,154 @@ Manage makegoods (free replacement spots) for missed commercials.
 
 ---
 
+## Production Orders
+
+The Production Orders system manages the complete workflow for creating commercial audio, from order entry through production, quality control, and delivery.
+
+### Production Orders Hub (`/production/orders`)
+
+![Production Orders](../screenshots/production/production-orders-list.png)
+
+Manage production orders for creating commercial audio content.
+
+#### Creating a Production Order
+
+1. Navigate to **Production > Production Orders** (`/production/orders`)
+2. Click "New Production Order" button
+3. Fill in production order details:
+
+   **Basic Information**
+   - **Copy**: Select the copy record this production order is for
+   - **Client Name**: Name of the client/advertiser
+   - **Campaign Title**: Campaign name (optional)
+   - **Order Type**: Type of production (e.g., VOICE_OVER, FULL_PRODUCTION, EDIT_ONLY)
+   - **Contract Number**: Contract reference (optional)
+
+   **Schedule**
+   - **Start Date**: Campaign start date
+   - **End Date**: Campaign end date
+   - **Deadline**: Production deadline
+
+   **Requirements**
+   - **Spot Lengths**: Array of spot lengths needed (15, 30, 60 seconds)
+   - **Deliverables**: Description of what needs to be produced
+   - **Copy Requirements**: Script or copy requirements
+   - **Talent Needs**: Voice talent requirements
+   - **Audio References**: Reference audio files (optional)
+   - **Stations**: List of stations this will air on
+   - **Version Count**: How many versions needed
+
+   **Instructions**
+   - **Instructions**: Production instructions for the producer
+   - **Budget**: Production budget (optional)
+
+4. Click "Save" to create the production order
+
+#### Production Order Statuses
+
+- **PENDING**: Order created, awaiting assignment
+- **ASSIGNED**: Assigned to a producer
+- **IN_PROGRESS**: Production in progress
+- **QC**: In quality control review
+- **COMPLETED**: Production completed
+- **DELIVERED**: Delivered to client/station
+- **CANCELLED**: Order cancelled
+
+#### Production Order Workflow
+
+1. **Create Order**: Sales or traffic creates production order from copy
+2. **Assign Producer**: Production manager assigns to producer
+3. **Assign Talent**: Producer assigns voice talent (if needed)
+4. **Production**: Producer creates audio content
+5. **Quality Control**: Audio goes through QC review
+6. **Delivery**: Completed audio delivered and linked to copy
+7. **Archive**: Completed orders archived for records
+
+---
+
+### Producer Dashboard (`/production/dashboard`)
+
+![Producer Dashboard](../screenshots/production/producer-dashboard.png)
+
+View and manage your assigned production orders.
+
+#### Dashboard Features
+
+- **My Assignments**: Production orders assigned to you
+- **Overdue Orders**: Orders past their deadline
+- **Due Today**: Orders due today
+- **In Progress**: Orders currently being worked on
+- **Status Overview**: Summary of order statuses
+
+#### Using the Dashboard
+
+1. Navigate to **Production > Producer Dashboard** (`/production/dashboard`)
+2. View your assigned orders
+3. Click on an order to view details
+4. Update order status as you progress
+5. Upload completed audio files
+6. Submit for QC when ready
+
+#### Order Actions
+
+- **Start Production**: Change status to IN_PROGRESS
+- **Submit for QC**: Move to QC status
+- **Upload Audio**: Upload completed audio files
+- **Assign Talent**: Assign voice talent to order
+- **View Details**: See full order information
+
+---
+
+### Voice Talent Portal (`/production/voice-talent`)
+
+![Voice Talent Portal](../screenshots/production/voice-talent-portal.png)
+
+Portal for voice talent to view assignments and submit recordings.
+
+#### Features
+
+- **My Assignments**: Voice talent assignments
+- **Scripts**: View scripts to record
+- **Submit Recordings**: Upload completed recordings
+- **Deadlines**: View production deadlines
+- **Instructions**: Production instructions
+
+#### Using the Portal
+
+1. Navigate to **Production > Voice Talent Portal** (`/production/voice-talent`)
+2. View assigned voice work
+3. Download scripts and reference materials
+4. Record voice tracks
+5. Upload completed recordings
+6. Track submission status
+
+---
+
+### Production Archive (`/production/archive`)
+
+![Production Archive](../screenshots/production/production-archive.png)
+
+Archive of completed production orders for reference and records.
+
+#### Features
+
+- **Completed Orders**: All delivered/completed orders
+- **Search**: Search by client, campaign, date
+- **Filter**: Filter by order type, status, date range
+- **Download**: Download archived audio files
+- **Reports**: Generate production reports
+
+#### Using the Archive
+
+1. Navigate to **Production > Production Archive** (`/production/archive`)
+2. View archived production orders
+3. Search for specific orders
+4. Filter by various criteria
+5. Download audio files if needed
+6. Generate reports on production activity
+
+---
+
 ## Analytics
 
 ### Inventory Dashboard (`/analytics/inventory`)
@@ -1020,6 +1325,185 @@ Set and track sales goals.
 - See performance by sales rep
 - Compare actual vs goal
 - Generate performance reports
+
+---
+
+## Audio Management
+
+The Audio Management system handles audio cuts, live reads, political compliance, audio delivery, and quality control.
+
+### Audio Cuts (`/audio-cuts`)
+
+Manage multi-cut audio assets for campaigns that require multiple versions or cuts of the same commercial.
+
+#### Creating Audio Cuts
+
+1. Navigate to **Audio > Audio Cuts** (`/audio-cuts`)
+2. Click "Upload Audio Cut" button
+3. Fill in details:
+   - **Title**: Name of the audio cut
+   - **Campaign/Order**: Link to campaign or order
+   - **Cut Number**: Version number (1, 2, 3, etc.)
+   - **File**: Upload audio file
+   - **Notes**: Production notes
+4. Click "Save"
+
+#### Audio Cut Management
+
+- **Multi-Cut Support**: Create multiple cuts for same campaign
+- **Version Control**: Track different versions
+- **QC Status**: Quality control status tracking
+- **Assignment**: Assign cuts to specific spots
+- **Archive**: Archive old cuts
+
+#### Quality Control
+
+- Audio cuts go through QC process
+- QC status: PENDING, APPROVED, REJECTED
+- Rejected cuts require fixes before approval
+- Approved cuts can be assigned to spots
+
+---
+
+### Live Reads (`/live-reads`)
+
+Manage live read scripts for on-air talent to read during broadcasts.
+
+#### Creating a Live Read
+
+1. Navigate to **Audio > Live Reads** (`/live-reads`)
+2. Click "Create Live Read" button
+3. Fill in details:
+   - **Script Text**: The text to be read on-air
+   - **Copy**: Link to copy record (optional)
+   - **Order**: Link to order (optional)
+   - **Advertiser**: Link to advertiser (optional)
+   - **Script Title**: Name for the script
+   - **Scheduled Time**: When it should be read
+   - **Scheduled Date**: Date for reading
+   - **Notes**: Additional instructions
+4. Click "Save"
+
+#### Live Read Workflow
+
+1. **Create Script**: Create live read script
+2. **Schedule**: Assign scheduled time/date
+3. **Assign Talent**: Assign to on-air talent
+4. **Perform**: Talent reads script on-air
+5. **Confirm**: Mark as performed with proof
+6. **Track**: Track performance for billing
+
+#### Performance Tracking
+
+- **Scheduled Time**: When script should be read
+- **Performed Time**: Actual time it was read
+- **Performed By**: Which talent read it
+- **Confirmed**: Confirmation status
+- **Proof of Performance**: Evidence of reading
+- **Makegood Required**: If reading was missed
+
+---
+
+### Political Compliance (`/political-compliance`)
+
+Track FCC compliance requirements for political advertising.
+
+#### Creating a Political Record
+
+1. Navigate to **Audio > Political Compliance** (`/political-compliance`)
+2. Click "Create Political Record" button
+3. Fill in compliance details:
+   - **Copy/Order**: Link to copy or order
+   - **Advertiser Category**: Political, issue advocacy, etc.
+   - **Sponsor Name**: Name of sponsor
+   - **Sponsor ID**: Sponsor identification number
+   - **Office Sought**: Political office (if applicable)
+   - **Disclaimers Required**: Required disclaimers
+   - **Political Window**: Start and end dates for political window
+   - **Notes**: Compliance notes
+4. Click "Save"
+
+#### Compliance Tracking
+
+- **Compliance Status**: PENDING, COMPLIANT, NON_COMPLIANT
+- **Disclaimers**: Track required disclaimers
+- **No Substitution**: Flag if substitution not allowed
+- **Archived**: Archive old political records
+- **Reports**: Generate compliance reports
+
+#### FCC Requirements
+
+- Political ads require specific disclaimers
+- Sponsor identification must be included
+- Records must be maintained for FCC inspection
+- System tracks all compliance requirements
+
+---
+
+### Audio Delivery (`/audio-delivery`)
+
+Manage delivery of audio files to stations and clients.
+
+#### Delivery Workflow
+
+1. **Prepare Audio**: Audio ready for delivery
+2. **Select Delivery Method**: FTP, email, cloud storage, etc.
+3. **Schedule Delivery**: Set delivery date/time
+4. **Deliver**: Send audio files
+5. **Confirm Receipt**: Track delivery confirmation
+6. **Archive**: Archive delivery records
+
+#### Delivery Methods
+
+- **FTP Upload**: Upload to station FTP server
+- **Email**: Send via email attachment
+- **Cloud Storage**: Upload to cloud (Dropbox, Google Drive, etc.)
+- **Direct Download**: Provide download link
+- **Physical Media**: Track physical delivery
+
+#### Delivery Tracking
+
+- **Delivery Status**: PENDING, IN_TRANSIT, DELIVERED, FAILED
+- **Delivery Date**: When files were delivered
+- **Confirmation**: Receipt confirmation
+- **Retry**: Retry failed deliveries
+- **History**: Delivery history log
+
+---
+
+### Audio QC (`/audio-qc`)
+
+Quality control system for reviewing and approving audio content.
+
+#### QC Workflow
+
+1. **Submit for QC**: Audio submitted for review
+2. **QC Review**: Reviewer listens and checks:
+   - Audio quality
+   - Content accuracy
+   - Compliance requirements
+   - Technical specifications
+3. **Approve or Reject**: Approve or request changes
+4. **Revisions**: Make requested changes
+5. **Final Approval**: Final QC approval
+6. **Release**: Release for use
+
+#### QC Checklist
+
+- **Audio Quality**: Levels, clarity, no distortion
+- **Content**: Matches script/copy
+- **Length**: Correct duration
+- **Compliance**: Meets all requirements
+- **Technical**: Meets technical specs
+- **Branding**: Correct advertiser/brand
+
+#### QC Status
+
+- **PENDING**: Awaiting review
+- **IN_REVIEW**: Currently being reviewed
+- **APPROVED**: Approved for use
+- **REJECTED**: Needs changes
+- **REVISED**: Changes made, re-submitted
 
 ---
 
@@ -1176,6 +1660,58 @@ Configure notification settings and alerts.
 
 ---
 
+### Profile (`/profile`)
+
+![Profile Page](../screenshots/admin/profile-page.png)
+
+Manage your user profile and account settings.
+
+#### Accessing Your Profile
+
+1. Click on your username in the navigation bar
+2. Select "Profile" from the menu
+3. Or navigate directly to `/profile`
+
+#### Updating Your Profile
+
+1. Navigate to **Profile** (`/profile`)
+2. View your current profile information:
+   - **Username**: Your login username
+   - **Role**: Your assigned role
+   - **Account Created**: When your account was created
+   - **Last Login**: Your last login time
+3. Update your information:
+   - **Change Username**: Enter new username
+   - **Change Password**: 
+     - Enter current password
+     - Enter new password
+     - Confirm new password
+4. Click "Save Changes" button
+
+#### Password Requirements
+
+- Current password required to change password
+- New password should meet security requirements
+- Password changes take effect immediately
+- You'll need to log in again with new password
+
+#### Account Information
+
+The profile page displays:
+- **Role**: Your user role (Admin, Sales, Traffic Manager, etc.)
+- **Account Created**: Date your account was created
+- **Last Login**: Timestamp of your last login
+
+#### Security Best Practices
+
+- Change default password immediately after first login
+- Use strong, unique passwords
+- Don't share your password
+- Change password regularly
+- Contact administrator if you suspect account compromise
+
+---
+
 ## Help Center
 
 ### Help Center (`/help`)
@@ -1238,7 +1774,101 @@ Access help documentation, terminology, and workflow guides.
   - Verify clock template exists
   - Check scheduled spots exist
   - Verify music library has tracks
+  - Check break structures are configured
+  - Verify LibreTime connection
   - Check system logs
+
+#### Production Order Not Appearing
+
+- **Problem**: Production order not showing in list
+- **Solution**:
+  - Check order status filter
+  - Verify user has production permissions
+  - Check date range filters
+  - Refresh page
+  - Verify order was saved successfully
+
+#### Break Structure Not Working
+
+- **Problem**: Break positions not being assigned correctly
+- **Solution**:
+  - Verify break structure is active
+  - Check break structure hour matches log hour
+  - Verify break positions array is valid
+  - Check break structure is linked to clock template
+  - Review log generation settings
+
+#### Audio Cut Upload Fails
+
+- **Problem**: Cannot upload audio cut
+- **Solution**:
+  - Verify file format is supported (MP3, WAV, etc.)
+  - Check file size limits
+  - Verify storage directory permissions
+  - Check disk space
+  - Review error messages in console
+
+#### Live Read Not Tracking
+
+- **Problem**: Live read performance not being tracked
+- **Solution**:
+  - Verify live read was marked as performed
+  - Check performed_by field is set
+  - Verify proof of performance uploaded
+  - Check scheduled time matches actual time
+  - Review live read status
+
+#### Political Compliance Record Missing
+
+- **Problem**: Political ad not showing compliance record
+- **Solution**:
+  - Verify political record was created
+  - Check advertiser category is set to "political"
+  - Verify copy/order is linked
+  - Check compliance status
+  - Review political window dates
+
+#### Audio Delivery Fails
+
+- **Problem**: Audio files not delivering
+- **Solution**:
+  - Verify delivery method configuration
+  - Check FTP/server credentials
+  - Verify network connectivity
+  - Check file permissions
+  - Review delivery logs
+  - Retry failed deliveries
+
+#### QC Approval Not Working
+
+- **Problem**: Cannot approve audio in QC
+- **Solution**:
+  - Verify user has QC permissions
+  - Check audio is in QC status
+  - Verify all QC requirements met
+  - Check for blocking issues
+  - Review QC workflow
+
+#### Voice Track Not Syncing to LibreTime
+
+- **Problem**: Voice track not appearing in LibreTime
+- **Solution**:
+  - Verify LibreTime API connection
+  - Check API key is valid
+  - Verify track was uploaded
+  - Check LibreTime ID was assigned
+  - Review sync logs
+  - Manually trigger sync if needed
+
+#### Profile Update Fails
+
+- **Problem**: Cannot update profile or password
+- **Solution**:
+  - Verify current password is correct (for password changes)
+  - Check username doesn't already exist
+  - Verify password meets requirements
+  - Check for validation errors
+  - Try logging out and back in
 
 ---
 

@@ -215,6 +215,18 @@ const VoiceRecorder: React.FC = () => {
     },
   })
 
+  // Delete recording mutation
+  const deleteRecordingMutation = useMutation({
+    mutationFn: async (recordingId: number) => {
+      await api.delete(`/voice/recordings/${recordingId}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['standalone-recordings'] })
+      queryClient.invalidateQueries({ queryKey: ['production-recordings'] })
+      queryClient.invalidateQueries({ queryKey: ['voice-tracks'] })
+    },
+  })
+
   // Select take mutation
   const selectTakeMutation = useMutation({
     mutationFn: async (takeId: number) => {
@@ -236,6 +248,16 @@ const VoiceRecorder: React.FC = () => {
 
   const handleTakeSelect = (takeId: number) => {
     selectTakeMutation.mutate(takeId)
+  }
+
+  const handleTakeDelete = async (takeId: number) => {
+    try {
+      await api.delete(`/voice/${takeId}`)
+      queryClient.invalidateQueries({ queryKey: ['voice-takes', selectedBreakId] })
+    } catch (error) {
+      console.error('Failed to delete take:', error)
+      throw error
+    }
   }
 
   // Auto-select first break when slots load
@@ -491,6 +513,20 @@ const VoiceRecorder: React.FC = () => {
                               </IconButton>
                             </Tooltip>
                           )}
+                          <Tooltip title="Delete recording">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => {
+                                if (window.confirm(`Are you sure you want to delete "${recording.show_name || `Recording #${recording.id}`}"?`)) {
+                                  deleteRecordingMutation.mutate(recording.id)
+                                }
+                              }}
+                              disabled={deleteRecordingMutation.isPending}
+                            >
+                              <Delete />
+                            </IconButton>
+                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -537,6 +573,9 @@ const VoiceRecorder: React.FC = () => {
                 onChange={(e) => {
                   const breakId = e.target.value as number
                   setSelectedBreakId(breakId)
+                  // Clear takes cache when switching breaks
+                  queryClient.setQueryData(['voice-takes', selectedBreakId], [])
+                  queryClient.setQueryData(['voice-takes', breakId], undefined)
                   const slot = slotsData.slots.find((s: any) => s.id === breakId)
                   if (slot) {
                     setSelectedHour(slot.hour)
@@ -572,7 +611,7 @@ const VoiceRecorder: React.FC = () => {
         <Grid container spacing={3}>
           {/* Preview panels */}
           <Grid item xs={12}>
-            <PreviewPanels breakId={selectedBreakId} />
+            <PreviewPanels breakId={selectedBreakId} logId={selectedLogId} />
           </Grid>
 
           {/* Timing display */}
@@ -589,6 +628,7 @@ const VoiceRecorder: React.FC = () => {
               breakId={selectedBreakId}
               onUpload={handleUpload}
               onTakeSelect={handleTakeSelect}
+              onTakeDelete={handleTakeDelete}
               takes={takesData || []}
             />
           </Grid>

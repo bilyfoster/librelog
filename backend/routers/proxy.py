@@ -347,11 +347,21 @@ async def get_dayparts_proxy(
         
         dayparts_data = []
         for dp in dayparts:
-            dp_dict = DaypartResponse.model_validate(dp).model_dump()
-            dp_dict["start_time"] = str(dp.start_time)
-            dp_dict["end_time"] = str(dp.end_time)
-            dp_dict["category_name"] = getattr(dp.category, 'name', None) if hasattr(dp, 'category') and dp.category else None
-            dayparts_data.append(dp_dict)
+            # Manually serialize to ensure datetime fields are strings
+            dp_dict = {
+                "id": dp.id,
+                "name": dp.name,
+                "start_time": str(dp.start_time),
+                "end_time": str(dp.end_time),
+                "days_of_week": getattr(dp, 'days_of_week', None),
+                "category_id": getattr(dp, 'category_id', None),
+                "description": getattr(dp, 'description', None),
+                "active": getattr(dp, 'active', True),
+                "created_at": dp.created_at.isoformat() if dp.created_at else "",
+                "updated_at": dp.updated_at.isoformat() if dp.updated_at else "",
+                "category_name": getattr(dp.category, 'name', None) if hasattr(dp, 'category') and dp.category else None
+            }
+            dayparts_data.append(DaypartResponse(**dp_dict))
         
         return dayparts_data
     except Exception as e:
@@ -379,7 +389,23 @@ async def get_daypart_categories_proxy(
         result = await db.execute(query)
         categories = result.scalars().all()
         
-        return [DaypartCategoryResponse.model_validate(cat) for cat in categories]
+        # Manually serialize to ensure datetime fields are strings
+        categories_data = []
+        for cat in categories:
+            cat_dict = {
+                "id": cat.id,
+                "name": cat.name,
+                "description": cat.description,
+                "color": cat.color,
+                "icon": cat.icon,
+                "sort_order": cat.sort_order,
+                "active": cat.active,
+                "created_at": cat.created_at.isoformat() if cat.created_at else "",
+                "updated_at": cat.updated_at.isoformat() if cat.updated_at else "",
+            }
+            categories_data.append(DaypartCategoryResponse(**cat_dict))
+        
+        return categories_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch daypart categories: {str(e)}")
 

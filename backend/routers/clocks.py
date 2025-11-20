@@ -42,6 +42,7 @@ class ClockTemplateUpdate(BaseModel):
 
 
 @router.get("/")
+@router.get("")  # Handle both with and without trailing slash
 async def list_clock_templates(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),

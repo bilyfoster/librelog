@@ -6,37 +6,44 @@ import {
   Typography,
   Grid,
   CircularProgress,
+  Alert,
 } from '@mui/material'
 import WaveformDisplay from './WaveformDisplay'
 import api from '../../utils/api'
+import { getVoiceSlotContext } from '../../utils/api'
 
 interface PreviewPanelsProps {
   breakId: number
+  logId?: number | null
 }
 
 interface PreviewData {
   slot_id: number
+  log_id: number
   hour: number
   break_position: string
   ramp_time: number | null
   previous_track: {
-    id: number
+    id?: number
     title: string
-    artist: string
-    duration: number
-    filepath: string
+    artist?: string
+    duration?: number
+    type?: string
+    libretime_id?: string
   } | null
   next_track: {
-    id: number
+    id?: number
     title: string
-    artist: string
-    duration: number
-    ramp_in: number
-    filepath: string
+    artist?: string
+    duration?: number
+    type?: string
+    libretime_id?: string
   } | null
+  previous_element?: any
+  next_element?: any
 }
 
-const PreviewPanels: React.FC<PreviewPanelsProps> = ({ breakId }) => {
+const PreviewPanels: React.FC<PreviewPanelsProps> = ({ breakId, logId }) => {
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -45,9 +52,23 @@ const PreviewPanels: React.FC<PreviewPanelsProps> = ({ breakId }) => {
     const fetchPreview = async () => {
       try {
         setLoading(true)
+        setError(null)
+        
+        // Try new context endpoint first if logId is available
+        if (logId) {
+          try {
+            const response = await getVoiceSlotContext(logId, breakId)
+            setPreviewData(response)
+            return
+          } catch (err: any) {
+            // Fall back to old endpoint if new one fails
+            console.warn('New context endpoint failed, trying old endpoint:', err)
+          }
+        }
+        
+        // Fallback to old endpoint
         const response = await api.get(`/voice/breaks/${breakId}/preview`)
         setPreviewData(response.data)
-        setError(null)
       } catch (err: any) {
         setError(err.response?.data?.detail || 'Failed to load preview')
         console.error('Preview fetch error:', err)
@@ -59,7 +80,7 @@ const PreviewPanels: React.FC<PreviewPanelsProps> = ({ breakId }) => {
     if (breakId) {
       fetchPreview()
     }
-  }, [breakId])
+  }, [breakId, logId])
 
   if (loading) {
     return (
@@ -92,17 +113,33 @@ const PreviewPanels: React.FC<PreviewPanelsProps> = ({ breakId }) => {
                 Previous Track (Outro)
               </Typography>
               <Typography variant="h6" gutterBottom>
-                {previewData.previous_track.title}
+                {previewData.previous_track.title || 'Unknown'}
               </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                {previewData.previous_track.artist}
-              </Typography>
-              <Box sx={{ mt: 2 }}>
-                <WaveformDisplay
-                  audioUrl={`/api/tracks/${previewData.previous_track.id}/preview`}
-                  height={150}
-                />
-              </Box>
+              {previewData.previous_track.artist && (
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  {previewData.previous_track.artist}
+                </Typography>
+              )}
+              {previewData.previous_track.duration && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  Duration: {Math.floor(previewData.previous_track.duration / 60)}:{(previewData.previous_track.duration % 60).toString().padStart(2, '0')}
+                </Typography>
+              )}
+              {previewData.previous_track.id && (
+                <Box sx={{ mt: 2 }}>
+                  <WaveformDisplay
+                    audioUrl={`/api/tracks/${previewData.previous_track.id}/preview`}
+                    height={150}
+                  />
+                </Box>
+              )}
+              {previewData.previous_element && (
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Type: {previewData.previous_element.type || previewData.previous_track.type || 'N/A'}
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -117,24 +154,49 @@ const PreviewPanels: React.FC<PreviewPanelsProps> = ({ breakId }) => {
                 Next Track (Intro)
               </Typography>
               <Typography variant="h6" gutterBottom>
-                {previewData.next_track.title}
+                {previewData.next_track.title || 'Unknown'}
               </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                {previewData.next_track.artist}
-              </Typography>
-              {previewData.next_track.ramp_in && (
-                <Typography variant="caption" color="primary" sx={{ display: 'block', mb: 1 }}>
-                  Ramp time: {previewData.next_track.ramp_in.toFixed(1)}s
+              {previewData.next_track.artist && (
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  {previewData.next_track.artist}
                 </Typography>
               )}
-              <Box sx={{ mt: 2 }}>
-                <WaveformDisplay
-                  audioUrl={`/api/tracks/${previewData.next_track.id}/preview`}
-                  height={150}
-                />
-              </Box>
+              {previewData.next_track.duration && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  Duration: {Math.floor(previewData.next_track.duration / 60)}:{(previewData.next_track.duration % 60).toString().padStart(2, '0')}
+                </Typography>
+              )}
+              {previewData.ramp_time && (
+                <Typography variant="caption" color="primary" sx={{ display: 'block', mb: 1 }}>
+                  Ramp time: {previewData.ramp_time.toFixed(1)}s
+                </Typography>
+              )}
+              {previewData.next_track.id && (
+                <Box sx={{ mt: 2 }}>
+                  <WaveformDisplay
+                    audioUrl={`/api/tracks/${previewData.next_track.id}/preview`}
+                    height={150}
+                  />
+                </Box>
+              )}
+              {previewData.next_element && (
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Type: {previewData.next_element.type || previewData.next_track.type || 'N/A'}
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
           </Card>
+        </Grid>
+      )}
+
+      {/* Show message if no context available */}
+      {!previewData.previous_track && !previewData.next_track && (
+        <Grid item xs={12}>
+          <Alert severity="info">
+            No context information available for this break. The tracks before and after will be determined when the log is finalized.
+          </Alert>
         </Grid>
       )}
 

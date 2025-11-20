@@ -5,6 +5,13 @@ interface UseVoiceRecorderOptions {
   breakId?: number
   requestId?: number
   onRecordingComplete?: (blob: Blob) => void
+  selectedDeviceId?: string | null
+}
+
+export interface AudioInputDevice {
+  deviceId: string
+  label: string
+  kind: MediaDeviceKind
 }
 
 export const useVoiceRecorder = (options: UseVoiceRecorderOptions = {}) => {
@@ -14,15 +21,52 @@ export const useVoiceRecorder = (options: UseVoiceRecorderOptions = {}) => {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
   const [takes, setTakes] = useState<any[]>([])
   const [selectedTake, setSelectedTake] = useState<number | null>(null)
+  const [availableDevices, setAvailableDevices] = useState<AudioInputDevice[]>([])
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(options.selectedDeviceId || null)
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
-  const startRecording = useCallback(async () => {
+  const enumerateDevices = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // First request permission to access devices
+      await navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        // Stop the stream immediately as we only needed it for permission
+        stream.getTracks().forEach(track => track.stop())
+      })
+      
+      // Now enumerate devices
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      const audioInputs = devices
+        .filter(device => device.kind === 'audioinput')
+        .map(device => ({
+          deviceId: device.deviceId,
+          label: device.label || `Microphone ${device.deviceId.slice(0, 8)}`,
+          kind: device.kind as MediaDeviceKind
+        }))
+      
+      setAvailableDevices(audioInputs)
+      return audioInputs
+    } catch (error) {
+      console.error('Error enumerating devices:', error)
+      return []
+    }
+  }, [])
+
+  const startRecording = useCallback(async (deviceId?: string | null) => {
+    try {
+      // Use provided deviceId, or fall back to hook's selectedDeviceId state, or default
+      const targetDeviceId = deviceId !== undefined ? deviceId : selectedDeviceId
+      
+      const audioConstraints: MediaTrackConstraints = targetDeviceId
+        ? { deviceId: { exact: targetDeviceId } }
+        : true
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: audioConstraints 
+      })
       streamRef.current = stream
       
       const mediaRecorder = new MediaRecorder(stream, {
@@ -64,7 +108,7 @@ export const useVoiceRecorder = (options: UseVoiceRecorderOptions = {}) => {
       console.error('Error starting recording:', error)
       throw error
     }
-  }, [options])
+  }, [options, selectedDeviceId])
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
@@ -124,6 +168,10 @@ export const useVoiceRecorder = (options: UseVoiceRecorderOptions = {}) => {
     audioBlob,
     takes,
     selectedTake,
+    availableDevices,
+    selectedDeviceId,
+    setSelectedDeviceId,
+    enumerateDevices,
     startRecording,
     stopRecording,
     pauseRecording,

@@ -3,6 +3,7 @@ Voice track slot service for managing break assignments
 """
 
 from typing import List, Optional, Dict, Any
+from datetime import date, datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from backend.models.voice_track_slot import VoiceTrackSlot
@@ -70,21 +71,120 @@ class VoiceTrackSlotService:
                     # Determine break position label (A, B, C, etc.)
                     break_label = chr(65 + idx) if idx < 26 else str(idx)  # A-Z, then numbers
                     
-                    # Find previous and next tracks
+                    # Generate standardized name: "HH-00_BreakX"
+                    standardized_name = f"{hour:02d}-00_Break{break_label}"
+                    
+                    # Find previous and next tracks from log elements
                     previous_track_id = None
                     next_track_id = None
                     
-                    # Find track before break
+                    # Find tracks around break position
                     cumulative_time = 0
-                    for elem in elements:
-                        if cumulative_time + elem.get("duration", 0) <= break_sec:
-                            if elem.get("type") == "track" and elem.get("track_id"):
-                                previous_track_id = elem.get("track_id")
-                        cumulative_time += elem.get("duration", 0)
-                        if cumulative_time > break_sec:
-                            if elem.get("type") == "track" and elem.get("track_id"):
-                                next_track_id = elem.get("track_id")
+                    for i, elem in enumerate(elements):
+                        elem_start = cumulative_time
+                        elem_end = cumulative_time + elem.get("duration", 0)
+                        
+                        # Check if break is before this element
+                        if break_sec < elem_start:
+                            # Next track is this element if it's a music track
+                            if elem.get("type") in ["MUS", "IDS", "NEW"]:
+                                # Try to find track by file_path or libretime_id
+                                if elem.get("file_path"):
+                                    track_result = await self.db.execute(
+                                        select(Track).where(Track.filepath == elem.get("file_path"))
+                                    )
+                                    track = track_result.scalar_one_or_none()
+                                    if track:
+                                        next_track_id = track.id
+                                elif elem.get("libretime_id") or elem.get("media_id"):
+                                    # Try to find by libretime_id
+                                    libretime_id = elem.get("libretime_id") or str(elem.get("media_id"))
+                                    track_result = await self.db.execute(
+                                        select(Track).where(Track.libretime_id == libretime_id)
+                                    )
+                                    track = track_result.scalar_one_or_none()
+                                    if track:
+                                        next_track_id = track.id
                             break
+                        
+                        # Check if break is within this element
+                        if elem_start <= break_sec < elem_end:
+                            # Previous track is the element before this one
+                            if i > 0:
+                                prev_elem = elements[i - 1]
+                                if prev_elem.get("type") in ["MUS", "IDS", "NEW"]:
+                                    if prev_elem.get("file_path"):
+                                        track_result = await self.db.execute(
+                                            select(Track).where(Track.filepath == prev_elem.get("file_path"))
+                                        )
+                                        track = track_result.scalar_one_or_none()
+                                        if track:
+                                            previous_track_id = track.id
+                                    elif prev_elem.get("libretime_id") or prev_elem.get("media_id"):
+                                        libretime_id = prev_elem.get("libretime_id") or str(prev_elem.get("media_id"))
+                                        track_result = await self.db.execute(
+                                            select(Track).where(Track.libretime_id == libretime_id)
+                                        )
+                                        track = track_result.scalar_one_or_none()
+                                        if track:
+                                            previous_track_id = track.id
+                            
+                            # Next track is this element or the one after
+                            if elem.get("type") in ["MUS", "IDS", "NEW"]:
+                                if elem.get("file_path"):
+                                    track_result = await self.db.execute(
+                                        select(Track).where(Track.filepath == elem.get("file_path"))
+                                    )
+                                    track = track_result.scalar_one_or_none()
+                                    if track:
+                                        next_track_id = track.id
+                                elif elem.get("libretime_id") or elem.get("media_id"):
+                                    libretime_id = elem.get("libretime_id") or str(elem.get("media_id"))
+                                    track_result = await self.db.execute(
+                                        select(Track).where(Track.libretime_id == libretime_id)
+                                    )
+                                    track = track_result.scalar_one_or_none()
+                                    if track:
+                                        next_track_id = track.id
+                            elif i + 1 < len(elements):
+                                next_elem = elements[i + 1]
+                                if next_elem.get("type") in ["MUS", "IDS", "NEW"]:
+                                    if next_elem.get("file_path"):
+                                        track_result = await self.db.execute(
+                                            select(Track).where(Track.filepath == next_elem.get("file_path"))
+                                        )
+                                        track = track_result.scalar_one_or_none()
+                                        if track:
+                                            next_track_id = track.id
+                                    elif next_elem.get("libretime_id") or next_elem.get("media_id"):
+                                        libretime_id = next_elem.get("libretime_id") or str(next_elem.get("media_id"))
+                                        track_result = await self.db.execute(
+                                            select(Track).where(Track.libretime_id == libretime_id)
+                                        )
+                                        track = track_result.scalar_one_or_none()
+                                        if track:
+                                            next_track_id = track.id
+                            break
+                        
+                        # Track previous element if it's a music track
+                        if elem.get("type") in ["MUS", "IDS", "NEW"] and elem_end <= break_sec:
+                            if elem.get("file_path"):
+                                track_result = await self.db.execute(
+                                    select(Track).where(Track.filepath == elem.get("file_path"))
+                                )
+                                track = track_result.scalar_one_or_none()
+                                if track:
+                                    previous_track_id = track.id
+                            elif elem.get("libretime_id") or elem.get("media_id"):
+                                libretime_id = elem.get("libretime_id") or str(elem.get("media_id"))
+                                track_result = await self.db.execute(
+                                    select(Track).where(Track.libretime_id == libretime_id)
+                                )
+                                track = track_result.scalar_one_or_none()
+                                if track:
+                                    previous_track_id = track.id
+                        
+                        cumulative_time = elem_end
                     
                     # Calculate ramp time from next track if available
                     ramp_time = None
@@ -102,6 +202,7 @@ class VoiceTrackSlotService:
                         log_id=log_id,
                         hour=hour,
                         break_position=break_label,
+                        standardized_name=standardized_name,
                         ramp_time=ramp_time,
                         status="pending"
                     )
@@ -212,6 +313,8 @@ class VoiceTrackSlotService:
             Updated slot or None if not found
         """
         try:
+            from backend.models.voice_track import VoiceTrack
+            
             result = await self.db.execute(
                 select(VoiceTrackSlot).where(VoiceTrackSlot.id == slot_id)
             )
@@ -220,16 +323,80 @@ class VoiceTrackSlotService:
             if not slot:
                 return None
             
+            # Get voice track to update standardized_name
+            track_result = await self.db.execute(
+                select(VoiceTrack).where(VoiceTrack.id == voice_track_id)
+            )
+            voice_track = track_result.scalar_one_or_none()
+            
+            if voice_track and slot.standardized_name:
+                # Update voice track with standardized name and recorded date
+                voice_track.standardized_name = slot.standardized_name
+                voice_track.recorded_date = datetime.now(timezone.utc)
+                await self.db.flush()
+            
             slot.voice_track_id = voice_track_id
             slot.status = "recorded"
             await self.db.commit()
             await self.db.refresh(slot)
             
-            logger.info("Voice track linked to slot", slot_id=slot_id, voice_track_id=voice_track_id)
+            logger.info("Voice track linked to slot", slot_id=slot_id, voice_track_id=voice_track_id, standardized_name=slot.standardized_name)
             return slot
             
         except Exception as e:
             await self.db.rollback()
             logger.error("Voice track linking failed", error=str(e), exc_info=True)
+            return None
+    
+    async def find_voice_track_with_fallback(
+        self,
+        standardized_name: str,
+        target_date: date,
+        max_days_back: int = 28
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Find a voice track by standardized name with fallback to previous days
+        
+        Args:
+            standardized_name: Standardized name (e.g., "14-00_BreakA")
+            target_date: Target date to find recording for
+            max_days_back: Maximum days to look back (default 28 = 4 weeks)
+        
+        Returns:
+            Dict with voice_track info and fallback_date if using fallback, or None
+        """
+        try:
+            from backend.models.voice_track import VoiceTrack
+            
+            # Try current date first
+            current_date = target_date
+            for days_back in range(max_days_back + 1):
+                check_date = current_date - timedelta(days=days_back)
+                
+                # Look for voice track with this standardized_name recorded on or before check_date
+                result = await self.db.execute(
+                    select(VoiceTrack).where(
+                        VoiceTrack.standardized_name == standardized_name,
+                        VoiceTrack.recorded_date <= datetime.combine(check_date, datetime.max.time()).replace(tzinfo=timezone.utc)
+                    ).order_by(VoiceTrack.recorded_date.desc())
+                )
+                voice_track = result.scalar_one_or_none()
+                
+                if voice_track:
+                    return {
+                        "voice_track": voice_track,
+                        "voice_track_id": voice_track.id,
+                        "libretime_id": voice_track.libretime_id,
+                        "file_url": voice_track.file_url,
+                        "recorded_date": voice_track.recorded_date,
+                        "is_fallback": days_back > 0,
+                        "fallback_days": days_back,
+                        "fallback_date": check_date if days_back > 0 else None
+                    }
+            
+            return None
+            
+        except Exception as e:
+            logger.error("Fallback lookup failed", standardized_name=standardized_name, error=str(e), exc_info=True)
             return None
 
