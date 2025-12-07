@@ -84,7 +84,7 @@ async def seed_demo_data(db_url: str) -> None:
             station_result = await session.execute(
                 text("""
                     INSERT INTO stations (call_letters, frequency, market, format, active, created_at, updated_at)
-                    VALUES ('KDEMO', '101.5 FM', 'Phoenix', 'Top 40', true, NOW(), NOW())
+                    VALUES ('GAYPHX', NULL, 'Phoenix', 'Online/Streaming', true, NOW(), NOW())
                     ON CONFLICT (call_letters) DO NOTHING
                     RETURNING id
                 """)
@@ -92,15 +92,15 @@ async def seed_demo_data(db_url: str) -> None:
             station_row = station_result.fetchone()
             if station_row:
                 station_id = station_row[0]
-                print(f"  ✓ Created station KDEMO (ID: {station_id})")
+                print(f"  ✓ Created station GayPHX.com (ID: {station_id})")
             else:
                 # Get existing station
                 station_result = await session.execute(
-                    text("SELECT id FROM stations WHERE call_letters = 'KDEMO'")
+                    text("SELECT id FROM stations WHERE call_letters = 'GAYPHX'")
                 )
                 station_row = station_result.fetchone()
                 station_id = station_row[0] if station_row else None
-                print(f"  ✓ Using existing station KDEMO (ID: {station_id})")
+                print(f"  ✓ Using existing station GayPHX.com (ID: {station_id})")
             
             # 3. Create Sales Structure
             print("  Creating sales structure...")
@@ -231,66 +231,66 @@ async def seed_demo_data(db_url: str) -> None:
             )
             print("  ✓ Created sales structure")
             
-            # 4. Create Advertiser
-            print("  Creating advertiser...")
+            # 4. Create Advertiser (1LPro LLC - Real Client)
+            print("  Creating advertiser (1LPro LLC)...")
             # Check if exists first
             check_result = await session.execute(
-                text("SELECT id FROM advertisers WHERE name = 'Acme Corporation'")
+                text("SELECT id FROM advertisers WHERE name = '1LPro LLC'")
             )
             existing = check_result.fetchone()
             
             if existing:
                 advertiser_id = existing[0]
-                print(f"  ✓ Using existing advertiser: Acme Corporation")
+                print(f"  ✓ Using existing advertiser: 1LPro LLC")
             else:
                 advertiser_result = await session.execute(
                     text("""
                         INSERT INTO advertisers (name, contact_first_name, contact_last_name, email, phone, address, active, created_at, updated_at)
-                        VALUES ('Acme Corporation', 'Jane', 'Manager', 'jane@acme.com', '602-555-0300', '456 Business Ave, Phoenix, AZ 85002', true, NOW(), NOW())
+                        VALUES ('1LPro LLC', 'John', 'Smith', 'john@1lpro.com', '602-555-0300', '123 Business Blvd, Phoenix, AZ 85001', true, NOW(), NOW())
                         RETURNING id
                     """)
                 )
                 advertiser_row = advertiser_result.fetchone()
                 advertiser_id = advertiser_row[0] if advertiser_row else None
-                print(f"  ✓ Created advertiser: Acme Corporation")
+                print(f"  ✓ Created advertiser: 1LPro LLC")
             
-            # 5. Create Agency
-            print("  Creating agency...")
+            # 5. Create Agency (Demo Agency)
+            print("  Creating agency (Demo Agency)...")
             check_result = await session.execute(
-                text("SELECT id FROM agencies WHERE name = 'Creative Media Agency'")
+                text("SELECT id FROM agencies WHERE name = 'Demo Agency'")
             )
             existing = check_result.fetchone()
             
             if existing:
                 agency_id = existing[0]
-                print(f"  ✓ Using existing agency: Creative Media Agency")
+                print(f"  ✓ Using existing agency: Demo Agency")
             else:
                 agency_result = await session.execute(
                     text("""
                         INSERT INTO agencies (name, contact_first_name, contact_last_name, email, phone, address, commission_rate, active, created_at, updated_at)
-                        VALUES ('Creative Media Agency', 'Bob', 'Agent', 'bob@cma.com', '602-555-0400', '789 Agency Blvd, Phoenix, AZ 85003', 0.15, true, NOW(), NOW())
+                        VALUES ('Demo Agency', 'Demo', 'Agent', 'demo@demoagency.com', '602-555-0400', '789 Agency Blvd, Phoenix, AZ 85003', 0.15, true, NOW(), NOW())
                         RETURNING id
                     """)
                 )
                 agency_row = agency_result.fetchone()
                 agency_id = agency_row[0] if agency_row else None
-                print(f"  ✓ Created agency: Creative Media Agency")
+                print(f"  ✓ Created agency: Demo Agency")
             
             # 6. Create Campaign
             print("  Creating campaign...")
             check_result = await session.execute(
-                text("SELECT id FROM campaigns WHERE advertiser = 'Acme Corporation' AND order_number = 'CAMP-2025-001'")
+                text("SELECT id FROM campaigns WHERE advertiser = '1LPro LLC' AND order_number = 'CAMP-2025-001'")
             )
             existing = check_result.fetchone()
             
             if existing:
                 campaign_id = existing[0]
-                print(f"  ✓ Using existing campaign: Summer Promotion 2025")
+                print(f"  ✓ Using existing campaign: 1LPro LLC Q1 Campaign")
             else:
                 campaign_result = await session.execute(
                     text("""
                         INSERT INTO campaigns (advertiser, order_number, start_date, end_date, priority, active, created_at, updated_at)
-                        VALUES ('Acme Corporation', 'CAMP-2025-001', :start_date, :end_date, 1, true, NOW(), NOW())
+                        VALUES ('1LPro LLC', 'CAMP-2025-001', :start_date, :end_date, 1, true, NOW(), NOW())
                         RETURNING id
                     """),
                     {
@@ -300,17 +300,17 @@ async def seed_demo_data(db_url: str) -> None:
                 )
                 campaign_row = campaign_result.fetchone()
                 campaign_id = campaign_row[0] if campaign_row else None
-                print(f"  ✓ Created campaign: Summer Promotion 2025")
+                print(f"  ✓ Created campaign: 1LPro LLC Q1 Campaign")
             
-            # 7. Create Order
-            print("  Creating comprehensive order...")
+            # 7. Create Order (Demo Order)
+            print("  Creating comprehensive order (Demo Order)...")
             order_number = f"ORD-{datetime.now().strftime('%Y%m%d')}-001"
             
             # Get admin user ID
             admin_result = await session.execute(text("SELECT id FROM users WHERE username = 'admin'"))
             admin_id = admin_result.scalar()
             
-            stations_json = f'[{{"id": "{station_id}", "call_letters": "KDEMO"}}]'
+            stations_json = f'[{{"id": "{station_id}", "call_letters": "GAYPHX"}}]'
             spot_lengths_json = '[30, 60]'
             rates_json = '{"30": 100.00, "60": 150.00}'
             
@@ -326,7 +326,7 @@ async def seed_demo_data(db_url: str) -> None:
                         traffic_ready, billing_ready, created_at, updated_at, created_by
                     )
                     VALUES (
-                        :order_number, 'Summer Radio Campaign', :campaign_id, :advertiser_id, :agency_id, :sales_rep_id,
+                        :order_number, 'Demo Order - Q1 Campaign', :campaign_id, :advertiser_id, :agency_id, :sales_rep_id,
                         :team_id, :office_id, :region_id, CAST(:stations_json AS jsonb),
                         'LOCAL', :start_date, :end_date, CAST(:spot_lengths_json AS jsonb), 120,
                         'ROS', CAST(:rates_json AS jsonb), 12000.00, 10200.00, 12000.00,
@@ -364,32 +364,34 @@ async def seed_demo_data(db_url: str) -> None:
                 )
                 order_row = order_result.fetchone()
                 order_id = order_row[0] if order_row else None
-            print(f"  ✓ Created order: {order_number}")
+            print(f"  ✓ Created order: {order_number} (Demo Order)")
             
             # 8. Create Order Lines
             print("  Creating order lines...")
             await session.execute(
                 text("""
                     INSERT INTO order_lines (
-                        order_id, line_number, spot_length, daypart, spots_per_week,
-                        rate, gross_amount, net_amount, start_date, end_date,
+                        order_id, line_number, station_id, length, daypart, 
+                        spot_frequency, rate, start_date, end_date,
+                        makegood_eligible, guaranteed_position, preemptible,
                         created_at, updated_at
                     )
                     VALUES
-                    (:order_id, 1, 30, 'MORNING_DRIVE', 10, 100.00, 3000.00, 2550.00, :start_date, :end_date, NOW(), NOW()),
-                    (:order_id, 2, 60, 'AFTERNOON_DRIVE', 15, 150.00, 9000.00, 7650.00, :start_date, :end_date, NOW(), NOW())
+                    (:order_id, 1, :station_id, 30, 'MORNING_DRIVE', 10, 100.00, :start_date, :end_date, true, false, true, NOW(), NOW()),
+                    (:order_id, 2, :station_id, 60, 'AFTERNOON_DRIVE', 15, 150.00, :start_date, :end_date, true, false, true, NOW(), NOW())
                     ON CONFLICT DO NOTHING
                 """),
                 {
                     "order_id": order_id,
+                    "station_id": station_id,
                     "start_date": date.today() + timedelta(days=7),
                     "end_date": date.today() + timedelta(days=37)
                 }
             )
             print("  ✓ Created order lines")
             
-            # 9. Create Copy/Scripts
-            print("  Creating copy/scripts...")
+            # 9. Create Copy/Scripts (Demo Copy)
+            print("  Creating copy/scripts (Demo Copy)...")
             copy_result = await session.execute(
                 text("""
                     INSERT INTO copy (
@@ -398,8 +400,8 @@ async def seed_demo_data(db_url: str) -> None:
                         active, created_at, updated_at
                     )
                     VALUES (
-                        :order_id, :advertiser_id, 'Summer Sale Announcement', 'COPY-001', 'ISCI-ACME-001',
-                        'NEW', 'Get ready for summer! Visit Acme Corporation for amazing deals on all your favorite products. Sale starts Monday!', 
+                        :order_id, :advertiser_id, 'Demo Copy - Q1 Campaign', 'COPY-001', 'ISCI-DEMO-001',
+                        'NEW', 'This is demo copy for teaching purposes. Visit 1LPro LLC for amazing products and services. Contact us today!', 
                         'APPROVED', 'APPROVED',
                         true, NOW(), NOW()
                     )
@@ -413,12 +415,12 @@ async def seed_demo_data(db_url: str) -> None:
                 copy_id = copy_row[0]
             else:
                 copy_result = await session.execute(
-                    text("SELECT id FROM copy WHERE order_id = :order_id AND title = 'Summer Sale Announcement'"),
+                    text("SELECT id FROM copy WHERE order_id = :order_id AND title = 'Demo Copy - Q1 Campaign'"),
                     {"order_id": order_id}
                 )
                 copy_row = copy_result.fetchone()
                 copy_id = copy_row[0] if copy_row else None
-            print("  ✓ Created copy/script")
+            print("  ✓ Created copy/script (Demo Copy)")
             
             # 10. Create Production Order
             print("  Creating production order...")
@@ -432,7 +434,7 @@ async def seed_demo_data(db_url: str) -> None:
                     )
                     VALUES (
                         :po_number, :copy_id, :order_id, :campaign_id, :advertiser_id,
-                        'Acme Corporation', 'Summer Promotion 2025', :start_date, :end_date, 5000.00,
+                        '1LPro LLC', '1LPro LLC Q1 Campaign', :start_date, :end_date, 5000.00,
                         'STANDARD', 'APPROVED', NOW(), NOW()
                     )
                     ON CONFLICT (po_number) DO NOTHING
@@ -465,21 +467,17 @@ async def seed_demo_data(db_url: str) -> None:
             await session.execute(
                 text("""
                     INSERT INTO spots (
-                        order_id, order_line_id, campaign_id, advertiser_id,
-                        station_id, scheduled_date, scheduled_time, spot_length,
-                        daypart, status, created_at, updated_at
+                        order_id, campaign_id, station_id, scheduled_date, scheduled_time, 
+                        spot_length, daypart, status, created_at, updated_at
                     )
                     VALUES
-                    (:order_id, (SELECT id FROM order_lines WHERE order_id = :order_id AND line_number = 1 LIMIT 1),
-                     :campaign_id, :advertiser_id, :station_id, :start_date, '07:30:00', 30, 'MORNING_DRIVE', 'SCHEDULED', NOW(), NOW()),
-                    (:order_id, (SELECT id FROM order_lines WHERE order_id = :order_id AND line_number = 2 LIMIT 1),
-                     :campaign_id, :advertiser_id, :station_id, :start_date, '17:00:00', 60, 'AFTERNOON_DRIVE', 'SCHEDULED', NOW(), NOW())
+                    (:order_id, :campaign_id, :station_id, :start_date, '07:30:00', 30, 'MORNING_DRIVE', 'SCHEDULED', NOW(), NOW()),
+                    (:order_id, :campaign_id, :station_id, :start_date, '17:00:00', 60, 'AFTERNOON_DRIVE', 'SCHEDULED', NOW(), NOW())
                     ON CONFLICT DO NOTHING
                 """),
                 {
                     "order_id": order_id,
                     "campaign_id": campaign_id,
-                    "advertiser_id": advertiser_id,
                     "station_id": station_id,
                     "start_date": date.today() + timedelta(days=7)
                 }
@@ -492,12 +490,12 @@ async def seed_demo_data(db_url: str) -> None:
                 text("""
                     INSERT INTO invoices (
                         invoice_number, order_id, campaign_id, advertiser_id, agency_id,
-                        invoice_date, due_date, subtotal, tax_amount, total_amount,
+                        invoice_date, due_date, subtotal, tax, total,
                         status, created_at, updated_at
                     )
                     VALUES (
                         :invoice_number, :order_id, :campaign_id, :advertiser_id, :agency_id,
-                        :invoice_date, :due_date, 10200.00, 816.00, 11016.00,
+                        :invoice_date, :due_date, 10200.00, 0.00, 10200.00,
                         'DRAFT', NOW(), NOW()
                     )
                     ON CONFLICT (invoice_number) DO NOTHING
@@ -520,11 +518,11 @@ async def seed_demo_data(db_url: str) -> None:
                 await session.execute(
                     text("""
                         INSERT INTO invoice_lines (
-                            invoice_id, order_line_id, description, quantity, unit_price, total_price
+                            invoice_id, station_id, description, quantity, unit_price, total
                         )
-                        SELECT :invoice_id, id, 
-                               'Spot ' || spot_length || 's - ' || daypart, 
-                               spots_per_week * 4, rate, rate * spots_per_week * 4
+                        SELECT :invoice_id, station_id,
+                               'Spot ' || length || 's - ' || daypart, 
+                               spot_frequency * 4, rate, rate * spot_frequency * 4
                         FROM order_lines
                         WHERE order_id = :order_id
                         ON CONFLICT DO NOTHING
@@ -553,12 +551,15 @@ async def seed_demo_data(db_url: str) -> None:
             print("\n📋 Login Credentials:")
             print("   Admin: admin / admin123")
             print("   Sales Rep: salesrep / demo123")
-            print(f"\n📦 Demo Order: {order_number}")
-            print(f"   Campaign: Summer Promotion 2025")
-            print(f"   Advertiser: Acme Corporation")
-            print(f"   Agency: Creative Media Agency")
-            print(f"   Station: KDEMO 101.5 FM")
-            print(f"\n🎯 This order includes:")
+            print(f"\n📻 Station: GayPHX.com (Online/Streaming)")
+            print(f"\n👤 Real Client:")
+            print(f"   Advertiser: 1LPro LLC")
+            print(f"\n📦 Demo Entities Created:")
+            print(f"   Order: {order_number} (Demo Order - Q1 Campaign)")
+            print(f"   Campaign: 1LPro LLC Q1 Campaign")
+            print(f"   Agency: Demo Agency")
+            print(f"   Copy: Demo Copy - Q1 Campaign")
+            print(f"\n🎯 Complete Order Lifecycle Data:")
             print("   ✓ Multiple order lines with different spot lengths")
             print("   ✓ Copy/scripts with approval workflow")
             print("   ✓ Production orders")
@@ -566,6 +567,12 @@ async def seed_demo_data(db_url: str) -> None:
             print("   ✓ Invoice with line items")
             print("   ✓ Sales team structure")
             print("   ✓ Campaign management")
+            print("\n💡 Use this data to walk through:")
+            print("   1. Order creation and configuration")
+            print("   2. Copy/script management and approval")
+            print("   3. Production order workflow")
+            print("   4. Spot scheduling")
+            print("   5. Invoice generation and billing")
             
     except Exception as e:
         logger.error("Failed to seed demo data", error=str(e), exc_info=True)
