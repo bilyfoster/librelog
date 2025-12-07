@@ -2,7 +2,7 @@
 Invoices router for billing
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from backend.database import get_db
@@ -14,6 +14,7 @@ from backend.services.billing_service import BillingService
 from backend.services.notification_service import NotificationService
 from backend.services.report_service import ReportService
 from backend.models.notification import NotificationType
+from backend.logging.audit import audit_logger
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import date
@@ -101,6 +102,7 @@ async def list_invoices(
     limit: int = Query(100, ge=1, le=1000),
     advertiser_id: Optional[int] = Query(None),
     status_filter: Optional[str] = Query(None),
+    station_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -117,6 +119,11 @@ async def list_invoices(
         except KeyError:
             pass
     
+    # Filter by station via invoice_lines
+    if station_id is not None:
+        from backend.models.invoice_line import InvoiceLine
+        query = query.join(InvoiceLine).where(InvoiceLine.station_id == station_id).distinct()
+    
     query = query.offset(skip).limit(limit).order_by(Invoice.invoice_date.desc())
     
     result = await db.execute(query)
@@ -128,6 +135,7 @@ async def list_invoices(
 @router.post("/", response_model=InvoiceResponse, status_code=status.HTTP_201_CREATED)
 async def create_invoice(
     invoice: InvoiceCreate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -160,6 +168,24 @@ async def create_invoice(
         # Recalculate totals
         new_invoice = await billing_service.calculate_invoice_totals(new_invoice.id)
     
+    # Log audit action
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    await audit_logger.log_action(
+        db_session=db,
+        user_id=current_user.id,
+        action="CREATE_INVOICE",
+        resource_type="Invoice",
+        resource_id=new_invoice.id,
+        details={
+            "invoice_number": new_invoice.invoice_number,
+            "advertiser_id": new_invoice.advertiser_id,
+            "total_amount": float(new_invoice.total_amount) if new_invoice.total_amount else 0
+        },
+        ip_address=client_ip,
+        user_agent=user_agent
+    )
+    
     return InvoiceResponse(**invoice_to_response_dict(new_invoice))
 
 
@@ -183,6 +209,7 @@ async def get_invoice(
 async def update_invoice(
     invoice_id: int,
     invoice_update: Dict[str, Any],
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -202,12 +229,31 @@ async def update_invoice(
     await db.commit()
     await db.refresh(invoice)
     
+    # Log audit action
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    await audit_logger.log_action(
+        db_session=db,
+        user_id=current_user.id,
+        action="UPDATE_INVOICE",
+        resource_type="Invoice",
+        resource_id=invoice.id,
+        details={
+            "invoice_number": invoice.invoice_number,
+            "updated_fields": list(invoice_update.keys()),
+            "status": invoice.status.value if invoice.status else None
+        },
+        ip_address=client_ip,
+        user_agent=user_agent
+    )
+    
     return InvoiceResponse(**invoice_to_response_dict(invoice))
 
 
 @router.post("/{invoice_id}/send")
 async def send_invoice(
     invoice_id: int,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -251,7 +297,7 @@ async def send_invoice(
         pdf_path = pdf_result.get("file_path")
         
         # Send email with PDF attachment
-        smtp_host = os.getenv("SMTP_HOST", "localhost")
+        smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")  # Default to Gmail SMTP instead of localhost
         smtp_port = int(os.getenv("SMTP_PORT", "587"))
         smtp_user = os.getenv("SMTP_USER")
         smtp_password = os.getenv("SMTP_PASSWORD")
@@ -311,6 +357,23 @@ LibreLog Billing Team
         # Update invoice status
         invoice.status = InvoiceStatus.SENT
         await db.commit()
+        
+        # Log audit action
+        client_ip = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+        await audit_logger.log_action(
+            db_session=db,
+            user_id=current_user.id,
+            action="SEND_INVOICE",
+            resource_type="Invoice",
+            resource_id=invoice.id,
+            details={
+                "invoice_number": invoice.invoice_number,
+                "recipient_email": advertiser_email
+            },
+            ip_address=client_ip,
+            user_agent=user_agent
+        )
         
         # Create notification record
         await NotificationService.create_notification(
@@ -374,6 +437,55 @@ async def mark_invoice_paid(
     await db.refresh(invoice)
     
     return {"message": "Payment recorded", "invoice_status": invoice.status.value}
+
+
+@router.delete("/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_invoice(
+    invoice_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete an invoice (soft delete by setting status to CANCELLED or hard delete)"""
+    result = await db.execute(select(Invoice).where(Invoice.id == invoice_id))
+    invoice = result.scalar_one_or_none()
+    
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    
+    # Check if invoice can be deleted (only DRAFT invoices can be deleted)
+    if invoice.status != InvoiceStatus.DRAFT:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete invoice with status {invoice.status.value}. Only DRAFT invoices can be deleted."
+        )
+    
+    # Delete invoice lines first
+    from sqlalchemy import delete
+    await db.execute(delete(InvoiceLine).where(InvoiceLine.invoice_id == invoice_id))
+    
+    # Delete invoice
+    await db.delete(invoice)
+    await db.commit()
+    
+    # Log audit action
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    await audit_logger.log_action(
+        db_session=db,
+        user_id=current_user.id,
+        action="DELETE_INVOICE",
+        resource_type="Invoice",
+        resource_id=invoice_id,
+        details={
+            "invoice_number": invoice.invoice_number,
+            "advertiser_id": invoice.advertiser_id
+        },
+        ip_address=client_ip,
+        user_agent=user_agent
+    )
+    
+    return None
 
 
 @router.get("/aging", response_model=Dict[str, Any])

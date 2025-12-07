@@ -103,12 +103,13 @@ async def create_notification(
 
 
 @router.post("/{notification_id}/read", status_code=status.HTTP_200_OK)
+@router.put("/{notification_id}/read", status_code=status.HTTP_200_OK)
 async def mark_notification_read(
     notification_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Mark a notification as read"""
+    """Mark a notification as read (supports both POST and PUT)"""
     success = await NotificationService.mark_read(db, notification_id, current_user.id)
     if not success:
         raise HTTPException(status_code=404, detail="Notification not found")

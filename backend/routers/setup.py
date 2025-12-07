@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db
 from backend.models.user import User
 from backend.auth.oauth2 import get_password_hash
+from backend.auth.password_validator import validate_password, PasswordValidationError
 from backend.routers.auth import get_current_user
 from backend.scripts.setup import create_initial_admin, check_api_keys
 from pydantic import BaseModel
@@ -30,14 +31,17 @@ class CreateUserRequest(BaseModel):
     role: str = "admin"
 
 
-@router.get("/setup/status")
+@router.get("/status")
 async def get_setup_status(db: AsyncSession = Depends(get_db)):
     """Get current setup status"""
+    from sqlalchemy import select, func
+    from backend.models.user import User
+    
     # Check if admin users exist
     result = await db.execute(
-        "SELECT COUNT(*) FROM users WHERE role = 'admin'"
+        select(func.count(User.id)).where(User.role == "admin")
     )
-    admin_count = result.scalar()
+    admin_count = result.scalar() or 0
     admin_user_exists = admin_count > 0
     
     # Check API keys
@@ -56,22 +60,34 @@ async def get_setup_status(db: AsyncSession = Depends(get_db)):
     )
 
 
-@router.post("/setup/create-admin")
+@router.post("/create-admin")
 async def create_admin_user(
     request: CreateUserRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """Create initial admin user (only if no admin exists)"""
+    from sqlalchemy import select, func
+    from backend.models.user import User
+    
     # Check if admin users already exist
     result = await db.execute(
-        "SELECT COUNT(*) FROM users WHERE role = 'admin'"
+        select(func.count(User.id)).where(User.role == "admin")
     )
-    admin_count = result.scalar()
+    admin_count = result.scalar() or 0
     
     if admin_count > 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Admin users already exist"
+        )
+    
+    # Validate password complexity
+    try:
+        validate_password(request.password)
+    except PasswordValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
         )
     
     # Create admin user
@@ -88,7 +104,7 @@ async def create_admin_user(
     return {"message": "Admin user created successfully"}
 
 
-@router.get("/setup/api-keys")
+@router.get("/api-keys")
 async def get_api_key_status():
     """Get API key configuration status"""
     libretime_key = os.getenv("LIBRETIME_API_KEY")
@@ -102,7 +118,7 @@ async def get_api_key_status():
     }
 
 
-@router.post("/setup/run-initial-setup")
+@router.post("/run-initial-setup")
 async def run_initial_setup():
     """Run initial setup (create admin user)"""
     await create_initial_admin()

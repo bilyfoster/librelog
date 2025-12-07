@@ -96,12 +96,22 @@ async def get_audit_log(
 ):
     """Get a specific audit log"""
     from datetime import datetime
+    from sqlalchemy.orm import selectinload
     
-    result = await db.execute(select(AuditLog).where(AuditLog.id == audit_log_id))
-    audit_log = result.scalar_one_or_none()
-    
-    if not audit_log:
-        raise HTTPException(status_code=404, detail="Audit log not found")
+    try:
+        result = await db.execute(
+            select(AuditLog)
+            .options(selectinload(AuditLog.user))
+            .where(AuditLog.id == audit_log_id)
+        )
+        audit_log = result.scalar_one_or_none()
+        
+        if not audit_log:
+            raise HTTPException(status_code=404, detail="Audit log not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve audit log: {str(e)}")
     
     log_dict = AuditLogResponse.model_validate(audit_log).model_dump()
     # Map details to changes (for backward compatibility)

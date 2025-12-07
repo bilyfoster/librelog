@@ -210,3 +210,28 @@ async def get_assignment(
     
     return assignment_to_response(assignment)
 
+
+@router.delete("/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_assignment(
+    assignment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a production assignment"""
+    result = await db.execute(
+        select(ProductionAssignment).where(ProductionAssignment.id == assignment_id)
+    )
+    assignment = result.scalar_one_or_none()
+    
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    
+    # Check permissions - only admins can delete assignments
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can delete assignments")
+    
+    await db.delete(assignment)
+    await db.commit()
+    
+    return None
+

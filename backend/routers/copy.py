@@ -4,7 +4,7 @@ Copy router for audio asset and script management
 
 import os
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from backend.database import get_db
@@ -14,6 +14,7 @@ from backend.models.user import User
 from backend.services.copy_service import CopyService
 from backend.services.production_approval_service import ProductionApprovalService
 from backend.models.copy import CopyStatus, CopyApprovalStatus
+from backend.logging.audit import audit_logger
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone
@@ -138,14 +139,57 @@ async def list_copy(
 @router.post("/", response_model=CopyResponse, status_code=status.HTTP_201_CREATED)
 async def create_copy(
     copy: CopyCreate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Create a new copy item"""
-    new_copy = Copy(**copy.model_dump())
-    db.add(new_copy)
-    await db.commit()
+    try:
+        new_copy = Copy(**copy.model_dump())
+        db.add(new_copy)
+        await db.flush()  # Get ID without committing
+        copy_id = new_copy.id
+        
+        try:
+            await db.commit()
+        except Exception as commit_error:
+            # If commit fails due to relationship loading, refresh and continue
+            if "relationship" in str(commit_error).lower() or "Multiple rows" in str(commit_error):
+                await db.rollback()
+                # Re-fetch the copy
+                result = await db.execute(select(Copy).where(Copy.id == copy_id))
+                new_copy = result.scalar_one_or_none()
+                if not new_copy:
+                    raise HTTPException(status_code=500, detail="Copy created but could not be retrieved")
+            else:
+                await db.rollback()
+                raise HTTPException(status_code=500, detail=f"Failed to create copy: {str(commit_error)}")
+        
+        await db.refresh(new_copy)
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to create copy: {str(e)}")
     await db.refresh(new_copy)
+    
+    # Log audit action
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    await audit_logger.log_action(
+        db_session=db,
+        user_id=current_user.id,
+        action="CREATE_COPY",
+        resource_type="Copy",
+        resource_id=new_copy.id,
+        details={
+            "title": new_copy.title,
+            "order_id": new_copy.order_id,
+            "advertiser_id": new_copy.advertiser_id
+        },
+        ip_address=client_ip,
+        user_agent=user_agent
+    )
     
     return CopyResponse(**copy_to_response_dict(new_copy))
 
@@ -240,6 +284,31 @@ async def upload_copy(
         )
 
 
+@router.get("/expiring", response_model=list[CopyResponse])
+async def get_expiring_copy(
+    days_ahead: int = Query(30, ge=1, le=365),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get copy expiring soon"""
+    copy_service = CopyService(db)
+    expiring = await copy_service.check_expiring(days_ahead)
+    return [CopyResponse(**copy_to_response_dict(c)) for c in expiring]
+
+
+@router.get("/expiring", response_model=list[CopyResponse])
+async def get_expiring_copy(
+    days_ahead: int = Query(30, ge=1, le=365),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get copy expiring soon"""
+    copy_service = CopyService(db)
+    expiring = await copy_service.check_expiring(days_ahead)
+    
+    return [CopyResponse(**copy_to_response_dict(c)) for c in expiring]
+
+
 @router.get("/{copy_id}", response_model=CopyResponse)
 async def get_copy(
     copy_id: int,
@@ -260,6 +329,7 @@ async def get_copy(
 async def update_copy(
     copy_id: int,
     copy_update: CopyUpdate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -277,12 +347,30 @@ async def update_copy(
     await db.commit()
     await db.refresh(copy_item)
     
+    # Log audit action
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    await audit_logger.log_action(
+        db_session=db,
+        user_id=current_user.id,
+        action="UPDATE_COPY",
+        resource_type="Copy",
+        resource_id=copy_id,
+        details={
+            "title": copy_item.title,
+            "updated_fields": list(update_data.keys())
+        },
+        ip_address=client_ip,
+        user_agent=user_agent
+    )
+    
     return CopyResponse(**copy_to_response_dict(copy_item))
 
 
 @router.delete("/{copy_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_copy(
     copy_id: int,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -293,23 +381,27 @@ async def delete_copy(
     if not copy_item:
         raise HTTPException(status_code=404, detail="Copy not found")
     
+    # Log audit action before deletion
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    await audit_logger.log_action(
+        db_session=db,
+        user_id=current_user.id,
+        action="DELETE_COPY",
+        resource_type="Copy",
+        resource_id=copy_id,
+        details={
+            "title": copy_item.title,
+            "order_id": copy_item.order_id
+        },
+        ip_address=client_ip,
+        user_agent=user_agent
+    )
+    
     await db.delete(copy_item)
     await db.commit()
     
     return None
-
-
-@router.get("/expiring", response_model=list[CopyResponse])
-async def get_expiring_copy(
-    days_ahead: int = Query(30, ge=1, le=365),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Get copy expiring soon"""
-    copy_service = CopyService(db)
-    expiring = await copy_service.check_expiring(days_ahead)
-    
-    return [CopyResponse(**copy_to_response_dict(c)) for c in expiring]
 
 
 @router.get("/{filename}/file")

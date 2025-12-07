@@ -29,6 +29,12 @@ class TrafficLogCreate(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
 
 
+class TrafficLogUpdate(BaseModel):
+    log_type: Optional[str] = None
+    message: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
 class TrafficLogBulkCreate(BaseModel):
     logs: List[TrafficLogCreate]
 
@@ -223,6 +229,69 @@ async def create_traffic_logs_bulk(
         "total": len(bulk_logs.logs),
         "errors": errors if errors else None
     }
+
+
+@router.put("/{log_id}", response_model=TrafficLogResponse)
+async def update_traffic_log(
+    log_id: int,
+    log_update: TrafficLogUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Update a traffic log entry"""
+    result = await db.execute(
+        select(TrafficLog)
+        .options(selectinload(TrafficLog.user))
+        .where(TrafficLog.id == log_id)
+    )
+    log = result.scalar_one_or_none()
+    
+    if not log:
+        raise HTTPException(status_code=404, detail="Traffic log not found")
+    
+    # Update fields
+    update_data = log_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        if field == "metadata":
+            # Map metadata to meta_data for database
+            setattr(log, "meta_data", value)
+        else:
+            setattr(log, field, value)
+    
+    # Validate log type if provided
+    if log_update.log_type and log_update.log_type not in [lt.value for lt in TrafficLogType]:
+        raise HTTPException(status_code=400, detail=f"Invalid log_type: {log_update.log_type}")
+    
+    await db.commit()
+    await db.refresh(log)
+    
+    log_dict = {
+        **{c.name: getattr(log, c.name) for c in log.__table__.columns},
+        "username": log.user.username if log.user else None,
+    }
+    # Map meta_data back to metadata for API response
+    if 'meta_data' in log_dict:
+        log_dict['metadata'] = log_dict.pop('meta_data')
+    return TrafficLogResponse(**log_dict)
+
+
+@router.delete("/{log_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_traffic_log(
+    log_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a traffic log entry"""
+    result = await db.execute(select(TrafficLog).where(TrafficLog.id == log_id))
+    log = result.scalar_one_or_none()
+    
+    if not log:
+        raise HTTPException(status_code=404, detail="Traffic log not found")
+    
+    await db.delete(log)
+    await db.commit()
+    
+    return None
 
 
 @router.get("/stats/summary", response_model=Dict[str, Any])

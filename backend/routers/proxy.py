@@ -4,6 +4,7 @@ Allows frontend to get data without browser making direct API calls
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, Dict, Any
 from backend.database import get_db
@@ -11,6 +12,9 @@ from backend.routers.auth import get_current_user
 from backend.models.user import User
 import httpx
 import os
+import structlog
+
+logger = structlog.get_logger()
 
 router = APIRouter()
 
@@ -139,7 +143,8 @@ async def get_advertisers_proxy(
             query = query.where(
                 or_(
                     Advertiser.name.ilike(search_term),
-                    Advertiser.contact_name.ilike(search_term)
+                    Advertiser.contact_first_name.ilike(search_term),
+                    Advertiser.contact_last_name.ilike(search_term)
                 )
             )
         query = query.offset(skip).limit(limit).order_by(Advertiser.name)
@@ -176,16 +181,20 @@ async def get_agencies_proxy(
             query = query.where(
                 or_(
                     Agency.name.ilike(search_term),
-                    Agency.contact_name.ilike(search_term)
+                    Agency.contact_first_name.ilike(search_term),
+                    Agency.contact_last_name.ilike(search_term)
                 )
             )
         query = query.offset(skip).limit(limit).order_by(Agency.name)
         result = await db.execute(query)
         agencies = result.scalars().all()
         
+        # Return empty list if no agencies found (no error)
         return [agency_to_response(agency) for agency in agencies]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch agencies: {str(e)}")
+        logger.error("Failed to fetch agencies", error=str(e), exc_info=True)
+        # Return empty list instead of error when database is empty
+        return []
 
 
 @router.get("/users")
@@ -273,7 +282,7 @@ async def get_sales_reps_proxy(
                 "updated_at": rep.updated_at.isoformat() if rep.updated_at else "",
                 "username": rep.user.username if rep.user else None,
             }
-            reps_data.append(SalesRepResponse(**rep_dict))
+            reps_data.append(rep_dict)
         
         return reps_data
     except Exception as e:
@@ -285,7 +294,7 @@ async def get_orders_proxy(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     status: Optional[str] = Query(None),
-    advertiser_id: Optional[int] = Query(None),
+    advertiser_id: Optional[UUID] = Query(None),
     search: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -296,6 +305,7 @@ async def get_orders_proxy(
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
     from backend.models.order import Order
+    from backend.models.sales_rep import SalesRep
     from backend.routers.orders import order_to_response_dict
     
     try:
@@ -306,10 +316,11 @@ async def get_orders_proxy(
             query = query.where(Order.advertiser_id == advertiser_id)
         if search:
             search_term = f"%{search}%"
-            query = query.where(Order.name.ilike(search_term))
+            query = query.where(Order.order_name.ilike(search_term))
         query = query.options(
             selectinload(Order.advertiser),
-            selectinload(Order.agency)
+            selectinload(Order.agency),
+            selectinload(Order.sales_rep).selectinload(SalesRep.user)
         )
         query = query.offset(skip).limit(limit).order_by(Order.created_at.desc())
         result = await db.execute(query)
@@ -325,7 +336,7 @@ async def get_dayparts_proxy(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     active_only: bool = Query(True),
-    category_id: Optional[int] = Query(None),
+    category_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -421,6 +432,7 @@ async def get_rotation_rules_proxy(
     """Get rotation rules - server-side proxy endpoint"""
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
+    from datetime import datetime
     from backend.models.rotation_rule import RotationRule
     from backend.routers.rotation_rules import RotationRuleResponse
     
@@ -437,10 +449,17 @@ async def get_rotation_rules_proxy(
         
         rules_data = []
         for rule in rules:
-            rule_dict = RotationRuleResponse.model_validate(rule).model_dump()
-            rule_dict["daypart_name"] = getattr(rule.daypart, 'name', None) if rule.daypart else None
-            rule_dict["campaign_name"] = getattr(rule.campaign, 'name', None) if rule.campaign else None
-            rules_data.append(rule_dict)
+            rule_dict = {
+                **{c.name: getattr(rule, c.name) for c in rule.__table__.columns},
+                "daypart_name": getattr(rule.daypart, 'name', None) if rule.daypart else None,
+                "campaign_name": getattr(rule.campaign, 'name', None) if rule.campaign else None,
+            }
+            # Convert datetime objects to strings for created_at and updated_at
+            if "created_at" in rule_dict and isinstance(rule_dict["created_at"], datetime):
+                rule_dict["created_at"] = rule_dict["created_at"].isoformat()
+            if "updated_at" in rule_dict and isinstance(rule_dict["updated_at"], datetime):
+                rule_dict["updated_at"] = rule_dict["updated_at"].isoformat()
+            rules_data.append(RotationRuleResponse(**rule_dict))
         
         return rules_data
     except Exception as e:
@@ -484,8 +503,8 @@ async def get_traffic_logs_proxy(
 async def get_copy_proxy(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    advertiser_id: Optional[int] = Query(None),
-    order_id: Optional[int] = Query(None),
+    advertiser_id: Optional[UUID] = Query(None),
+    order_id: Optional[UUID] = Query(None),
     search: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -506,7 +525,8 @@ async def get_copy_proxy(
             query = query.where(
                 or_(
                     Copy.title.ilike(search_term),
-                    Copy.description.ilike(search_term)
+                    Copy.script_text.ilike(search_term),
+                    Copy.copy_code.ilike(search_term) if hasattr(Copy, 'copy_code') else False
                 )
             )
         query = query.offset(skip).limit(limit).order_by(Copy.title)
@@ -551,7 +571,7 @@ async def get_invoices_proxy(
     limit: int = Query(100, ge=1, le=1000),
     status: Optional[str] = Query(None),
     status_filter: Optional[str] = Query(None),
-    advertiser_id: Optional[int] = Query(None),
+    advertiser_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -585,7 +605,7 @@ async def get_invoices_proxy(
 async def get_payments_proxy(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    invoice_id: Optional[int] = Query(None),
+    invoice_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -611,7 +631,7 @@ async def get_payments_proxy(
 async def get_makegoods_proxy(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    campaign_id: Optional[int] = Query(None),
+    campaign_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -661,7 +681,7 @@ async def get_inventory_proxy(
 async def get_sales_goals_proxy(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    sales_rep_id: Optional[int] = Query(None),
+    sales_rep_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -751,7 +771,7 @@ async def get_settings_proxy(
 async def get_audit_logs_proxy(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    user_id: Optional[int] = Query(None),
+    user_id: Optional[UUID] = Query(None),
     action: Optional[str] = Query(None),
     resource_type: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
@@ -760,6 +780,7 @@ async def get_audit_logs_proxy(
     """Get audit logs - server-side proxy endpoint"""
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
+    from datetime import datetime
     from backend.models.audit_log import AuditLog
     from backend.routers.audit_logs import AuditLogResponse
     import json
@@ -778,14 +799,27 @@ async def get_audit_logs_proxy(
         
         logs_data = []
         for log in logs:
-            log_dict = AuditLogResponse.model_validate(log).model_dump()
-            log_dict["username"] = getattr(log.user, 'username', None) if log.user else None
+            # Build dict manually to convert datetime to string before validation
+            log_dict = {
+                "id": log.id,
+                "user_id": log.user_id,
+                "action": log.action,
+                "resource_type": log.resource_type,
+                "resource_id": log.resource_id,
+                "ip_address": log.ip_address,
+                "user_agent": log.user_agent,
+                "created_at": log.created_at.isoformat() if log.created_at else "",
+                "username": getattr(log.user, 'username', None) if log.user else None,
+            }
+            # Parse details to changes
             if log.details:
                 try:
                     log_dict["changes"] = json.loads(log.details) if isinstance(log.details, str) else log.details
                 except:
                     log_dict["changes"] = None
-            logs_data.append(log_dict)
+            else:
+                log_dict["changes"] = None
+            logs_data.append(AuditLogResponse(**log_dict))
         
         return logs_data
     except Exception as e:
@@ -868,6 +902,246 @@ async def get_backups_proxy(
         return [BackupResponse.model_validate(backup) for backup in backups]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch backups: {str(e)}")
+
+
+@router.get("/sales-teams")
+async def get_sales_teams_proxy(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    active_only: Optional[bool] = Query(True),
+    search: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get sales teams - server-side proxy endpoint"""
+    from sqlalchemy import select, or_
+    from backend.models.sales_team import SalesTeam
+    from backend.schemas.sales_team import SalesTeamResponse
+    
+    try:
+        query = select(SalesTeam)
+        if active_only:
+            query = query.where(SalesTeam.active == True)
+        if search:
+            search_term = f"%{search}%"
+            query = query.where(
+                or_(
+                    SalesTeam.name.ilike(search_term),
+                    SalesTeam.description.ilike(search_term)
+                )
+            )
+        query = query.offset(skip).limit(limit).order_by(SalesTeam.name)
+        result = await db.execute(query)
+        teams = result.scalars().all()
+        
+        return [SalesTeamResponse.model_validate(team) for team in teams]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch sales teams: {str(e)}")
+
+
+@router.get("/sales-offices")
+async def get_sales_offices_proxy(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    active_only: Optional[bool] = Query(True),
+    region_id: Optional[UUID] = Query(None),
+    search: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get sales offices - server-side proxy endpoint"""
+    from sqlalchemy import select, or_
+    from sqlalchemy.orm import selectinload
+    from backend.models.sales_office import SalesOffice
+    from backend.schemas.sales_office import SalesOfficeResponse
+    
+    try:
+        query = select(SalesOffice)
+        if active_only:
+            query = query.where(SalesOffice.active == True)
+        if region_id:
+            query = query.where(SalesOffice.region_id == region_id)
+        if search:
+            search_term = f"%{search}%"
+            query = query.where(
+                or_(
+                    SalesOffice.name.ilike(search_term),
+                    SalesOffice.address.ilike(search_term)
+                )
+            )
+        query = query.options(selectinload(SalesOffice.region))
+        query = query.offset(skip).limit(limit).order_by(SalesOffice.name)
+        result = await db.execute(query)
+        offices = result.scalars().all()
+        
+        offices_data = []
+        for office in offices:
+            office_dict = SalesOfficeResponse.model_validate(office).model_dump()
+            office_dict["region_name"] = office.region.name if office.region else None
+            offices_data.append(SalesOfficeResponse(**office_dict))
+        
+        return offices_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch sales offices: {str(e)}")
+
+
+@router.get("/sales-regions")
+async def get_sales_regions_proxy(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    active_only: Optional[bool] = Query(True),
+    search: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get sales regions - server-side proxy endpoint"""
+    from sqlalchemy import select, or_
+    from backend.models.sales_region import SalesRegion
+    from backend.schemas.sales_region import SalesRegionResponse
+    
+    try:
+        query = select(SalesRegion)
+        if active_only:
+            query = query.where(SalesRegion.active == True)
+        if search:
+            search_term = f"%{search}%"
+            query = query.where(
+                or_(
+                    SalesRegion.name.ilike(search_term),
+                    SalesRegion.description.ilike(search_term)
+                )
+            )
+        query = query.offset(skip).limit(limit).order_by(SalesRegion.name)
+        result = await db.execute(query)
+        regions = result.scalars().all()
+        
+        return [SalesRegionResponse.model_validate(region) for region in regions]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch sales regions: {str(e)}")
+
+
+@router.get("/stations")
+async def get_stations_proxy(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    active_only: Optional[bool] = Query(True),
+    cluster_id: Optional[UUID] = Query(None),
+    search: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get stations - server-side proxy endpoint"""
+    from sqlalchemy import select, or_
+    from sqlalchemy.orm import selectinload
+    from backend.models.station import Station
+    from backend.models.cluster import Cluster
+    from backend.schemas.station import StationResponse
+    
+    try:
+        query = select(Station)
+        if active_only:
+            query = query.where(Station.active == True)
+        if cluster_id:
+            query = query.join(Station.clusters).where(Cluster.id == cluster_id)
+        if search:
+            search_term = f"%{search}%"
+            query = query.where(
+                or_(
+                    Station.call_letters.ilike(search_term),
+                    Station.frequency.ilike(search_term),
+                    Station.market.ilike(search_term),
+                    Station.format.ilike(search_term)
+                )
+            )
+        query = query.options(selectinload(Station.clusters))
+        query = query.offset(skip).limit(limit).order_by(Station.call_letters)
+        result = await db.execute(query)
+        stations = result.scalars().all()
+        
+        stations_data = []
+        for station in stations:
+            station_dict = {
+                "id": station.id,
+                "call_letters": station.call_letters,
+                "frequency": station.frequency,
+                "market": station.market,
+                "format": station.format,
+                "ownership": station.ownership,
+                "contacts": station.contacts,
+                "rates": station.rates,
+                "inventory_class": station.inventory_class,
+                "active": station.active,
+                "created_at": station.created_at,
+                "updated_at": station.updated_at,
+                "libretime_config": station.libretime_config,
+                "clusters": [
+                    {"id": cluster.id, "name": cluster.name}
+                    for cluster in station.clusters
+                ]
+            }
+            stations_data.append(StationResponse(**station_dict))
+        
+        return stations_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch stations: {str(e)}")
+
+
+@router.get("/clusters")
+async def get_clusters_proxy(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    active_only: Optional[bool] = Query(True),
+    search: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get clusters - server-side proxy endpoint"""
+    from sqlalchemy import select, or_
+    from sqlalchemy.orm import selectinload
+    from backend.models.cluster import Cluster
+    from backend.schemas.cluster import ClusterResponse
+    
+    try:
+        query = select(Cluster)
+        if active_only:
+            query = query.where(Cluster.active == True)
+        if search:
+            search_term = f"%{search}%"
+            query = query.where(
+                or_(
+                    Cluster.name.ilike(search_term),
+                    Cluster.description.ilike(search_term)
+                )
+            )
+        query = query.options(selectinload(Cluster.stations))
+        query = query.offset(skip).limit(limit).order_by(Cluster.name)
+        result = await db.execute(query)
+        clusters = result.scalars().all()
+        
+        clusters_data = []
+        for cluster in clusters:
+            cluster_dict = {
+                "id": cluster.id,
+                "name": cluster.name,
+                "description": cluster.description,
+                "active": cluster.active,
+                "created_at": cluster.created_at,
+                "updated_at": cluster.updated_at,
+                "stations": [
+                    {
+                        "id": station.id,
+                        "call_letters": station.call_letters,
+                        "frequency": station.frequency,
+                        "market": station.market
+                    }
+                    for station in cluster.stations
+                ]
+            }
+            clusters_data.append(ClusterResponse(**cluster_dict))
+        
+        return clusters_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch clusters: {str(e)}")
 
 
 @router.get("/libretime/{path:path}")

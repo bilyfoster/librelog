@@ -3,6 +3,7 @@ Settings router for application configuration management
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from uuid import UUID
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, Any, Optional
@@ -16,6 +17,9 @@ from backend.database import get_db
 from backend.models.user import User
 from backend.routers.auth import get_current_user
 from backend.services.settings_service import SettingsService
+import structlog
+
+logger = structlog.get_logger()
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -69,6 +73,12 @@ class BackblazeTestRequest(BaseModel):
     bucket_name: str
 
 
+class PublicBrandingResponse(BaseModel):
+    system_name: str
+    header_color: str
+    logo_url: str
+
+
 @router.get("/")
 async def get_all_settings(
     db: AsyncSession = Depends(get_db),
@@ -79,8 +89,13 @@ async def get_all_settings(
     categories = ["general", "branding", "smtp", "storage", "backup", "integrations"]
     result = {}
     
-    for category in categories:
-        result[category] = await SettingsService.get_category_settings(db, category)
+    try:
+        for category in categories:
+            result[category] = await SettingsService.get_category_settings(db, category)
+    except Exception as e:
+        logger.error("Failed to get settings", error=str(e), exc_info=True)
+        # Return empty dict for each category on error
+        result = {category: {} for category in categories}
     
     # Set default branding values only if not set in database
     branding_settings = result.get("branding", {})
@@ -300,47 +315,58 @@ async def upload_logo(
         )
 
 
-@router.get("/branding/public")
+@router.get("/branding/public", response_model=PublicBrandingResponse)
 async def get_public_branding(
     db: AsyncSession = Depends(get_db)
-    # No auth required - public branding info for login page
 ):
-    """Get public branding settings (logo and system name) - no auth required"""
-    branding_settings = await SettingsService.get_category_settings(db, "branding")
+    """Get public branding settings (logo and system name) - no auth required, failsafe"""
+    import asyncio
     
-    # Apply defaults if not set
+    # Default values - always return these if anything fails
     system_name = "GayPHX Radio Traffic System"
     header_color = "#424242"
     logo_url = ""
     
-    if branding_settings.get("system_name") and branding_settings["system_name"].get("value"):
-        system_name = branding_settings["system_name"]["value"]
-    if branding_settings.get("header_color") and branding_settings["header_color"].get("value"):
-        header_color = branding_settings["header_color"]["value"]
-    if branding_settings.get("logo_url") and branding_settings["logo_url"].get("value"):
-        logo_url = branding_settings["logo_url"]["value"]
-        # Verify the logo file actually exists
-        if logo_url:
-            # Extract filename from URL (e.g., /api/settings/branding/logo/filename.png -> filename.png)
-            import re
-            filename_match = re.search(r'/([^/]+\.(png|jpg|jpeg|gif|svg|webp))$', logo_url)
-            if filename_match:
-                filename = filename_match.group(1)
-                logo_dir = _get_logo_dir()
-                file_path = logo_dir / filename
-                # Check fallback directory too
-                if not file_path.exists():
-                    fallback_dir = Path("/tmp/librelog/logos")
-                    file_path = fallback_dir / filename
-                # If file doesn't exist, clear the logo_url
-                if not file_path.exists() or not file_path.is_file():
-                    logo_url = ""
+    # Try to get branding settings with very short timeout to prevent hanging
+    try:
+        branding_settings = await asyncio.wait_for(
+            SettingsService.get_category_settings(db, "branding"),
+            timeout=0.5  # Very short timeout - 500ms
+        )
+        
+        if branding_settings.get("system_name") and branding_settings["system_name"].get("value"):
+            system_name = branding_settings["system_name"]["value"]
+        if branding_settings.get("header_color") and branding_settings["header_color"].get("value"):
+            header_color = branding_settings["header_color"]["value"]
+        if branding_settings.get("logo_url") and branding_settings["logo_url"].get("value"):
+            logo_url = branding_settings["logo_url"]["value"]
+            # Verify the logo file actually exists (non-blocking check)
+            if logo_url:
+                try:
+                    import re
+                    filename_match = re.search(r'/([^/]+\.(png|jpg|jpeg|gif|svg|webp))$', logo_url)
+                    if filename_match:
+                        filename = filename_match.group(1)
+                        logo_dir = _get_logo_dir()
+                        file_path = logo_dir / filename
+                        # Check fallback directory too
+                        if not file_path.exists():
+                            fallback_dir = Path("/tmp/librelog/logos")
+                            file_path = fallback_dir / filename
+                        # If file doesn't exist, clear the logo_url
+                        if not file_path.exists() or not file_path.is_file():
+                            logo_url = ""
+                except Exception:
+                    logo_url = ""  # If file check fails, just clear it
+    except (asyncio.TimeoutError, Exception):
+        # Any error - just use defaults, don't log (logging might also fail)
+        pass
     
-    return {
-        "system_name": system_name,
-        "header_color": header_color,
-        "logo_url": logo_url
-    }
+    return PublicBrandingResponse(
+        system_name=system_name,
+        header_color=header_color,
+        logo_url=logo_url
+    )
 
 
 @router.get("/branding/logo/{filename}")

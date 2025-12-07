@@ -158,3 +158,77 @@ async def get_log_users(
     users = manager.get_log_users(log_id)
     return {"log_id": log_id, "users": users}
 
+
+@router.get("/comments")
+async def get_comments(
+    log_id: int = Query(...),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get comments for a log"""
+    from backend.models.collaboration_comment import CollaborationComment
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    
+    query = select(CollaborationComment).options(
+        selectinload(CollaborationComment.user)
+    ).where(
+        CollaborationComment.log_id == log_id
+    ).order_by(
+        CollaborationComment.created_at.desc()
+    ).offset(skip).limit(limit)
+    
+    result = await db.execute(query)
+    comments = result.scalars().all()
+    
+    return [
+        {
+            "id": c.id,
+            "log_id": c.log_id,
+            "user_id": c.user_id,
+            "username": c.user.username if c.user else None,
+            "comment": c.comment,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+        }
+        for c in comments
+    ]
+
+
+@router.post("/comments")
+async def create_comment(
+    log_id: int = Query(...),
+    comment: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Create a comment on a log"""
+    from backend.models.collaboration_comment import CollaborationComment
+    from datetime import datetime, timezone
+    
+    # Verify log exists
+    log_result = await db.execute(select(DailyLog).where(DailyLog.id == log_id))
+    if not log_result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Log not found")
+    
+    new_comment = CollaborationComment(
+        log_id=log_id,
+        user_id=current_user.id,
+        comment=comment,
+        created_at=datetime.now(timezone.utc)
+    )
+    
+    db.add(new_comment)
+    await db.commit()
+    await db.refresh(new_comment)
+    
+    return {
+        "id": new_comment.id,
+        "log_id": new_comment.log_id,
+        "user_id": new_comment.user_id,
+        "username": current_user.username,
+        "comment": new_comment.comment,
+        "created_at": new_comment.created_at.isoformat() if new_comment.created_at else None,
+    }
+

@@ -3,8 +3,10 @@ Agencies router for traffic management
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
+from sqlalchemy.orm import selectinload
 from backend.database import get_db
 from backend.models.agency import Agency
 from backend.routers.auth import get_current_user
@@ -18,7 +20,8 @@ router = APIRouter()
 
 class AgencyCreate(BaseModel):
     name: str
-    contact_name: Optional[str] = None
+    contact_first_name: Optional[str] = None
+    contact_last_name: Optional[str] = None
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     address: Optional[str] = None
@@ -27,7 +30,8 @@ class AgencyCreate(BaseModel):
 
 class AgencyUpdate(BaseModel):
     name: Optional[str] = None
-    contact_name: Optional[str] = None
+    contact_first_name: Optional[str] = None
+    contact_last_name: Optional[str] = None
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     address: Optional[str] = None
@@ -36,9 +40,10 @@ class AgencyUpdate(BaseModel):
 
 
 class AgencyResponse(BaseModel):
-    id: int
+    id: UUID
     name: str
-    contact_name: Optional[str]
+    contact_first_name: Optional[str]
+    contact_last_name: Optional[str]
     email: Optional[str]
     phone: Optional[str]
     address: Optional[str]
@@ -56,7 +61,8 @@ def agency_to_response(ag: Agency) -> AgencyResponse:
     return AgencyResponse(
         id=ag.id,
         name=ag.name,
-        contact_name=ag.contact_name,
+        contact_first_name=ag.contact_first_name,
+        contact_last_name=ag.contact_last_name,
         email=ag.email,
         phone=ag.phone,
         address=ag.address,
@@ -83,10 +89,15 @@ async def list_agencies(
         query = query.where(Agency.active == True)
     
     if search:
+        search_term = f"%{search}%"
         query = query.where(
-            Agency.name.ilike(f"%{search}%")
+            or_(
+                Agency.name.ilike(search_term),
+                Agency.contact_first_name.ilike(search_term),
+                Agency.contact_last_name.ilike(search_term),
+                Agency.email.ilike(search_term)
+            )
         )
-    
     query = query.offset(skip).limit(limit).order_by(Agency.name)
     
     result = await db.execute(query)
@@ -112,12 +123,16 @@ async def create_agency(
 
 @router.get("/{agency_id}", response_model=AgencyResponse)
 async def get_agency(
-    agency_id: int,
+    agency_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Get a specific agency"""
-    result = await db.execute(select(Agency).where(Agency.id == agency_id))
+    result = await db.execute(
+        select(Agency)
+        .where(Agency.id == agency_id)
+        .options(selectinload(Agency.account_manager))
+    )
     agency = result.scalar_one_or_none()
     
     if not agency:
@@ -128,7 +143,7 @@ async def get_agency(
 
 @router.put("/{agency_id}", response_model=AgencyResponse)
 async def update_agency(
-    agency_id: int,
+    agency_id: UUID,
     agency_update: AgencyUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -146,14 +161,14 @@ async def update_agency(
         setattr(agency, field, value)
     
     await db.commit()
-    await db.refresh(agency)
+    await db.refresh(agency, ["account_manager"])
     
     return agency_to_response(agency)
 
 
 @router.delete("/{agency_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_agency(
-    agency_id: int,
+    agency_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

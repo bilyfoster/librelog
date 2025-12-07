@@ -21,7 +21,8 @@ from backend.services.timing_service import TimingService
 from backend.services.voice_track_slot_service import VoiceTrackSlotService
 from backend.routers.auth import get_current_user
 from backend.models.user import User
-from backend.integrations.libretime_client import libretime_client
+from backend.integrations.libretime_client import libretime_client, get_libretime_client_for_station
+from backend.utils.file_validation import validate_audio_file
 import aiofiles
 import structlog
 
@@ -115,10 +116,14 @@ async def upload_voice_track(
     file: UploadFile = File(...),
     show_name: Optional[str] = Form(None),
     scheduled_time: Optional[str] = Form(None),
+    slot_id: Optional[int] = Form(None),  # Link to voice track slot if provided
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Upload a voice track"""
+    """Upload a voice track (can be recorded separately and linked to a slot)"""
+    # Validate file size and type
+    validate_audio_file(file)
+    
     # Validate file type (audio files)
     allowed_extensions = {'.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac', '.webm'}
     file_ext = Path(file.filename).suffix.lower() if file.filename else ''
@@ -129,9 +134,29 @@ async def upload_voice_track(
             detail=f"Invalid file type. Allowed: {', '.join(allowed_extensions)}"
         )
     
-    # Generate unique filename
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_filename = f"{timestamp}_{file.filename}" if file.filename else f"{timestamp}_voice_track{file_ext}"
+    # Get standardized_name from slot if provided
+    standardized_name = None
+    break_id = None
+    if slot_id:
+        slot_result = await db.execute(
+            select(VoiceTrackSlot).where(VoiceTrackSlot.id == slot_id)
+        )
+        slot = slot_result.scalar_one_or_none()
+        if slot:
+            standardized_name = slot.standardized_name
+            break_id = slot.id
+        else:
+            raise HTTPException(status_code=404, detail="Voice track slot not found")
+    
+    # Generate filename from standardized_name if available, otherwise use timestamp
+    if standardized_name:
+        # Use standardized_name as filename (e.g., "14-00_BreakA.mp3")
+        safe_filename = f"{standardized_name}{file_ext}"
+    else:
+        # Fallback to timestamp-based filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_filename = f"{timestamp}_{file.filename}" if file.filename else f"{timestamp}_voice_track{file_ext}"
+    
     file_path = Path(VOICE_TRACKS_DIR) / safe_filename
     
     # Save file
@@ -159,17 +184,45 @@ async def upload_voice_track(
             show_name=show_name,
             file_url=file_url,
             scheduled_time=scheduled_datetime,
-            uploaded_by=current_user.id
+            uploaded_by=current_user.id,
+            standardized_name=standardized_name,
+            break_id=break_id,
+            recorded_date=datetime.now(timezone.utc) if standardized_name else None
         )
         
         db.add(voice_track)
+        await db.flush()
+        
+        # Link to slot if provided
+        if slot_id and slot:
+            slot.voice_track_id = voice_track.id
+            slot.status = "recorded"
+            await db.flush()
+            
+            # Sync to log element
+            from backend.services.log_editor import LogEditor
+            editor = LogEditor(db)
+            await editor.sync_voice_track_to_log_element(
+                slot.log_id,
+                voice_track.id,
+                slot.id
+            )
+        
         await db.commit()
         await db.refresh(voice_track)
         
-        logger.info("Voice track uploaded", voice_track_id=voice_track.id, filename=safe_filename)
+        logger.info(
+            "Voice track uploaded",
+            voice_track_id=voice_track.id,
+            filename=safe_filename,
+            standardized_name=standardized_name,
+            slot_id=slot_id
+        )
         
         return VoiceTrackResponse.model_validate(voice_track)
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Voice track upload failed", error=str(e), exc_info=True)
         # Clean up file if it was created
@@ -406,13 +459,36 @@ async def upload_voice_track_to_libretime(
                 detail=f"File not compatible with LibreTime: {', '.join(errors)}"
             )
         
-        # Upload to LibreTime
-        result = await libretime_client.upload_voice_track(
+        # Get standardized_name from slot if linked (for filename generation)
+        standardized_filename = None
+        if voice_track.break_id:
+            from backend.models.voice_track_slot import VoiceTrackSlot
+            slot_result = await db.execute(
+                select(VoiceTrackSlot).where(VoiceTrackSlot.id == voice_track.break_id)
+            )
+            slot = slot_result.scalar_one_or_none()
+            if slot and slot.standardized_name:
+                voice_track.standardized_name = slot.standardized_name
+                voice_track.recorded_date = datetime.now(timezone.utc)
+                # Generate filename from standardized_name (e.g., "14-00_BreakA.mp3")
+                standardized_filename = f"{slot.standardized_name}.mp3"
+        
+        # Use standardized_name if available, otherwise use voice_track.standardized_name
+        if not standardized_filename and voice_track.standardized_name:
+            standardized_filename = f"{voice_track.standardized_name}.mp3"
+        
+        # Get station-specific LibreTime client (if voice track has station_id)
+        station_id = getattr(voice_track, 'station_id', None)
+        client = await get_libretime_client_for_station(station_id, db) if station_id else libretime_client
+        
+        # Upload to LibreTime with standardized filename
+        result = await client.upload_voice_track(
             file_path=prepared_path,
             title=metadata["title"],
             description=f"Voice track uploaded from LibreLog - {voice_track.show_name or 'Test Recording'}",
             artist_name=metadata["artist"],
-            genre=metadata["genre"]
+            genre=metadata["genre"],
+            filename=standardized_filename  # Use standardized filename for LibreTime
         )
         
         if result and result.get("success"):
@@ -422,17 +498,6 @@ async def upload_voice_track_to_libretime(
                 voice_track.libretime_id = f"lib_{library_id}"
             else:
                 voice_track.libretime_id = "uploaded"
-            
-            # Get standardized_name from slot if linked
-            if voice_track.break_id:
-                from backend.models.voice_track_slot import VoiceTrackSlot
-                slot_result = await db.execute(
-                    select(VoiceTrackSlot).where(VoiceTrackSlot.id == voice_track.break_id)
-                )
-                slot = slot_result.scalar_one_or_none()
-                if slot and slot.standardized_name:
-                    voice_track.standardized_name = slot.standardized_name
-                    voice_track.recorded_date = datetime.now(timezone.utc)
             
             voice_track.status = VoiceTrackStatus.READY
             await db.commit()
@@ -626,6 +691,12 @@ async def create_take(
             detail=f"Invalid file type. Allowed: {', '.join(allowed_extensions)}"
         )
     
+    # Generate filename from standardized_name if available (for log matching)
+    standardized_filename = None
+    if slot.standardized_name:
+        file_ext = file_ext or ".mp3"
+        standardized_filename = f"{slot.standardized_name}{file_ext}"
+    
     # Create directory for this break
     break_dir = Path(VOICE_TRACKS_DIR) / str(break_id)
     break_dir.mkdir(parents=True, exist_ok=True)
@@ -640,10 +711,14 @@ async def create_take(
         last_take = existing_takes_result.scalar_one_or_none()
         take_number = (last_take.take_number + 1) if last_take else 1
     
-    # Generate filename
-    timestamp = datetime.now().strftime("%Y%m%d-%H%M")
-    filename = f"{timestamp}_break{break_id}_take{take_number}{file_ext}"
-    file_path = break_dir / filename
+    # Generate filename - use standardized_name if available, otherwise use take-based naming
+    if standardized_filename:
+        filename = standardized_filename
+        file_path = Path(VOICE_TRACKS_DIR) / filename  # Store in main directory with standardized name
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M")
+        filename = f"{timestamp}_break{break_id}_take{take_number}{file_ext}"
+        file_path = break_dir / filename
     
     # Save file - stream to avoid memory issues with large files
     try:
@@ -656,7 +731,11 @@ async def create_take(
                     break
                 await f.write(chunk)
         
-        file_url = f"/api/voice/{break_id}/{filename}/file"
+        # Generate file URL based on whether we used standardized filename
+        if standardized_filename:
+            file_url = f"/api/voice/{filename}/file"
+        else:
+            file_url = f"/api/voice/{break_id}/{filename}/file"
         
         # Calculate audio duration (handle errors gracefully)
         audio_processor = AudioProcessingService()
@@ -676,6 +755,8 @@ async def create_take(
             is_final=False,
             status=VoiceTrackStatus.DRAFT,
             raw_file_url=str(file_path),
+            standardized_name=slot.standardized_name,  # Set standardized_name from slot
+            recorded_date=datetime.now(timezone.utc),  # Set recorded date
             track_metadata={
                 "original_filename": file.filename,
                 "file_ext": file_ext,
@@ -684,6 +765,22 @@ async def create_take(
         )
         
         db.add(voice_track)
+        await db.flush()
+        
+        # Link to slot and sync to log
+        slot.voice_track_id = voice_track.id
+        slot.status = "recorded"
+        await db.flush()
+        
+        # Sync voice track to log element
+        from backend.services.log_editor import LogEditor
+        editor = LogEditor(db)
+        await editor.sync_voice_track_to_log_element(
+            slot.log_id,
+            voice_track.id,
+            break_id
+        )
+        
         await db.commit()
         await db.refresh(voice_track)
         
@@ -697,7 +794,7 @@ async def create_take(
         db.add(audit)
         await db.commit()
         
-        logger.info("Take created", break_id=break_id, take_number=take_number, voice_track_id=voice_track.id)
+        logger.info("Take created", break_id=break_id, take_number=take_number, voice_track_id=voice_track.id, standardized_name=slot.standardized_name)
         
         return VoiceTrackResponse.model_validate(voice_track)
         
@@ -733,7 +830,7 @@ async def select_take(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Mark a take as final/selected"""
+    """Mark a take as final/selected and link to slot/log"""
     result = await db.execute(select(VoiceTrack).where(VoiceTrack.id == take_id))
     voice_track = result.scalar_one_or_none()
     
@@ -742,25 +839,38 @@ async def select_take(
     
     # Unset other takes as final
     if voice_track.break_id:
-        await db.execute(
+        other_takes_result = await db.execute(
             select(VoiceTrack).where(
                 VoiceTrack.break_id == voice_track.break_id,
                 VoiceTrack.id != take_id
             )
         )
-        other_takes = await db.execute(
-            select(VoiceTrack).where(
-                VoiceTrack.break_id == voice_track.break_id,
-                VoiceTrack.id != take_id
-            )
-        )
-        for other in other_takes.scalars().all():
+        for other in other_takes_result.scalars().all():
             other.is_final = False
     
     # Set this take as final
     voice_track.is_final = True
     voice_track.status = VoiceTrackStatus.APPROVED
     
+    # Link to slot if break_id exists (do essential work quickly)
+    slot = None
+    if voice_track.break_id:
+        slot_result = await db.execute(
+            select(VoiceTrackSlot).where(VoiceTrackSlot.id == voice_track.break_id)
+        )
+        slot = slot_result.scalar_one_or_none()
+        
+        if slot:
+            # Update voice track with standardized_name if available
+            if slot.standardized_name:
+                voice_track.standardized_name = slot.standardized_name
+                voice_track.recorded_date = datetime.now(timezone.utc)
+            
+            # Link to slot
+            slot.voice_track_id = voice_track.id
+            slot.status = "recorded"
+    
+    # Commit quickly to respond to user
     await db.commit()
     await db.refresh(voice_track)
     
@@ -774,7 +884,22 @@ async def select_take(
     db.add(audit)
     await db.commit()
     
-    logger.info("Take selected as final", take_id=take_id)
+    logger.info("Take selected as final", take_id=take_id, standardized_name=voice_track.standardized_name)
+    
+    # Sync to log element if slot exists (non-blocking - don't fail if this errors)
+    if slot:
+        try:
+            from backend.services.log_editor import LogEditor
+            editor = LogEditor(db)
+            # Use a new session for this to avoid blocking
+            await editor.sync_voice_track_to_log_element(
+                slot.log_id,
+                voice_track.id,
+                voice_track.break_id
+            )
+        except Exception as e:
+            logger.warning("Failed to sync voice track to log (non-critical)", error=str(e), exc_info=True)
+            # Don't fail the request - sync can happen later
     
     return VoiceTrackResponse.model_validate(voice_track)
 

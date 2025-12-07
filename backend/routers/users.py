@@ -159,6 +159,16 @@ async def create_user(
                 detail="Username already exists"
             )
         
+        # Validate password complexity
+        from backend.auth.password_validator import validate_password, PasswordValidationError
+        try:
+            validate_password(user_data.password)
+        except PasswordValidationError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
+        
         # Create user
         password_hash = get_password_hash(user_data.password)
         new_user = User(

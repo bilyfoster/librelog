@@ -14,6 +14,49 @@ from backend.auth.oauth2 import get_user_by_username
 logger = structlog.get_logger()
 
 
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    """Middleware for limiting request body size"""
+    
+    # Size limits in bytes
+    MAX_JSON_SIZE = 10 * 1024 * 1024  # 10MB
+    MAX_UPLOAD_SIZE = 100 * 1024 * 1024  # 100MB
+    
+    async def dispatch(self, request: Request, call_next):
+        """Check request size before processing"""
+        content_length = request.headers.get("content-length")
+        
+        if content_length:
+            try:
+                size = int(content_length)
+                # Determine if this is a file upload
+                content_type = request.headers.get("content-type", "")
+                is_upload = "multipart/form-data" in content_type or any(
+                    upload_path in str(request.url.path) 
+                    for upload_path in ["/upload", "/voice/upload", "/audio-cuts/upload", "/copy/upload", "/order-attachments/upload"]
+                )
+                
+                max_size = self.MAX_UPLOAD_SIZE if is_upload else self.MAX_JSON_SIZE
+                
+                if size > max_size:
+                    logger.warning(
+                        "Request too large",
+                        path=request.url.path,
+                        size=size,
+                        max_size=max_size,
+                        client_ip=request.client.host if request.client else None
+                    )
+                    from fastapi import HTTPException, status
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=f"Request body too large. Maximum size: {max_size / (1024*1024):.0f}MB"
+                    )
+            except ValueError:
+                # Invalid content-length header, let it proceed
+                pass
+        
+        return await call_next(request)
+
+
 class LoggingMiddleware(BaseHTTPMiddleware):
     """Middleware for request/response logging"""
     
@@ -97,10 +140,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 headers={"WWW-Authenticate": "Bearer"}
             )
         
-        # Verify token
+        # Verify token (includes blacklist check)
         payload = verify_token(token)
         if payload is None:
-            logger.warning("Invalid or expired token", path=path)
+            logger.warning("Invalid, expired, or blacklisted token", path=path)
             return Response(
                 content='{"detail":"Could not validate credentials"}',
                 status_code=status.HTTP_401_UNAUTHORIZED,

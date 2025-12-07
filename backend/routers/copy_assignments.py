@@ -28,6 +28,22 @@ class CopyAssignmentResponse(BaseModel):
         from_attributes = True
 
 
+@router.get("/{assignment_id}", response_model=CopyAssignmentResponse)
+async def get_copy_assignment(
+    assignment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get a specific copy assignment"""
+    result = await db.execute(select(CopyAssignment).where(CopyAssignment.id == assignment_id))
+    assignment = result.scalar_one_or_none()
+    
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Copy assignment not found")
+    
+    return CopyAssignmentResponse.model_validate(assignment)
+
+
 @router.get("/", response_model=list[CopyAssignmentResponse])
 async def list_copy_assignments(
     skip: int = Query(0, ge=0),

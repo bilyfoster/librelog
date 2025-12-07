@@ -69,3 +69,47 @@ async def get_sellout_percentages(
     inventory_service = InventoryService(db)
     return await inventory_service.calculate_sellout(start_date, end_date)
 
+
+@router.get("/avails")
+async def get_avails(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    station_id: Optional[int] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get available inventory slots (avails)"""
+    inventory_service = InventoryService(db)
+    return await inventory_service.get_available_slots(start_date, end_date, station_id)
+
+
+@router.get("/slots")
+async def get_slots(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    station_id: Optional[int] = Query(None),
+    hour: Optional[int] = Query(None, ge=0, le=23),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get inventory slots with filtering"""
+    query = select(InventorySlot).where(
+        and_(
+            InventorySlot.date >= start_date,
+            InventorySlot.date <= end_date
+        )
+    )
+    
+    if station_id:
+        query = query.where(InventorySlot.station_id == station_id)
+    
+    if hour is not None:
+        query = query.where(InventorySlot.hour == hour)
+    
+    query = query.order_by(InventorySlot.date, InventorySlot.hour)
+    
+    result = await db.execute(query)
+    slots = result.scalars().all()
+    
+    return [InventorySlotResponse.model_validate(slot) for slot in slots]
+

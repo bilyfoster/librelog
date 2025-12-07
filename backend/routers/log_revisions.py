@@ -102,3 +102,54 @@ async def revert_to_revision(
     
     return {"message": "Log reverted successfully", "log_id": log_id, "revision_id": revision_id}
 
+
+@router.get("/", response_model=list[LogRevisionResponse])
+async def list_log_revisions(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    log_id: Optional[int] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """List all log revisions"""
+    query = select(LogRevision)
+    
+    if log_id:
+        query = query.where(LogRevision.log_id == log_id)
+    
+    query = query.order_by(LogRevision.created_at.desc()).offset(skip).limit(limit)
+    
+    result = await db.execute(query)
+    revisions = result.scalars().all()
+    
+    revisions_data = []
+    for rev in revisions:
+        rev_dict = LogRevisionResponse.model_validate(rev).model_dump()
+        if rev.changed_by_user:
+            rev_dict["changed_by_username"] = rev.changed_by_user.username
+        revisions_data.append(LogRevisionResponse(**rev_dict))
+    
+    return revisions_data
+
+
+@router.get("/{revision_id}", response_model=LogRevisionResponse)
+async def get_log_revision_by_id(
+    revision_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get a specific revision by ID"""
+    result = await db.execute(
+        select(LogRevision).where(LogRevision.id == revision_id)
+    )
+    revision = result.scalar_one_or_none()
+    
+    if not revision:
+        raise HTTPException(status_code=404, detail="Revision not found")
+    
+    rev_dict = LogRevisionResponse.model_validate(revision).model_dump()
+    if revision.changed_by_user:
+        rev_dict["changed_by_username"] = revision.changed_by_user.username
+    
+    return LogRevisionResponse(**rev_dict)
+

@@ -12,9 +12,14 @@ from sqlalchemy import select
 from backend.models.user import User
 
 # Configuration
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecretkey")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not SECRET_KEY or len(SECRET_KEY) < 32:
+    raise ValueError(
+        "JWT_SECRET_KEY environment variable must be set and at least 32 characters long. "
+        "Generate a strong secret key for production use."
+    )
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))  # Reduced to 15 minutes for enterprise security
 
 # Password hashing
 # Use pbkdf2_sha256 to avoid bcrypt initialization bug detection issues
@@ -54,6 +59,33 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 def verify_token(token: str) -> Optional[dict]:
     """Verify and decode a JWT token"""
     try:
+        # Check if token is blacklisted (synchronous check for in-memory storage)
+        from backend.services.token_blacklist_service import TokenBlacklistService, redis_client, _token_blacklist
+        
+        storage_key = TokenBlacklistService._get_storage_key(token)
+        
+        # Check blacklist (synchronous for in-memory, async for Redis handled in middleware)
+        if redis_client:
+            try:
+                exists = redis_client.exists(storage_key)
+                if exists:
+                    return None  # Token is blacklisted
+            except Exception:
+                # Fall back to in-memory check on Redis error
+                if storage_key in _token_blacklist:
+                    expires_at = _token_blacklist[storage_key]
+                    if datetime.utcnow() <= expires_at:
+                        return None  # Token is blacklisted
+        else:
+            # In-memory storage check
+            if storage_key in _token_blacklist:
+                expires_at = _token_blacklist[storage_key]
+                if datetime.utcnow() <= expires_at:
+                    return None  # Token is blacklisted
+                else:
+                    # Remove expired token
+                    del _token_blacklist[storage_key]
+        
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except JWTError:

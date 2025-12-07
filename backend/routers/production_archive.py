@@ -206,3 +206,69 @@ async def get_renewal_candidates(
         ]
     }
 
+
+@router.get("/")
+async def get_production_archive(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    status: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get production archive (all completed/archived orders)"""
+    archive_service = ProductionArchiveService(db)
+    status_enum = None
+    
+    if status:
+        try:
+            status_enum = ProductionOrderStatus(status)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid status")
+    
+    orders = await archive_service.get_archive(status=status_enum, skip=skip, limit=limit)
+    
+    return {
+        "results": [
+            {
+                "id": po.id,
+                "po_number": po.po_number,
+                "client_name": po.client_name,
+                "campaign_title": po.campaign_title,
+                "status": po.status.value if hasattr(po.status, 'value') else str(po.status),
+                "created_at": po.created_at.isoformat() if po.created_at else None,
+                "completed_at": po.completed_at.isoformat() if po.completed_at else None,
+            }
+            for po in orders
+        ]
+    }
+
+
+@router.get("/{order_id}")
+async def get_production_archive_item(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get a specific archived production order"""
+    from backend.models.production_order import ProductionOrder
+    from sqlalchemy import select
+    
+    result = await db.execute(
+        select(ProductionOrder).where(ProductionOrder.id == order_id)
+    )
+    order = result.scalar_one_or_none()
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Production order not found")
+    
+    return {
+        "id": order.id,
+        "po_number": order.po_number,
+        "client_name": order.client_name,
+        "campaign_title": order.campaign_title,
+        "status": order.status.value if hasattr(order.status, 'value') else str(order.status),
+        "created_at": order.created_at.isoformat() if order.created_at else None,
+        "completed_at": order.completed_at.isoformat() if order.completed_at else None,
+        "notes": order.notes,
+    }
+

@@ -147,39 +147,73 @@ async def create_rotation_rule(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new rotation rule"""
-    # Validate rotation type
-    if rule.rotation_type not in [rt.value for rt in RotationType]:
-        raise HTTPException(status_code=400, detail=f"Invalid rotation_type: {rule.rotation_type}")
-    
-    # Validate daypart if provided
-    if rule.daypart_id:
-        from backend.models.daypart import Daypart
-        result = await db.execute(select(Daypart).where(Daypart.id == rule.daypart_id))
-        daypart = result.scalar_one_or_none()
-        if not daypart:
-            raise HTTPException(status_code=404, detail="Daypart not found")
-    
-    # Validate campaign if provided
-    if rule.campaign_id:
-        from backend.models.campaign import Campaign
-        result = await db.execute(select(Campaign).where(Campaign.id == rule.campaign_id))
-        campaign = result.scalar_one_or_none()
-        if not campaign:
-            raise HTTPException(status_code=404, detail="Campaign not found")
-    
-    new_rule = RotationRule(**rule.dict())
-    db.add(new_rule)
-    await db.commit()
-    await db.refresh(new_rule)
-    
-    # Load relationships for response
-    await db.refresh(new_rule, ["daypart", "campaign"])
-    rule_dict = {
-        **{c.name: getattr(new_rule, c.name) for c in new_rule.__table__.columns},
-        "daypart_name": new_rule.daypart.name if new_rule.daypart else None,
-        "campaign_name": new_rule.campaign.name if new_rule.campaign else None,
-    }
-    return RotationRuleResponse(**rule_dict)
+    try:
+        # Validate rotation type
+        if rule.rotation_type not in [rt.value for rt in RotationType]:
+            raise HTTPException(status_code=400, detail=f"Invalid rotation_type: {rule.rotation_type}")
+        
+        # Validate daypart if provided
+        if rule.daypart_id:
+            from backend.models.daypart import Daypart
+            result = await db.execute(select(Daypart).where(Daypart.id == rule.daypart_id))
+            daypart = result.scalar_one_or_none()
+            if not daypart:
+                raise HTTPException(status_code=404, detail="Daypart not found")
+        
+        # Validate campaign if provided
+        if rule.campaign_id:
+            from backend.models.campaign import Campaign
+            result = await db.execute(select(Campaign).where(Campaign.id == rule.campaign_id))
+            campaign = result.scalar_one_or_none()
+            if not campaign:
+                raise HTTPException(status_code=404, detail="Campaign not found")
+        
+        new_rule = RotationRule(**rule.dict())
+        db.add(new_rule)
+        await db.flush()  # Get ID without committing
+        rule_id = new_rule.id
+        
+        try:
+            await db.commit()
+        except Exception as commit_error:
+            # If commit fails due to relationship loading, refresh and continue
+            if "relationship" in str(commit_error).lower() or "Multiple rows" in str(commit_error):
+                await db.rollback()
+                # Re-fetch the rule with relationships
+                result = await db.execute(
+                    select(RotationRule)
+                    .options(selectinload(RotationRule.daypart), selectinload(RotationRule.campaign))
+                    .where(RotationRule.id == rule_id)
+                )
+                new_rule = result.scalar_one_or_none()
+                if not new_rule:
+                    raise HTTPException(status_code=500, detail="Rule created but could not be retrieved")
+            else:
+                await db.rollback()
+                raise
+        
+        # Load relationships for response using eager loading
+        result = await db.execute(
+            select(RotationRule)
+            .options(selectinload(RotationRule.daypart), selectinload(RotationRule.campaign))
+            .where(RotationRule.id == rule_id)
+        )
+        new_rule = result.scalar_one_or_none()
+        
+        if not new_rule:
+            raise HTTPException(status_code=500, detail="Rule created but could not be retrieved")
+        
+        rule_dict = {
+            **{c.name: getattr(new_rule, c.name) for c in new_rule.__table__.columns},
+            "daypart_name": new_rule.daypart.name if new_rule.daypart else None,
+            "campaign_name": new_rule.campaign.name if new_rule.campaign else None,
+        }
+        return RotationRuleResponse(**rule_dict)
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to create rotation rule: {str(e)}")
 
 
 @router.put("/{rule_id}", response_model=RotationRuleResponse)
@@ -221,9 +255,34 @@ async def update_rotation_rule(
     for field, value in update_data.items():
         setattr(rule, field, value)
     
-    await db.commit()
-    await db.refresh(rule)
-    await db.refresh(rule, ["daypart", "campaign"])
+    try:
+        await db.commit()
+    except Exception as commit_error:
+        if "relationship" in str(commit_error).lower() or "Multiple rows" in str(commit_error):
+            await db.rollback()
+            # Re-fetch with relationships
+            result = await db.execute(
+                select(RotationRule)
+                .options(selectinload(RotationRule.daypart), selectinload(RotationRule.campaign))
+                .where(RotationRule.id == rule_id)
+            )
+            rule = result.scalar_one_or_none()
+            if not rule:
+                raise HTTPException(status_code=500, detail="Rule updated but could not be retrieved")
+        else:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to update rotation rule: {str(commit_error)}")
+    
+    # Re-fetch with relationships for response
+    result = await db.execute(
+        select(RotationRule)
+        .options(selectinload(RotationRule.daypart), selectinload(RotationRule.campaign))
+        .where(RotationRule.id == rule_id)
+    )
+    rule = result.scalar_one_or_none()
+    
+    if not rule:
+        raise HTTPException(status_code=500, detail="Rule updated but could not be retrieved")
     
     rule_dict = {
         **{c.name: getattr(rule, c.name) for c in rule.__table__.columns},

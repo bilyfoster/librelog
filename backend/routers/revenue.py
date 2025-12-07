@@ -47,3 +47,41 @@ async def get_revenue_forecast(
     revenue_service = RevenueService(db)
     return await revenue_service.generate_forecast(months_ahead)
 
+
+@router.get("/")
+async def get_revenue(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get revenue data for date range"""
+    revenue_service = RevenueService(db)
+    return await revenue_service.calculate_revenue(start_date, end_date)
+
+
+@router.get("/by-station")
+async def get_revenue_by_station(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    station_id: Optional[int] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get revenue breakdown by station"""
+    revenue_service = RevenueService(db)
+    return await revenue_service.get_revenue_by_station(start_date, end_date, station_id)
+
+
+@router.get("/by-advertiser")
+async def get_revenue_by_advertiser(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    advertiser_id: Optional[int] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get revenue breakdown by advertiser"""
+    revenue_service = RevenueService(db)
+    return await revenue_service.get_revenue_by_advertiser(start_date, end_date, advertiser_id)
+

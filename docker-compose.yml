@@ -7,7 +7,9 @@ services:
     environment:
       POSTGRES_DB: librelog
       POSTGRES_USER: librelog
-      POSTGRES_PASSWORD: password
+      # Use environment variable for password - set in .env file
+      # Never commit actual passwords to version control
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme-in-production}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/alembic/versions:/docker-entrypoint-initdb.d
@@ -56,6 +58,7 @@ services:
     volumes:
       - ./backend:/app/backend
       - ./shared:/app/shared
+      - librelog_logos:/var/lib/librelog/logos
     working_dir: /app
     networks:
       - libretime
@@ -149,6 +152,7 @@ services:
 
 volumes:
   postgres_data:
+  librelog_logos:
 
 networks:
   libretime:
