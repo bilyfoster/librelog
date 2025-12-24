@@ -3,6 +3,7 @@ Live Reads router for managing live read scripts and performance tracking
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db
 from backend.routers.auth import get_current_user
@@ -20,9 +21,9 @@ router = APIRouter(prefix="/live-reads", tags=["live-reads"])
 
 class LiveReadCreate(BaseModel):
     script_text: str
-    copy_id: Optional[int] = None
-    order_id: Optional[int] = None
-    advertiser_id: Optional[int] = None
+    copy_id: Optional[UUID] = None
+    order_id: Optional[UUID] = None
+    advertiser_id: Optional[UUID] = None
     script_title: Optional[str] = None
     scheduled_time: Optional[datetime] = None
     scheduled_date: Optional[datetime] = None
@@ -30,10 +31,10 @@ class LiveReadCreate(BaseModel):
 
 
 class LiveReadResponse(BaseModel):
-    id: int
-    copy_id: Optional[int]
-    order_id: Optional[int]
-    advertiser_id: Optional[int]
+    id: UUID
+    copy_id: Optional[UUID]
+    order_id: Optional[UUID]
+    advertiser_id: Optional[UUID]
     script_text: str
     script_title: Optional[str]
     scheduled_time: Optional[str]
@@ -53,9 +54,9 @@ class LiveReadResponse(BaseModel):
 
 @router.get("/", response_model=List[LiveReadResponse])
 async def list_live_reads(
-    copy_id: Optional[int] = Query(None),
-    order_id: Optional[int] = Query(None),
-    advertiser_id: Optional[int] = Query(None),
+    copy_id: Optional[UUID] = Query(None),
+    order_id: Optional[UUID] = Query(None),
+    advertiser_id: Optional[UUID] = Query(None),
     status: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -97,7 +98,7 @@ async def create_live_read(
 
 @router.post("/{live_read_id}/confirm", response_model=LiveReadResponse)
 async def confirm_performance(
-    live_read_id: int,
+    live_read_id: UUID,
     proof_data: Optional[Dict[str, Any]] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -117,7 +118,7 @@ async def confirm_performance(
 
 @router.post("/{live_read_id}/missed", response_model=LiveReadResponse)
 async def mark_missed(
-    live_read_id: int,
+    live_read_id: UUID,
     create_makegood: bool = True,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)

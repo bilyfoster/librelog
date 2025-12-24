@@ -2,8 +2,8 @@
 Notification model for email and in-app notifications
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, Text, Enum as SQLEnum, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -29,8 +29,8 @@ class Notification(Base):
     """Notification model for user notifications"""
     __tablename__ = "notifications"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     notification_type = Column(SQLEnum(NotificationType), nullable=False, default=NotificationType.IN_APP)
     status = Column(SQLEnum(NotificationStatus), nullable=False, default=NotificationStatus.PENDING, index=True)
     subject = Column(String(255), nullable=True)

@@ -54,6 +54,50 @@ After running initial setup:
 
 See `docs/DEVELOPMENT.md` for detailed setup instructions.
 
+## Documentation
+
+Comprehensive documentation is available in the `docs/` directory:
+
+- **[User Manual](docs/USER_MANUAL.md)** - Complete user guide
+- **[Workflow Scenarios](docs/WORKFLOW_SCENARIOS.md)** - End-to-end workflow examples
+- **[Development Guide](docs/DEVELOPMENT.md)** - Developer setup and guidelines
+- **[Security & QA Reports](docs/security/)** - Security audit and QA test reports
+- **[Testing Documentation](docs/testing/)** - API testing guides and checklists
+- **[Setup Guides](docs/setup/)** - Integration and infrastructure setup
+- **[Implementation Status](docs/implementation/)** - Implementation and fix documentation
+
+See [docs/README.md](docs/README.md) for complete documentation index.
+
+## Testing
+
+### API Testing
+
+Comprehensive API testing scripts are available:
+
+- **`test_all_endpoints.py`** - Tests all API endpoints with tokenized requests
+- **`test_complete_workflow.py`** - Tests complete workflow from order to billing
+
+**Quick Test:**
+```bash
+export LIBRELOG_API_URL=http://api:8000
+export TEST_USERNAME=admin
+export TEST_PASSWORD=admin123
+python3 test_all_endpoints.py
+```
+
+### Testing Documentation
+
+See the [testing documentation](docs/testing/) directory for:
+- [API Testing Guide](docs/testing/API_TESTING_GUIDE.md) - Complete guide to API testing
+- [Manual Testing Checklist](docs/testing/MANUAL_TESTING_CHECKLIST.md) - Step-by-step manual testing instructions
+- [Test Results](docs/testing/) - Test execution results and reports
+
+### Test Results
+
+Test results are saved to:
+- `api_test_results.json` - Automated API test results
+- `complete_workflow_test_results.json` - Workflow test results
+
 ## Features (Alpha)
 
 - ✅ Music library management with metadata tagging

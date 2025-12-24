@@ -3,6 +3,7 @@ Timing service for back-timing and show timing calculations
 """
 
 from datetime import datetime, timedelta
+from uuid import UUID
 from typing import Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -20,7 +21,7 @@ class TimingService:
     
     async def calculate_hour_remaining(
         self,
-        log_id: int,
+        log_id: UUID,
         hour: int
     ) -> Dict[str, Any]:
         """
@@ -73,7 +74,7 @@ class TimingService:
     
     async def calculate_hour_end_time(
         self,
-        log_id: int,
+        log_id: UUID,
         hour: int,
         log_date: Optional[datetime] = None
     ) -> Dict[str, Any]:
@@ -134,7 +135,7 @@ class TimingService:
     
     async def check_timing_balance(
         self,
-        log_id: int,
+        log_id: UUID,
         hour: int
     ) -> Dict[str, Any]:
         """

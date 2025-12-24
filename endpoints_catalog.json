@@ -1,0 +1,3887 @@
+{
+  "total": 377,
+  "endpoints": [
+    {
+      "file": "activity.py",
+      "method": "GET",
+      "path": "/recent"
+    },
+    {
+      "file": "advertisers.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "advertisers.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "advertisers.py",
+      "method": "GET",
+      "path": "/{advertiser_id}"
+    },
+    {
+      "file": "advertisers.py",
+      "method": "PUT",
+      "path": "/{advertiser_id}"
+    },
+    {
+      "file": "advertisers.py",
+      "method": "DELETE",
+      "path": "/{advertiser_id}"
+    },
+    {
+      "file": "agencies.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "agencies.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "agencies.py",
+      "method": "GET",
+      "path": "/{agency_id}"
+    },
+    {
+      "file": "agencies.py",
+      "method": "PUT",
+      "path": "/{agency_id}"
+    },
+    {
+      "file": "agencies.py",
+      "method": "DELETE",
+      "path": "/{agency_id}"
+    },
+    {
+      "file": "audio_cuts.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "audio_cuts.py",
+      "method": "GET",
+      "path": "/{cut_id}"
+    },
+    {
+      "file": "audio_cuts.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "audio_cuts.py",
+      "method": "POST",
+      "path": "/upload"
+    },
+    {
+      "file": "audio_cuts.py",
+      "method": "PUT",
+      "path": "/{cut_id}"
+    },
+    {
+      "file": "audio_cuts.py",
+      "method": "DELETE",
+      "path": "/{cut_id}"
+    },
+    {
+      "file": "audio_cuts.py",
+      "method": "POST",
+      "path": "/{cut_id}/versions"
+    },
+    {
+      "file": "audio_cuts.py",
+      "method": "GET",
+      "path": "/{cut_id}/versions"
+    },
+    {
+      "file": "audio_cuts.py",
+      "method": "POST",
+      "path": "/{cut_id}/rollback/{version_number}"
+    },
+    {
+      "file": "audio_cuts.py",
+      "method": "GET",
+      "path": "/{cut_id}/file"
+    },
+    {
+      "file": "audio_delivery.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "audio_delivery.py",
+      "method": "POST",
+      "path": "/{delivery_id}/retry"
+    },
+    {
+      "file": "audio_qc.py",
+      "method": "POST",
+      "path": "/run/{cut_id}"
+    },
+    {
+      "file": "audio_qc.py",
+      "method": "GET",
+      "path": "/{cut_id}/results"
+    },
+    {
+      "file": "audio_qc.py",
+      "method": "POST",
+      "path": "/{qc_result_id}/override"
+    },
+    {
+      "file": "audit_logs.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "audit_logs.py",
+      "method": "GET",
+      "path": "/{audit_log_id}"
+    },
+    {
+      "file": "auth.py",
+      "method": "GET",
+      "path": "/profile"
+    },
+    {
+      "file": "auth.py",
+      "method": "PUT",
+      "path": "/profile"
+    },
+    {
+      "file": "auth.py",
+      "method": "POST",
+      "path": "/login"
+    },
+    {
+      "file": "auth.py",
+      "method": "GET",
+      "path": "/me"
+    },
+    {
+      "file": "auth.py",
+      "method": "POST",
+      "path": "/refresh"
+    },
+    {
+      "file": "auth.py",
+      "method": "POST",
+      "path": "/logout"
+    },
+    {
+      "file": "backups.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "backups.py",
+      "method": "GET",
+      "path": "/{backup_id}"
+    },
+    {
+      "file": "backups.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "backups.py",
+      "method": "POST",
+      "path": "/{backup_id}/restore"
+    },
+    {
+      "file": "backups.py",
+      "method": "DELETE",
+      "path": "/{backup_id}"
+    },
+    {
+      "file": "break_structures.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "break_structures.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "break_structures.py",
+      "method": "GET",
+      "path": "/{break_structure_id}"
+    },
+    {
+      "file": "break_structures.py",
+      "method": "PUT",
+      "path": "/{break_structure_id}"
+    },
+    {
+      "file": "break_structures.py",
+      "method": "DELETE",
+      "path": "/{break_structure_id}"
+    },
+    {
+      "file": "campaigns.py",
+      "method": "GET",
+      "path": "/count"
+    },
+    {
+      "file": "campaigns.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "campaigns.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "campaigns.py",
+      "method": "GET",
+      "path": "/{campaign_id}"
+    },
+    {
+      "file": "campaigns.py",
+      "method": "PUT",
+      "path": "/{campaign_id}"
+    },
+    {
+      "file": "campaigns.py",
+      "method": "DELETE",
+      "path": "/{campaign_id}"
+    },
+    {
+      "file": "campaigns.py",
+      "method": "GET",
+      "path": "/{campaign_id}/stats"
+    },
+    {
+      "file": "campaigns.py",
+      "method": "GET",
+      "path": "/schedule/{target_date}/{target_hour}"
+    },
+    {
+      "file": "clocks.py",
+      "method": "GET",
+      "path": "/count"
+    },
+    {
+      "file": "clocks.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "clocks.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "clocks.py",
+      "method": "GET",
+      "path": "/{template_id}"
+    },
+    {
+      "file": "clocks.py",
+      "method": "PUT",
+      "path": "/{template_id}"
+    },
+    {
+      "file": "clocks.py",
+      "method": "DELETE",
+      "path": "/{template_id}"
+    },
+    {
+      "file": "clocks.py",
+      "method": "GET",
+      "path": "/{template_id}/preview"
+    },
+    {
+      "file": "clocks.py",
+      "method": "POST",
+      "path": "/{template_id}/export"
+    },
+    {
+      "file": "clusters.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "clusters.py",
+      "method": "GET",
+      "path": "/{cluster_id}"
+    },
+    {
+      "file": "clusters.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "clusters.py",
+      "method": "PUT",
+      "path": "/{cluster_id}"
+    },
+    {
+      "file": "clusters.py",
+      "method": "DELETE",
+      "path": "/{cluster_id}"
+    },
+    {
+      "file": "collaboration.py",
+      "method": "GET",
+      "path": "/users/{log_id}"
+    },
+    {
+      "file": "copy.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "copy.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "copy.py",
+      "method": "POST",
+      "path": "/upload"
+    },
+    {
+      "file": "copy.py",
+      "method": "GET",
+      "path": "/expiring"
+    },
+    {
+      "file": "copy.py",
+      "method": "GET",
+      "path": "/expiring"
+    },
+    {
+      "file": "copy.py",
+      "method": "GET",
+      "path": "/{copy_id}"
+    },
+    {
+      "file": "copy.py",
+      "method": "PUT",
+      "path": "/{copy_id}"
+    },
+    {
+      "file": "copy.py",
+      "method": "DELETE",
+      "path": "/{copy_id}"
+    },
+    {
+      "file": "copy.py",
+      "method": "GET",
+      "path": "/{filename}/file"
+    },
+    {
+      "file": "copy.py",
+      "method": "POST",
+      "path": "/{copy_id}/assign"
+    },
+    {
+      "file": "copy.py",
+      "method": "POST",
+      "path": "/{copy_id}/set-needs-production"
+    },
+    {
+      "file": "copy.py",
+      "method": "POST",
+      "path": "/{copy_id}/approve"
+    },
+    {
+      "file": "copy.py",
+      "method": "POST",
+      "path": "/{copy_id}/reject"
+    },
+    {
+      "file": "copy.py",
+      "method": "GET",
+      "path": "/{copy_id}/production-status"
+    },
+    {
+      "file": "copy_assignments.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "copy_assignments.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "copy_assignments.py",
+      "method": "PUT",
+      "path": "/{assignment_id}"
+    },
+    {
+      "file": "copy_assignments.py",
+      "method": "DELETE",
+      "path": "/{assignment_id}"
+    },
+    {
+      "file": "daypart_categories.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "daypart_categories.py",
+      "method": "GET",
+      "path": "/{category_id}"
+    },
+    {
+      "file": "daypart_categories.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "daypart_categories.py",
+      "method": "PUT",
+      "path": "/{category_id}"
+    },
+    {
+      "file": "daypart_categories.py",
+      "method": "DELETE",
+      "path": "/{category_id}"
+    },
+    {
+      "file": "dayparts.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "dayparts.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "dayparts.py",
+      "method": "GET",
+      "path": "/{daypart_id}"
+    },
+    {
+      "file": "dayparts.py",
+      "method": "PUT",
+      "path": "/{daypart_id}"
+    },
+    {
+      "file": "dayparts.py",
+      "method": "DELETE",
+      "path": "/{daypart_id}"
+    },
+    {
+      "file": "help.py",
+      "method": "GET",
+      "path": "/articles"
+    },
+    {
+      "file": "help.py",
+      "method": "GET",
+      "path": "/articles/{article_id}"
+    },
+    {
+      "file": "help.py",
+      "method": "GET",
+      "path": "/terminology"
+    },
+    {
+      "file": "help.py",
+      "method": "GET",
+      "path": "/terminology/{term_id}"
+    },
+    {
+      "file": "help.py",
+      "method": "GET",
+      "path": "/field-help/{field_path}"
+    },
+    {
+      "file": "help.py",
+      "method": "GET",
+      "path": "/search"
+    },
+    {
+      "file": "inventory.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "inventory.py",
+      "method": "GET",
+      "path": "/heatmap"
+    },
+    {
+      "file": "inventory.py",
+      "method": "GET",
+      "path": "/sellout"
+    },
+    {
+      "file": "invoices.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "invoices.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "invoices.py",
+      "method": "GET",
+      "path": "/{invoice_id}"
+    },
+    {
+      "file": "invoices.py",
+      "method": "PUT",
+      "path": "/{invoice_id}"
+    },
+    {
+      "file": "invoices.py",
+      "method": "POST",
+      "path": "/{invoice_id}/send"
+    },
+    {
+      "file": "invoices.py",
+      "method": "POST",
+      "path": "/{invoice_id}/mark-paid"
+    },
+    {
+      "file": "invoices.py",
+      "method": "GET",
+      "path": "/aging"
+    },
+    {
+      "file": "live_reads.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "live_reads.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "live_reads.py",
+      "method": "POST",
+      "path": "/{live_read_id}/confirm"
+    },
+    {
+      "file": "live_reads.py",
+      "method": "POST",
+      "path": "/{live_read_id}/missed"
+    },
+    {
+      "file": "log_revisions.py",
+      "method": "GET",
+      "path": "/logs/{log_id}/revisions"
+    },
+    {
+      "file": "log_revisions.py",
+      "method": "GET",
+      "path": "/logs/{log_id}/revisions/{revision_id}"
+    },
+    {
+      "file": "log_revisions.py",
+      "method": "POST",
+      "path": "/logs/{log_id}/revert"
+    },
+    {
+      "file": "logs.py",
+      "method": "GET",
+      "path": "/count"
+    },
+    {
+      "file": "logs.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "logs.py",
+      "method": "POST",
+      "path": "/generate"
+    },
+    {
+      "file": "logs.py",
+      "method": "POST",
+      "path": "/generate-batch"
+    },
+    {
+      "file": "logs.py",
+      "method": "POST",
+      "path": "/preview"
+    },
+    {
+      "file": "logs.py",
+      "method": "GET",
+      "path": "/{log_id}"
+    },
+    {
+      "file": "logs.py",
+      "method": "POST",
+      "path": "/{log_id}/publish"
+    },
+    {
+      "file": "logs.py",
+      "method": "POST",
+      "path": "/{log_id}/publish-hour"
+    },
+    {
+      "file": "logs.py",
+      "method": "DELETE",
+      "path": "/{log_id}"
+    },
+    {
+      "file": "logs.py",
+      "method": "GET",
+      "path": "/{log_id}/timeline"
+    },
+    {
+      "file": "logs.py",
+      "method": "POST",
+      "path": "/{log_id}/lock"
+    },
+    {
+      "file": "logs.py",
+      "method": "POST",
+      "path": "/{log_id}/unlock"
+    },
+    {
+      "file": "logs.py",
+      "method": "GET",
+      "path": "/{log_id}/conflicts"
+    },
+    {
+      "file": "logs.py",
+      "method": "GET",
+      "path": "/{log_id}/avails"
+    },
+    {
+      "file": "logs.py",
+      "method": "POST",
+      "path": "/{log_id}/spots"
+    },
+    {
+      "file": "logs.py",
+      "method": "PUT",
+      "path": "/{log_id}/spots/{spot_id}"
+    },
+    {
+      "file": "logs.py",
+      "method": "DELETE",
+      "path": "/{log_id}/spots/{spot_id}"
+    },
+    {
+      "file": "logs.py",
+      "method": "GET",
+      "path": "/{log_id}/voice-slots"
+    },
+    {
+      "file": "logs.py",
+      "method": "PUT",
+      "path": "/{log_id}/voice-slots/{slot_id}/link-voice-track"
+    },
+    {
+      "file": "logs.py",
+      "method": "GET",
+      "path": "/{log_id}/voice-slots/{slot_id}/context"
+    },
+    {
+      "file": "logs.py",
+      "method": "PUT",
+      "path": "/{log_id}/elements/{hour}"
+    },
+    {
+      "file": "logs.py",
+      "method": "POST",
+      "path": "/{log_id}/elements/{hour}"
+    },
+    {
+      "file": "logs.py",
+      "method": "DELETE",
+      "path": "/{log_id}/elements/{hour}/{element_index}"
+    },
+    {
+      "file": "logs.py",
+      "method": "POST",
+      "path": "/{log_id}/add-vot-placeholders"
+    },
+    {
+      "file": "logs.py",
+      "method": "POST",
+      "path": "/{log_id}/elements/{hour}/reorder"
+    },
+    {
+      "file": "makegoods.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "makegoods.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "makegoods.py",
+      "method": "POST",
+      "path": "/{makegood_id}/approve"
+    },
+    {
+      "file": "notifications.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "notifications.py",
+      "method": "GET",
+      "path": "/unread-count"
+    },
+    {
+      "file": "notifications.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "notifications.py",
+      "method": "POST",
+      "path": "/{notification_id}/read"
+    },
+    {
+      "file": "notifications.py",
+      "method": "POST",
+      "path": "/mark-all-read"
+    },
+    {
+      "file": "order_attachments.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "order_attachments.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "order_attachments.py",
+      "method": "GET",
+      "path": "/{attachment_id}"
+    },
+    {
+      "file": "order_attachments.py",
+      "method": "GET",
+      "path": "/{attachment_id}/download"
+    },
+    {
+      "file": "order_attachments.py",
+      "method": "PUT",
+      "path": "/{attachment_id}"
+    },
+    {
+      "file": "order_attachments.py",
+      "method": "DELETE",
+      "path": "/{attachment_id}"
+    },
+    {
+      "file": "order_lines.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "order_lines.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "order_lines.py",
+      "method": "GET",
+      "path": "/{line_id}"
+    },
+    {
+      "file": "order_lines.py",
+      "method": "PUT",
+      "path": "/{line_id}"
+    },
+    {
+      "file": "order_lines.py",
+      "method": "DELETE",
+      "path": "/{line_id}"
+    },
+    {
+      "file": "orders.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "orders.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "orders.py",
+      "method": "GET",
+      "path": "/{order_id}"
+    },
+    {
+      "file": "orders.py",
+      "method": "PUT",
+      "path": "/{order_id}"
+    },
+    {
+      "file": "orders.py",
+      "method": "DELETE",
+      "path": "/{order_id}"
+    },
+    {
+      "file": "orders.py",
+      "method": "POST",
+      "path": "/{order_id}/approve"
+    },
+    {
+      "file": "orders.py",
+      "method": "POST",
+      "path": "/{order_id}/duplicate"
+    },
+    {
+      "file": "orders.py",
+      "method": "GET",
+      "path": "/autocomplete/sales-teams"
+    },
+    {
+      "file": "orders.py",
+      "method": "GET",
+      "path": "/autocomplete/sales-offices"
+    },
+    {
+      "file": "orders.py",
+      "method": "GET",
+      "path": "/autocomplete/sales-regions"
+    },
+    {
+      "file": "orders.py",
+      "method": "GET",
+      "path": "/autocomplete/stations"
+    },
+    {
+      "file": "orders.py",
+      "method": "GET",
+      "path": "/autocomplete/clusters"
+    },
+    {
+      "file": "orders.py",
+      "method": "GET",
+      "path": "/templates"
+    },
+    {
+      "file": "orders.py",
+      "method": "POST",
+      "path": "/templates"
+    },
+    {
+      "file": "payments.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "payments.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "payments.py",
+      "method": "GET",
+      "path": "/{payment_id}"
+    },
+    {
+      "file": "payments.py",
+      "method": "PUT",
+      "path": "/{payment_id}"
+    },
+    {
+      "file": "payments.py",
+      "method": "DELETE",
+      "path": "/{payment_id}"
+    },
+    {
+      "file": "political_compliance.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "political_compliance.py",
+      "method": "GET",
+      "path": "/fcc-log"
+    },
+    {
+      "file": "production_archive.py",
+      "method": "GET",
+      "path": "/search/client"
+    },
+    {
+      "file": "production_archive.py",
+      "method": "GET",
+      "path": "/search/script"
+    },
+    {
+      "file": "production_archive.py",
+      "method": "GET",
+      "path": "/search/voice-talent"
+    },
+    {
+      "file": "production_archive.py",
+      "method": "GET",
+      "path": "/search/spot-length"
+    },
+    {
+      "file": "production_archive.py",
+      "method": "GET",
+      "path": "/history"
+    },
+    {
+      "file": "production_archive.py",
+      "method": "GET",
+      "path": "/renewal-candidates"
+    },
+    {
+      "file": "production_assignments.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "production_assignments.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "production_assignments.py",
+      "method": "PUT",
+      "path": "/{assignment_id}"
+    },
+    {
+      "file": "production_assignments.py",
+      "method": "GET",
+      "path": "/{assignment_id}"
+    },
+    {
+      "file": "production_orders.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "production_orders.py",
+      "method": "GET",
+      "path": "/{po_id}"
+    },
+    {
+      "file": "production_orders.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "production_orders.py",
+      "method": "PUT",
+      "path": "/{po_id}"
+    },
+    {
+      "file": "production_orders.py",
+      "method": "POST",
+      "path": "/{po_id}/assign"
+    },
+    {
+      "file": "production_orders.py",
+      "method": "POST",
+      "path": "/{po_id}/request-revision"
+    },
+    {
+      "file": "production_orders.py",
+      "method": "POST",
+      "path": "/{po_id}/approve"
+    },
+    {
+      "file": "production_orders.py",
+      "method": "POST",
+      "path": "/{po_id}/deliver"
+    },
+    {
+      "file": "production_orders.py",
+      "method": "POST",
+      "path": "/{po_id}/update-status"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/dashboard"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/tracks/aggregated"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/advertisers"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/agencies"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/users"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/sales-reps"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/orders"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/dayparts"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/daypart-categories"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/rotation-rules"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/traffic-logs"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/copy"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/campaigns"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/invoices"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/payments"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/makegoods"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/inventory"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/sales-goals"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/settings"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/admin/audit-logs"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/webhooks"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/notifications"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/backups"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/sales-teams"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/sales-offices"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/sales-regions"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/stations"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/clusters"
+    },
+    {
+      "file": "proxy.py",
+      "method": "GET",
+      "path": "/libretime/{path:path}"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/reconciliation"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/compliance"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/playback"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/traffic/daily-log"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/traffic/missing-copy"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/traffic/avails"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/traffic/conflicts"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/traffic/expirations"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/billing/contract-actualization"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/billing/revenue-summary"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/billing/ar-aging"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/billing/makegoods"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/sales/revenue-by-rep"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/sales/revenue-by-advertiser"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/sales/pending-orders"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/sales/expiring-contracts"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/audio/activity"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/audio/cut-rotation-performance"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/audio/live-read-performance"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/audio/fcc-compliance"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/production/turnaround"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/production/workload"
+    },
+    {
+      "file": "reports.py",
+      "method": "GET",
+      "path": "/production/missed-deadlines"
+    },
+    {
+      "file": "reports.py",
+      "method": "POST",
+      "path": "/export"
+    },
+    {
+      "file": "revenue.py",
+      "method": "GET",
+      "path": "/summary"
+    },
+    {
+      "file": "revenue.py",
+      "method": "GET",
+      "path": "/pacing"
+    },
+    {
+      "file": "revenue.py",
+      "method": "GET",
+      "path": "/forecast"
+    },
+    {
+      "file": "rotation_rules.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "rotation_rules.py",
+      "method": "GET",
+      "path": "/{rule_id}"
+    },
+    {
+      "file": "rotation_rules.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "rotation_rules.py",
+      "method": "PUT",
+      "path": "/{rule_id}"
+    },
+    {
+      "file": "rotation_rules.py",
+      "method": "DELETE",
+      "path": "/{rule_id}"
+    },
+    {
+      "file": "sales_goals.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "sales_goals.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "sales_goals.py",
+      "method": "GET",
+      "path": "/progress"
+    },
+    {
+      "file": "sales_offices.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "sales_offices.py",
+      "method": "GET",
+      "path": "/{office_id}"
+    },
+    {
+      "file": "sales_offices.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "sales_offices.py",
+      "method": "PUT",
+      "path": "/{office_id}"
+    },
+    {
+      "file": "sales_offices.py",
+      "method": "DELETE",
+      "path": "/{office_id}"
+    },
+    {
+      "file": "sales_offices.py",
+      "method": "POST",
+      "path": "/{office_id}/sales-reps/{sales_rep_id}"
+    },
+    {
+      "file": "sales_offices.py",
+      "method": "DELETE",
+      "path": "/{office_id}/sales-reps/{sales_rep_id}"
+    },
+    {
+      "file": "sales_regions.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "sales_regions.py",
+      "method": "GET",
+      "path": "/{region_id}"
+    },
+    {
+      "file": "sales_regions.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "sales_regions.py",
+      "method": "PUT",
+      "path": "/{region_id}"
+    },
+    {
+      "file": "sales_regions.py",
+      "method": "DELETE",
+      "path": "/{region_id}"
+    },
+    {
+      "file": "sales_regions.py",
+      "method": "POST",
+      "path": "/{region_id}/sales-reps/{sales_rep_id}"
+    },
+    {
+      "file": "sales_regions.py",
+      "method": "DELETE",
+      "path": "/{region_id}/sales-reps/{sales_rep_id}"
+    },
+    {
+      "file": "sales_reps.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "sales_reps.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "sales_reps.py",
+      "method": "GET",
+      "path": "/{sales_rep_id}"
+    },
+    {
+      "file": "sales_reps.py",
+      "method": "PUT",
+      "path": "/{sales_rep_id}"
+    },
+    {
+      "file": "sales_reps.py",
+      "method": "DELETE",
+      "path": "/{sales_rep_id}"
+    },
+    {
+      "file": "sales_reps.py",
+      "method": "GET",
+      "path": "/{sales_rep_id}/teams"
+    },
+    {
+      "file": "sales_reps.py",
+      "method": "GET",
+      "path": "/{sales_rep_id}/offices"
+    },
+    {
+      "file": "sales_reps.py",
+      "method": "GET",
+      "path": "/{sales_rep_id}/regions"
+    },
+    {
+      "file": "sales_teams.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "sales_teams.py",
+      "method": "GET",
+      "path": "/{team_id}"
+    },
+    {
+      "file": "sales_teams.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "sales_teams.py",
+      "method": "PUT",
+      "path": "/{team_id}"
+    },
+    {
+      "file": "sales_teams.py",
+      "method": "DELETE",
+      "path": "/{team_id}"
+    },
+    {
+      "file": "sales_teams.py",
+      "method": "POST",
+      "path": "/{team_id}/sales-reps/{sales_rep_id}"
+    },
+    {
+      "file": "sales_teams.py",
+      "method": "DELETE",
+      "path": "/{team_id}/sales-reps/{sales_rep_id}"
+    },
+    {
+      "file": "settings.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "settings.py",
+      "method": "GET",
+      "path": "/{category}"
+    },
+    {
+      "file": "settings.py",
+      "method": "PUT",
+      "path": "/{category}"
+    },
+    {
+      "file": "settings.py",
+      "method": "POST",
+      "path": "/test-smtp"
+    },
+    {
+      "file": "settings.py",
+      "method": "POST",
+      "path": "/test-s3"
+    },
+    {
+      "file": "settings.py",
+      "method": "POST",
+      "path": "/test-backblaze"
+    },
+    {
+      "file": "settings.py",
+      "method": "POST",
+      "path": "/branding/upload-logo"
+    },
+    {
+      "file": "settings.py",
+      "method": "GET",
+      "path": "/branding/public"
+    },
+    {
+      "file": "settings.py",
+      "method": "GET",
+      "path": "/branding/logo/{filename}"
+    },
+    {
+      "file": "setup.py",
+      "method": "GET",
+      "path": "/setup/status"
+    },
+    {
+      "file": "setup.py",
+      "method": "POST",
+      "path": "/setup/create-admin"
+    },
+    {
+      "file": "setup.py",
+      "method": "GET",
+      "path": "/setup/api-keys"
+    },
+    {
+      "file": "setup.py",
+      "method": "POST",
+      "path": "/setup/run-initial-setup"
+    },
+    {
+      "file": "spots.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "spots.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "spots.py",
+      "method": "POST",
+      "path": "/bulk"
+    },
+    {
+      "file": "spots.py",
+      "method": "PUT",
+      "path": "/{spot_id}"
+    },
+    {
+      "file": "spots.py",
+      "method": "DELETE",
+      "path": "/{spot_id}"
+    },
+    {
+      "file": "spots.py",
+      "method": "POST",
+      "path": "/{spot_id}/resolve-conflict"
+    },
+    {
+      "file": "stations.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "stations.py",
+      "method": "GET",
+      "path": "/{station_id}"
+    },
+    {
+      "file": "stations.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "stations.py",
+      "method": "PUT",
+      "path": "/{station_id}"
+    },
+    {
+      "file": "stations.py",
+      "method": "DELETE",
+      "path": "/{station_id}"
+    },
+    {
+      "file": "stations.py",
+      "method": "POST",
+      "path": "/{station_id}/clusters/{cluster_id}"
+    },
+    {
+      "file": "stations.py",
+      "method": "DELETE",
+      "path": "/{station_id}/clusters/{cluster_id}"
+    },
+    {
+      "file": "sync.py",
+      "method": "POST",
+      "path": "/tracks"
+    },
+    {
+      "file": "sync.py",
+      "method": "POST",
+      "path": "/playback-history"
+    },
+    {
+      "file": "sync.py",
+      "method": "GET",
+      "path": "/status"
+    },
+    {
+      "file": "sync.py",
+      "method": "POST",
+      "path": "/libretime/save-config"
+    },
+    {
+      "file": "sync.py",
+      "method": "GET",
+      "path": "/libretime/config"
+    },
+    {
+      "file": "tracks.py",
+      "method": "GET",
+      "path": "/count"
+    },
+    {
+      "file": "tracks.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "tracks.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "tracks.py",
+      "method": "GET",
+      "path": "/{track_id}"
+    },
+    {
+      "file": "tracks.py",
+      "method": "PUT",
+      "path": "/{track_id}"
+    },
+    {
+      "file": "tracks.py",
+      "method": "DELETE",
+      "path": "/{track_id}"
+    },
+    {
+      "file": "tracks.py",
+      "method": "GET",
+      "path": "/preview/by-path"
+    },
+    {
+      "file": "tracks.py",
+      "method": "GET",
+      "path": "/{track_id}/preview"
+    },
+    {
+      "file": "traffic_logs.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "traffic_logs.py",
+      "method": "GET",
+      "path": "/{log_id}"
+    },
+    {
+      "file": "traffic_logs.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "traffic_logs.py",
+      "method": "POST",
+      "path": "/bulk"
+    },
+    {
+      "file": "traffic_logs.py",
+      "method": "GET",
+      "path": "/stats/summary"
+    },
+    {
+      "file": "users.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "users.py",
+      "method": "GET",
+      "path": "/{user_id}"
+    },
+    {
+      "file": "users.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "users.py",
+      "method": "PUT",
+      "path": "/{user_id}"
+    },
+    {
+      "file": "users.py",
+      "method": "DELETE",
+      "path": "/{user_id}"
+    },
+    {
+      "file": "voice_talent.py",
+      "method": "GET",
+      "path": "/requests"
+    },
+    {
+      "file": "voice_talent.py",
+      "method": "POST",
+      "path": "/requests"
+    },
+    {
+      "file": "voice_talent.py",
+      "method": "POST",
+      "path": "/requests/{request_id}/upload-take"
+    },
+    {
+      "file": "voice_talent.py",
+      "method": "GET",
+      "path": "/requests/{request_id}/takes"
+    },
+    {
+      "file": "voice_talent.py",
+      "method": "POST",
+      "path": "/requests/{request_id}/approve-take"
+    },
+    {
+      "file": "voice_talent.py",
+      "method": "POST",
+      "path": "/requests/{request_id}/assign"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "POST",
+      "path": "/upload"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "GET",
+      "path": "/{voice_track_id}"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "DELETE",
+      "path": "/{voice_track_id}"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "GET",
+      "path": "/{break_id}/{filename}/file"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "GET",
+      "path": "/{filename}/file"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "POST",
+      "path": "/{voice_track_id}/upload-to-libretime"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "GET",
+      "path": "/breaks/{break_id}/preview"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "GET",
+      "path": "/tracks/{track_id}/waveform"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "GET",
+      "path": "/tracks/{track_id}/preview"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "POST",
+      "path": "/breaks/{break_id}/takes"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "GET",
+      "path": "/breaks/{break_id}/takes"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "PUT",
+      "path": "/takes/{take_id}/select"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "GET",
+      "path": "/recordings/production"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "DELETE",
+      "path": "/recordings/{recording_id}"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "POST",
+      "path": "/recordings/standalone"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "POST",
+      "path": "/trim"
+    },
+    {
+      "file": "voice_tracks.py",
+      "method": "POST",
+      "path": "/breaks/{break_id}/record"
+    },
+    {
+      "file": "webhooks.py",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "file": "webhooks.py",
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "file": "webhooks.py",
+      "method": "GET",
+      "path": "/{webhook_id}"
+    },
+    {
+      "file": "webhooks.py",
+      "method": "PUT",
+      "path": "/{webhook_id}"
+    },
+    {
+      "file": "webhooks.py",
+      "method": "DELETE",
+      "path": "/{webhook_id}"
+    },
+    {
+      "file": "webhooks.py",
+      "method": "POST",
+      "path": "/{webhook_id}/test"
+    },
+    {
+      "file": "main.py",
+      "method": "GET",
+      "path": "/health"
+    },
+    {
+      "file": "main.py",
+      "method": "GET",
+      "path": "/api/health"
+    },
+    {
+      "file": "main.py",
+      "method": "GET",
+      "path": "/api/settings/branding/public"
+    },
+    {
+      "file": "main.py",
+      "method": "GET",
+      "path": "/"
+    }
+  ],
+  "by_file": {
+    "activity.py": [
+      {
+        "file": "activity.py",
+        "method": "GET",
+        "path": "/recent"
+      }
+    ],
+    "advertisers.py": [
+      {
+        "file": "advertisers.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "advertisers.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "advertisers.py",
+        "method": "GET",
+        "path": "/{advertiser_id}"
+      },
+      {
+        "file": "advertisers.py",
+        "method": "PUT",
+        "path": "/{advertiser_id}"
+      },
+      {
+        "file": "advertisers.py",
+        "method": "DELETE",
+        "path": "/{advertiser_id}"
+      }
+    ],
+    "agencies.py": [
+      {
+        "file": "agencies.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "agencies.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "agencies.py",
+        "method": "GET",
+        "path": "/{agency_id}"
+      },
+      {
+        "file": "agencies.py",
+        "method": "PUT",
+        "path": "/{agency_id}"
+      },
+      {
+        "file": "agencies.py",
+        "method": "DELETE",
+        "path": "/{agency_id}"
+      }
+    ],
+    "audio_cuts.py": [
+      {
+        "file": "audio_cuts.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "audio_cuts.py",
+        "method": "GET",
+        "path": "/{cut_id}"
+      },
+      {
+        "file": "audio_cuts.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "audio_cuts.py",
+        "method": "POST",
+        "path": "/upload"
+      },
+      {
+        "file": "audio_cuts.py",
+        "method": "PUT",
+        "path": "/{cut_id}"
+      },
+      {
+        "file": "audio_cuts.py",
+        "method": "DELETE",
+        "path": "/{cut_id}"
+      },
+      {
+        "file": "audio_cuts.py",
+        "method": "POST",
+        "path": "/{cut_id}/versions"
+      },
+      {
+        "file": "audio_cuts.py",
+        "method": "GET",
+        "path": "/{cut_id}/versions"
+      },
+      {
+        "file": "audio_cuts.py",
+        "method": "POST",
+        "path": "/{cut_id}/rollback/{version_number}"
+      },
+      {
+        "file": "audio_cuts.py",
+        "method": "GET",
+        "path": "/{cut_id}/file"
+      }
+    ],
+    "audio_delivery.py": [
+      {
+        "file": "audio_delivery.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "audio_delivery.py",
+        "method": "POST",
+        "path": "/{delivery_id}/retry"
+      }
+    ],
+    "audio_qc.py": [
+      {
+        "file": "audio_qc.py",
+        "method": "POST",
+        "path": "/run/{cut_id}"
+      },
+      {
+        "file": "audio_qc.py",
+        "method": "GET",
+        "path": "/{cut_id}/results"
+      },
+      {
+        "file": "audio_qc.py",
+        "method": "POST",
+        "path": "/{qc_result_id}/override"
+      }
+    ],
+    "audit_logs.py": [
+      {
+        "file": "audit_logs.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "audit_logs.py",
+        "method": "GET",
+        "path": "/{audit_log_id}"
+      }
+    ],
+    "auth.py": [
+      {
+        "file": "auth.py",
+        "method": "GET",
+        "path": "/profile"
+      },
+      {
+        "file": "auth.py",
+        "method": "PUT",
+        "path": "/profile"
+      },
+      {
+        "file": "auth.py",
+        "method": "POST",
+        "path": "/login"
+      },
+      {
+        "file": "auth.py",
+        "method": "GET",
+        "path": "/me"
+      },
+      {
+        "file": "auth.py",
+        "method": "POST",
+        "path": "/refresh"
+      },
+      {
+        "file": "auth.py",
+        "method": "POST",
+        "path": "/logout"
+      }
+    ],
+    "backups.py": [
+      {
+        "file": "backups.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "backups.py",
+        "method": "GET",
+        "path": "/{backup_id}"
+      },
+      {
+        "file": "backups.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "backups.py",
+        "method": "POST",
+        "path": "/{backup_id}/restore"
+      },
+      {
+        "file": "backups.py",
+        "method": "DELETE",
+        "path": "/{backup_id}"
+      }
+    ],
+    "break_structures.py": [
+      {
+        "file": "break_structures.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "break_structures.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "break_structures.py",
+        "method": "GET",
+        "path": "/{break_structure_id}"
+      },
+      {
+        "file": "break_structures.py",
+        "method": "PUT",
+        "path": "/{break_structure_id}"
+      },
+      {
+        "file": "break_structures.py",
+        "method": "DELETE",
+        "path": "/{break_structure_id}"
+      }
+    ],
+    "campaigns.py": [
+      {
+        "file": "campaigns.py",
+        "method": "GET",
+        "path": "/count"
+      },
+      {
+        "file": "campaigns.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "campaigns.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "campaigns.py",
+        "method": "GET",
+        "path": "/{campaign_id}"
+      },
+      {
+        "file": "campaigns.py",
+        "method": "PUT",
+        "path": "/{campaign_id}"
+      },
+      {
+        "file": "campaigns.py",
+        "method": "DELETE",
+        "path": "/{campaign_id}"
+      },
+      {
+        "file": "campaigns.py",
+        "method": "GET",
+        "path": "/{campaign_id}/stats"
+      },
+      {
+        "file": "campaigns.py",
+        "method": "GET",
+        "path": "/schedule/{target_date}/{target_hour}"
+      }
+    ],
+    "clocks.py": [
+      {
+        "file": "clocks.py",
+        "method": "GET",
+        "path": "/count"
+      },
+      {
+        "file": "clocks.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "clocks.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "clocks.py",
+        "method": "GET",
+        "path": "/{template_id}"
+      },
+      {
+        "file": "clocks.py",
+        "method": "PUT",
+        "path": "/{template_id}"
+      },
+      {
+        "file": "clocks.py",
+        "method": "DELETE",
+        "path": "/{template_id}"
+      },
+      {
+        "file": "clocks.py",
+        "method": "GET",
+        "path": "/{template_id}/preview"
+      },
+      {
+        "file": "clocks.py",
+        "method": "POST",
+        "path": "/{template_id}/export"
+      }
+    ],
+    "clusters.py": [
+      {
+        "file": "clusters.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "clusters.py",
+        "method": "GET",
+        "path": "/{cluster_id}"
+      },
+      {
+        "file": "clusters.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "clusters.py",
+        "method": "PUT",
+        "path": "/{cluster_id}"
+      },
+      {
+        "file": "clusters.py",
+        "method": "DELETE",
+        "path": "/{cluster_id}"
+      }
+    ],
+    "collaboration.py": [
+      {
+        "file": "collaboration.py",
+        "method": "GET",
+        "path": "/users/{log_id}"
+      }
+    ],
+    "copy.py": [
+      {
+        "file": "copy.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "copy.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "copy.py",
+        "method": "POST",
+        "path": "/upload"
+      },
+      {
+        "file": "copy.py",
+        "method": "GET",
+        "path": "/expiring"
+      },
+      {
+        "file": "copy.py",
+        "method": "GET",
+        "path": "/expiring"
+      },
+      {
+        "file": "copy.py",
+        "method": "GET",
+        "path": "/{copy_id}"
+      },
+      {
+        "file": "copy.py",
+        "method": "PUT",
+        "path": "/{copy_id}"
+      },
+      {
+        "file": "copy.py",
+        "method": "DELETE",
+        "path": "/{copy_id}"
+      },
+      {
+        "file": "copy.py",
+        "method": "GET",
+        "path": "/{filename}/file"
+      },
+      {
+        "file": "copy.py",
+        "method": "POST",
+        "path": "/{copy_id}/assign"
+      },
+      {
+        "file": "copy.py",
+        "method": "POST",
+        "path": "/{copy_id}/set-needs-production"
+      },
+      {
+        "file": "copy.py",
+        "method": "POST",
+        "path": "/{copy_id}/approve"
+      },
+      {
+        "file": "copy.py",
+        "method": "POST",
+        "path": "/{copy_id}/reject"
+      },
+      {
+        "file": "copy.py",
+        "method": "GET",
+        "path": "/{copy_id}/production-status"
+      }
+    ],
+    "copy_assignments.py": [
+      {
+        "file": "copy_assignments.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "copy_assignments.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "copy_assignments.py",
+        "method": "PUT",
+        "path": "/{assignment_id}"
+      },
+      {
+        "file": "copy_assignments.py",
+        "method": "DELETE",
+        "path": "/{assignment_id}"
+      }
+    ],
+    "daypart_categories.py": [
+      {
+        "file": "daypart_categories.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "daypart_categories.py",
+        "method": "GET",
+        "path": "/{category_id}"
+      },
+      {
+        "file": "daypart_categories.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "daypart_categories.py",
+        "method": "PUT",
+        "path": "/{category_id}"
+      },
+      {
+        "file": "daypart_categories.py",
+        "method": "DELETE",
+        "path": "/{category_id}"
+      }
+    ],
+    "dayparts.py": [
+      {
+        "file": "dayparts.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "dayparts.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "dayparts.py",
+        "method": "GET",
+        "path": "/{daypart_id}"
+      },
+      {
+        "file": "dayparts.py",
+        "method": "PUT",
+        "path": "/{daypart_id}"
+      },
+      {
+        "file": "dayparts.py",
+        "method": "DELETE",
+        "path": "/{daypart_id}"
+      }
+    ],
+    "help.py": [
+      {
+        "file": "help.py",
+        "method": "GET",
+        "path": "/articles"
+      },
+      {
+        "file": "help.py",
+        "method": "GET",
+        "path": "/articles/{article_id}"
+      },
+      {
+        "file": "help.py",
+        "method": "GET",
+        "path": "/terminology"
+      },
+      {
+        "file": "help.py",
+        "method": "GET",
+        "path": "/terminology/{term_id}"
+      },
+      {
+        "file": "help.py",
+        "method": "GET",
+        "path": "/field-help/{field_path}"
+      },
+      {
+        "file": "help.py",
+        "method": "GET",
+        "path": "/search"
+      }
+    ],
+    "inventory.py": [
+      {
+        "file": "inventory.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "inventory.py",
+        "method": "GET",
+        "path": "/heatmap"
+      },
+      {
+        "file": "inventory.py",
+        "method": "GET",
+        "path": "/sellout"
+      }
+    ],
+    "invoices.py": [
+      {
+        "file": "invoices.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "invoices.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "invoices.py",
+        "method": "GET",
+        "path": "/{invoice_id}"
+      },
+      {
+        "file": "invoices.py",
+        "method": "PUT",
+        "path": "/{invoice_id}"
+      },
+      {
+        "file": "invoices.py",
+        "method": "POST",
+        "path": "/{invoice_id}/send"
+      },
+      {
+        "file": "invoices.py",
+        "method": "POST",
+        "path": "/{invoice_id}/mark-paid"
+      },
+      {
+        "file": "invoices.py",
+        "method": "GET",
+        "path": "/aging"
+      }
+    ],
+    "live_reads.py": [
+      {
+        "file": "live_reads.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "live_reads.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "live_reads.py",
+        "method": "POST",
+        "path": "/{live_read_id}/confirm"
+      },
+      {
+        "file": "live_reads.py",
+        "method": "POST",
+        "path": "/{live_read_id}/missed"
+      }
+    ],
+    "log_revisions.py": [
+      {
+        "file": "log_revisions.py",
+        "method": "GET",
+        "path": "/logs/{log_id}/revisions"
+      },
+      {
+        "file": "log_revisions.py",
+        "method": "GET",
+        "path": "/logs/{log_id}/revisions/{revision_id}"
+      },
+      {
+        "file": "log_revisions.py",
+        "method": "POST",
+        "path": "/logs/{log_id}/revert"
+      }
+    ],
+    "logs.py": [
+      {
+        "file": "logs.py",
+        "method": "GET",
+        "path": "/count"
+      },
+      {
+        "file": "logs.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "logs.py",
+        "method": "POST",
+        "path": "/generate"
+      },
+      {
+        "file": "logs.py",
+        "method": "POST",
+        "path": "/generate-batch"
+      },
+      {
+        "file": "logs.py",
+        "method": "POST",
+        "path": "/preview"
+      },
+      {
+        "file": "logs.py",
+        "method": "GET",
+        "path": "/{log_id}"
+      },
+      {
+        "file": "logs.py",
+        "method": "POST",
+        "path": "/{log_id}/publish"
+      },
+      {
+        "file": "logs.py",
+        "method": "POST",
+        "path": "/{log_id}/publish-hour"
+      },
+      {
+        "file": "logs.py",
+        "method": "DELETE",
+        "path": "/{log_id}"
+      },
+      {
+        "file": "logs.py",
+        "method": "GET",
+        "path": "/{log_id}/timeline"
+      },
+      {
+        "file": "logs.py",
+        "method": "POST",
+        "path": "/{log_id}/lock"
+      },
+      {
+        "file": "logs.py",
+        "method": "POST",
+        "path": "/{log_id}/unlock"
+      },
+      {
+        "file": "logs.py",
+        "method": "GET",
+        "path": "/{log_id}/conflicts"
+      },
+      {
+        "file": "logs.py",
+        "method": "GET",
+        "path": "/{log_id}/avails"
+      },
+      {
+        "file": "logs.py",
+        "method": "POST",
+        "path": "/{log_id}/spots"
+      },
+      {
+        "file": "logs.py",
+        "method": "PUT",
+        "path": "/{log_id}/spots/{spot_id}"
+      },
+      {
+        "file": "logs.py",
+        "method": "DELETE",
+        "path": "/{log_id}/spots/{spot_id}"
+      },
+      {
+        "file": "logs.py",
+        "method": "GET",
+        "path": "/{log_id}/voice-slots"
+      },
+      {
+        "file": "logs.py",
+        "method": "PUT",
+        "path": "/{log_id}/voice-slots/{slot_id}/link-voice-track"
+      },
+      {
+        "file": "logs.py",
+        "method": "GET",
+        "path": "/{log_id}/voice-slots/{slot_id}/context"
+      },
+      {
+        "file": "logs.py",
+        "method": "PUT",
+        "path": "/{log_id}/elements/{hour}"
+      },
+      {
+        "file": "logs.py",
+        "method": "POST",
+        "path": "/{log_id}/elements/{hour}"
+      },
+      {
+        "file": "logs.py",
+        "method": "DELETE",
+        "path": "/{log_id}/elements/{hour}/{element_index}"
+      },
+      {
+        "file": "logs.py",
+        "method": "POST",
+        "path": "/{log_id}/add-vot-placeholders"
+      },
+      {
+        "file": "logs.py",
+        "method": "POST",
+        "path": "/{log_id}/elements/{hour}/reorder"
+      }
+    ],
+    "makegoods.py": [
+      {
+        "file": "makegoods.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "makegoods.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "makegoods.py",
+        "method": "POST",
+        "path": "/{makegood_id}/approve"
+      }
+    ],
+    "notifications.py": [
+      {
+        "file": "notifications.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "notifications.py",
+        "method": "GET",
+        "path": "/unread-count"
+      },
+      {
+        "file": "notifications.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "notifications.py",
+        "method": "POST",
+        "path": "/{notification_id}/read"
+      },
+      {
+        "file": "notifications.py",
+        "method": "POST",
+        "path": "/mark-all-read"
+      }
+    ],
+    "order_attachments.py": [
+      {
+        "file": "order_attachments.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "order_attachments.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "order_attachments.py",
+        "method": "GET",
+        "path": "/{attachment_id}"
+      },
+      {
+        "file": "order_attachments.py",
+        "method": "GET",
+        "path": "/{attachment_id}/download"
+      },
+      {
+        "file": "order_attachments.py",
+        "method": "PUT",
+        "path": "/{attachment_id}"
+      },
+      {
+        "file": "order_attachments.py",
+        "method": "DELETE",
+        "path": "/{attachment_id}"
+      }
+    ],
+    "order_lines.py": [
+      {
+        "file": "order_lines.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "order_lines.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "order_lines.py",
+        "method": "GET",
+        "path": "/{line_id}"
+      },
+      {
+        "file": "order_lines.py",
+        "method": "PUT",
+        "path": "/{line_id}"
+      },
+      {
+        "file": "order_lines.py",
+        "method": "DELETE",
+        "path": "/{line_id}"
+      }
+    ],
+    "orders.py": [
+      {
+        "file": "orders.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "orders.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "orders.py",
+        "method": "GET",
+        "path": "/{order_id}"
+      },
+      {
+        "file": "orders.py",
+        "method": "PUT",
+        "path": "/{order_id}"
+      },
+      {
+        "file": "orders.py",
+        "method": "DELETE",
+        "path": "/{order_id}"
+      },
+      {
+        "file": "orders.py",
+        "method": "POST",
+        "path": "/{order_id}/approve"
+      },
+      {
+        "file": "orders.py",
+        "method": "POST",
+        "path": "/{order_id}/duplicate"
+      },
+      {
+        "file": "orders.py",
+        "method": "GET",
+        "path": "/autocomplete/sales-teams"
+      },
+      {
+        "file": "orders.py",
+        "method": "GET",
+        "path": "/autocomplete/sales-offices"
+      },
+      {
+        "file": "orders.py",
+        "method": "GET",
+        "path": "/autocomplete/sales-regions"
+      },
+      {
+        "file": "orders.py",
+        "method": "GET",
+        "path": "/autocomplete/stations"
+      },
+      {
+        "file": "orders.py",
+        "method": "GET",
+        "path": "/autocomplete/clusters"
+      },
+      {
+        "file": "orders.py",
+        "method": "GET",
+        "path": "/templates"
+      },
+      {
+        "file": "orders.py",
+        "method": "POST",
+        "path": "/templates"
+      }
+    ],
+    "payments.py": [
+      {
+        "file": "payments.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "payments.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "payments.py",
+        "method": "GET",
+        "path": "/{payment_id}"
+      },
+      {
+        "file": "payments.py",
+        "method": "PUT",
+        "path": "/{payment_id}"
+      },
+      {
+        "file": "payments.py",
+        "method": "DELETE",
+        "path": "/{payment_id}"
+      }
+    ],
+    "political_compliance.py": [
+      {
+        "file": "political_compliance.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "political_compliance.py",
+        "method": "GET",
+        "path": "/fcc-log"
+      }
+    ],
+    "production_archive.py": [
+      {
+        "file": "production_archive.py",
+        "method": "GET",
+        "path": "/search/client"
+      },
+      {
+        "file": "production_archive.py",
+        "method": "GET",
+        "path": "/search/script"
+      },
+      {
+        "file": "production_archive.py",
+        "method": "GET",
+        "path": "/search/voice-talent"
+      },
+      {
+        "file": "production_archive.py",
+        "method": "GET",
+        "path": "/search/spot-length"
+      },
+      {
+        "file": "production_archive.py",
+        "method": "GET",
+        "path": "/history"
+      },
+      {
+        "file": "production_archive.py",
+        "method": "GET",
+        "path": "/renewal-candidates"
+      }
+    ],
+    "production_assignments.py": [
+      {
+        "file": "production_assignments.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "production_assignments.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "production_assignments.py",
+        "method": "PUT",
+        "path": "/{assignment_id}"
+      },
+      {
+        "file": "production_assignments.py",
+        "method": "GET",
+        "path": "/{assignment_id}"
+      }
+    ],
+    "production_orders.py": [
+      {
+        "file": "production_orders.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "production_orders.py",
+        "method": "GET",
+        "path": "/{po_id}"
+      },
+      {
+        "file": "production_orders.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "production_orders.py",
+        "method": "PUT",
+        "path": "/{po_id}"
+      },
+      {
+        "file": "production_orders.py",
+        "method": "POST",
+        "path": "/{po_id}/assign"
+      },
+      {
+        "file": "production_orders.py",
+        "method": "POST",
+        "path": "/{po_id}/request-revision"
+      },
+      {
+        "file": "production_orders.py",
+        "method": "POST",
+        "path": "/{po_id}/approve"
+      },
+      {
+        "file": "production_orders.py",
+        "method": "POST",
+        "path": "/{po_id}/deliver"
+      },
+      {
+        "file": "production_orders.py",
+        "method": "POST",
+        "path": "/{po_id}/update-status"
+      }
+    ],
+    "proxy.py": [
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/dashboard"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/tracks/aggregated"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/advertisers"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/agencies"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/users"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/sales-reps"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/orders"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/dayparts"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/daypart-categories"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/rotation-rules"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/traffic-logs"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/copy"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/campaigns"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/invoices"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/payments"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/makegoods"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/inventory"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/sales-goals"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/settings"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/admin/audit-logs"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/webhooks"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/notifications"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/backups"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/sales-teams"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/sales-offices"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/sales-regions"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/stations"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/clusters"
+      },
+      {
+        "file": "proxy.py",
+        "method": "GET",
+        "path": "/libretime/{path:path}"
+      }
+    ],
+    "reports.py": [
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/reconciliation"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/compliance"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/playback"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/traffic/daily-log"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/traffic/missing-copy"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/traffic/avails"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/traffic/conflicts"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/traffic/expirations"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/billing/contract-actualization"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/billing/revenue-summary"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/billing/ar-aging"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/billing/makegoods"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/sales/revenue-by-rep"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/sales/revenue-by-advertiser"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/sales/pending-orders"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/sales/expiring-contracts"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/audio/activity"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/audio/cut-rotation-performance"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/audio/live-read-performance"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/audio/fcc-compliance"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/production/turnaround"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/production/workload"
+      },
+      {
+        "file": "reports.py",
+        "method": "GET",
+        "path": "/production/missed-deadlines"
+      },
+      {
+        "file": "reports.py",
+        "method": "POST",
+        "path": "/export"
+      }
+    ],
+    "revenue.py": [
+      {
+        "file": "revenue.py",
+        "method": "GET",
+        "path": "/summary"
+      },
+      {
+        "file": "revenue.py",
+        "method": "GET",
+        "path": "/pacing"
+      },
+      {
+        "file": "revenue.py",
+        "method": "GET",
+        "path": "/forecast"
+      }
+    ],
+    "rotation_rules.py": [
+      {
+        "file": "rotation_rules.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "rotation_rules.py",
+        "method": "GET",
+        "path": "/{rule_id}"
+      },
+      {
+        "file": "rotation_rules.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "rotation_rules.py",
+        "method": "PUT",
+        "path": "/{rule_id}"
+      },
+      {
+        "file": "rotation_rules.py",
+        "method": "DELETE",
+        "path": "/{rule_id}"
+      }
+    ],
+    "sales_goals.py": [
+      {
+        "file": "sales_goals.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "sales_goals.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "sales_goals.py",
+        "method": "GET",
+        "path": "/progress"
+      }
+    ],
+    "sales_offices.py": [
+      {
+        "file": "sales_offices.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "sales_offices.py",
+        "method": "GET",
+        "path": "/{office_id}"
+      },
+      {
+        "file": "sales_offices.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "sales_offices.py",
+        "method": "PUT",
+        "path": "/{office_id}"
+      },
+      {
+        "file": "sales_offices.py",
+        "method": "DELETE",
+        "path": "/{office_id}"
+      },
+      {
+        "file": "sales_offices.py",
+        "method": "POST",
+        "path": "/{office_id}/sales-reps/{sales_rep_id}"
+      },
+      {
+        "file": "sales_offices.py",
+        "method": "DELETE",
+        "path": "/{office_id}/sales-reps/{sales_rep_id}"
+      }
+    ],
+    "sales_regions.py": [
+      {
+        "file": "sales_regions.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "sales_regions.py",
+        "method": "GET",
+        "path": "/{region_id}"
+      },
+      {
+        "file": "sales_regions.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "sales_regions.py",
+        "method": "PUT",
+        "path": "/{region_id}"
+      },
+      {
+        "file": "sales_regions.py",
+        "method": "DELETE",
+        "path": "/{region_id}"
+      },
+      {
+        "file": "sales_regions.py",
+        "method": "POST",
+        "path": "/{region_id}/sales-reps/{sales_rep_id}"
+      },
+      {
+        "file": "sales_regions.py",
+        "method": "DELETE",
+        "path": "/{region_id}/sales-reps/{sales_rep_id}"
+      }
+    ],
+    "sales_reps.py": [
+      {
+        "file": "sales_reps.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "sales_reps.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "sales_reps.py",
+        "method": "GET",
+        "path": "/{sales_rep_id}"
+      },
+      {
+        "file": "sales_reps.py",
+        "method": "PUT",
+        "path": "/{sales_rep_id}"
+      },
+      {
+        "file": "sales_reps.py",
+        "method": "DELETE",
+        "path": "/{sales_rep_id}"
+      },
+      {
+        "file": "sales_reps.py",
+        "method": "GET",
+        "path": "/{sales_rep_id}/teams"
+      },
+      {
+        "file": "sales_reps.py",
+        "method": "GET",
+        "path": "/{sales_rep_id}/offices"
+      },
+      {
+        "file": "sales_reps.py",
+        "method": "GET",
+        "path": "/{sales_rep_id}/regions"
+      }
+    ],
+    "sales_teams.py": [
+      {
+        "file": "sales_teams.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "sales_teams.py",
+        "method": "GET",
+        "path": "/{team_id}"
+      },
+      {
+        "file": "sales_teams.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "sales_teams.py",
+        "method": "PUT",
+        "path": "/{team_id}"
+      },
+      {
+        "file": "sales_teams.py",
+        "method": "DELETE",
+        "path": "/{team_id}"
+      },
+      {
+        "file": "sales_teams.py",
+        "method": "POST",
+        "path": "/{team_id}/sales-reps/{sales_rep_id}"
+      },
+      {
+        "file": "sales_teams.py",
+        "method": "DELETE",
+        "path": "/{team_id}/sales-reps/{sales_rep_id}"
+      }
+    ],
+    "settings.py": [
+      {
+        "file": "settings.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "settings.py",
+        "method": "GET",
+        "path": "/{category}"
+      },
+      {
+        "file": "settings.py",
+        "method": "PUT",
+        "path": "/{category}"
+      },
+      {
+        "file": "settings.py",
+        "method": "POST",
+        "path": "/test-smtp"
+      },
+      {
+        "file": "settings.py",
+        "method": "POST",
+        "path": "/test-s3"
+      },
+      {
+        "file": "settings.py",
+        "method": "POST",
+        "path": "/test-backblaze"
+      },
+      {
+        "file": "settings.py",
+        "method": "POST",
+        "path": "/branding/upload-logo"
+      },
+      {
+        "file": "settings.py",
+        "method": "GET",
+        "path": "/branding/public"
+      },
+      {
+        "file": "settings.py",
+        "method": "GET",
+        "path": "/branding/logo/{filename}"
+      }
+    ],
+    "setup.py": [
+      {
+        "file": "setup.py",
+        "method": "GET",
+        "path": "/setup/status"
+      },
+      {
+        "file": "setup.py",
+        "method": "POST",
+        "path": "/setup/create-admin"
+      },
+      {
+        "file": "setup.py",
+        "method": "GET",
+        "path": "/setup/api-keys"
+      },
+      {
+        "file": "setup.py",
+        "method": "POST",
+        "path": "/setup/run-initial-setup"
+      }
+    ],
+    "spots.py": [
+      {
+        "file": "spots.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "spots.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "spots.py",
+        "method": "POST",
+        "path": "/bulk"
+      },
+      {
+        "file": "spots.py",
+        "method": "PUT",
+        "path": "/{spot_id}"
+      },
+      {
+        "file": "spots.py",
+        "method": "DELETE",
+        "path": "/{spot_id}"
+      },
+      {
+        "file": "spots.py",
+        "method": "POST",
+        "path": "/{spot_id}/resolve-conflict"
+      }
+    ],
+    "stations.py": [
+      {
+        "file": "stations.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "stations.py",
+        "method": "GET",
+        "path": "/{station_id}"
+      },
+      {
+        "file": "stations.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "stations.py",
+        "method": "PUT",
+        "path": "/{station_id}"
+      },
+      {
+        "file": "stations.py",
+        "method": "DELETE",
+        "path": "/{station_id}"
+      },
+      {
+        "file": "stations.py",
+        "method": "POST",
+        "path": "/{station_id}/clusters/{cluster_id}"
+      },
+      {
+        "file": "stations.py",
+        "method": "DELETE",
+        "path": "/{station_id}/clusters/{cluster_id}"
+      }
+    ],
+    "sync.py": [
+      {
+        "file": "sync.py",
+        "method": "POST",
+        "path": "/tracks"
+      },
+      {
+        "file": "sync.py",
+        "method": "POST",
+        "path": "/playback-history"
+      },
+      {
+        "file": "sync.py",
+        "method": "GET",
+        "path": "/status"
+      },
+      {
+        "file": "sync.py",
+        "method": "POST",
+        "path": "/libretime/save-config"
+      },
+      {
+        "file": "sync.py",
+        "method": "GET",
+        "path": "/libretime/config"
+      }
+    ],
+    "tracks.py": [
+      {
+        "file": "tracks.py",
+        "method": "GET",
+        "path": "/count"
+      },
+      {
+        "file": "tracks.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "tracks.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "tracks.py",
+        "method": "GET",
+        "path": "/{track_id}"
+      },
+      {
+        "file": "tracks.py",
+        "method": "PUT",
+        "path": "/{track_id}"
+      },
+      {
+        "file": "tracks.py",
+        "method": "DELETE",
+        "path": "/{track_id}"
+      },
+      {
+        "file": "tracks.py",
+        "method": "GET",
+        "path": "/preview/by-path"
+      },
+      {
+        "file": "tracks.py",
+        "method": "GET",
+        "path": "/{track_id}/preview"
+      }
+    ],
+    "traffic_logs.py": [
+      {
+        "file": "traffic_logs.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "traffic_logs.py",
+        "method": "GET",
+        "path": "/{log_id}"
+      },
+      {
+        "file": "traffic_logs.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "traffic_logs.py",
+        "method": "POST",
+        "path": "/bulk"
+      },
+      {
+        "file": "traffic_logs.py",
+        "method": "GET",
+        "path": "/stats/summary"
+      }
+    ],
+    "users.py": [
+      {
+        "file": "users.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "users.py",
+        "method": "GET",
+        "path": "/{user_id}"
+      },
+      {
+        "file": "users.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "users.py",
+        "method": "PUT",
+        "path": "/{user_id}"
+      },
+      {
+        "file": "users.py",
+        "method": "DELETE",
+        "path": "/{user_id}"
+      }
+    ],
+    "voice_talent.py": [
+      {
+        "file": "voice_talent.py",
+        "method": "GET",
+        "path": "/requests"
+      },
+      {
+        "file": "voice_talent.py",
+        "method": "POST",
+        "path": "/requests"
+      },
+      {
+        "file": "voice_talent.py",
+        "method": "POST",
+        "path": "/requests/{request_id}/upload-take"
+      },
+      {
+        "file": "voice_talent.py",
+        "method": "GET",
+        "path": "/requests/{request_id}/takes"
+      },
+      {
+        "file": "voice_talent.py",
+        "method": "POST",
+        "path": "/requests/{request_id}/approve-take"
+      },
+      {
+        "file": "voice_talent.py",
+        "method": "POST",
+        "path": "/requests/{request_id}/assign"
+      }
+    ],
+    "voice_tracks.py": [
+      {
+        "file": "voice_tracks.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "POST",
+        "path": "/upload"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "GET",
+        "path": "/{voice_track_id}"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "DELETE",
+        "path": "/{voice_track_id}"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "GET",
+        "path": "/{break_id}/{filename}/file"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "GET",
+        "path": "/{filename}/file"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "POST",
+        "path": "/{voice_track_id}/upload-to-libretime"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "GET",
+        "path": "/breaks/{break_id}/preview"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "GET",
+        "path": "/tracks/{track_id}/waveform"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "GET",
+        "path": "/tracks/{track_id}/preview"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "POST",
+        "path": "/breaks/{break_id}/takes"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "GET",
+        "path": "/breaks/{break_id}/takes"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "PUT",
+        "path": "/takes/{take_id}/select"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "GET",
+        "path": "/recordings/production"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "DELETE",
+        "path": "/recordings/{recording_id}"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "POST",
+        "path": "/recordings/standalone"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "POST",
+        "path": "/trim"
+      },
+      {
+        "file": "voice_tracks.py",
+        "method": "POST",
+        "path": "/breaks/{break_id}/record"
+      }
+    ],
+    "webhooks.py": [
+      {
+        "file": "webhooks.py",
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "file": "webhooks.py",
+        "method": "POST",
+        "path": "/"
+      },
+      {
+        "file": "webhooks.py",
+        "method": "GET",
+        "path": "/{webhook_id}"
+      },
+      {
+        "file": "webhooks.py",
+        "method": "PUT",
+        "path": "/{webhook_id}"
+      },
+      {
+        "file": "webhooks.py",
+        "method": "DELETE",
+        "path": "/{webhook_id}"
+      },
+      {
+        "file": "webhooks.py",
+        "method": "POST",
+        "path": "/{webhook_id}/test"
+      }
+    ],
+    "main.py": [
+      {
+        "file": "main.py",
+        "method": "GET",
+        "path": "/health"
+      },
+      {
+        "file": "main.py",
+        "method": "GET",
+        "path": "/api/health"
+      },
+      {
+        "file": "main.py",
+        "method": "GET",
+        "path": "/api/settings/branding/public"
+      },
+      {
+        "file": "main.py",
+        "method": "GET",
+        "path": "/"
+      }
+    ]
+  }
+}

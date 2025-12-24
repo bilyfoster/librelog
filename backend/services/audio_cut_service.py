@@ -3,6 +3,7 @@ AudioCutService for managing audio cuts with versioning, rotation, and expiratio
 """
 
 from typing import List, Optional, Dict, Any
+from uuid import UUID
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func
@@ -24,7 +25,7 @@ class AudioCutService:
     
     async def create_cut(
         self,
-        copy_id: int,
+        copy_id: UUID,
         cut_id: str,
         cut_name: Optional[str] = None,
         audio_file_path: Optional[str] = None,
@@ -35,7 +36,7 @@ class AudioCutService:
         expires_at: Optional[datetime] = None,
         notes: Optional[str] = None,
         tags: Optional[List[str]] = None,
-        created_by: Optional[int] = None
+        created_by: Optional[UUID] = None
     ) -> AudioCut:
         """Create a new audio cut"""
         # Verify copy exists
@@ -90,12 +91,12 @@ class AudioCutService:
         logger.info("Audio cut created", cut_id=cut.id, copy_id=copy_id, cut_identifier=cut_id)
         return cut
     
-    async def get_cut(self, cut_id: int) -> Optional[AudioCut]:
+    async def get_cut(self, cut_id: UUID) -> Optional[AudioCut]:
         """Get a cut by ID"""
         result = await self.db.execute(select(AudioCut).where(AudioCut.id == cut_id))
         return result.scalar_one_or_none()
     
-    async def get_cuts_by_copy(self, copy_id: int, active_only: bool = False) -> List[AudioCut]:
+    async def get_cuts_by_copy(self, copy_id: UUID, active_only: bool = False) -> List[AudioCut]:
         """Get all cuts for a copy"""
         query = select(AudioCut).where(AudioCut.copy_id == copy_id)
         if active_only:
@@ -107,7 +108,7 @@ class AudioCutService:
     
     async def update_cut(
         self,
-        cut_id: int,
+        cut_id: UUID,
         cut_name: Optional[str] = None,
         rotation_weight: Optional[float] = None,
         daypart_restrictions: Optional[List[int]] = None,
@@ -147,7 +148,7 @@ class AudioCutService:
         logger.info("Audio cut updated", cut_id=cut_id)
         return cut
     
-    async def delete_cut(self, cut_id: int) -> bool:
+    async def delete_cut(self, cut_id: UUID) -> bool:
         """Delete a cut"""
         cut = await self.get_cut(cut_id)
         if not cut:
@@ -178,11 +179,11 @@ class AudioCutService:
     
     async def create_version(
         self,
-        cut_id: int,
+        cut_id: UUID,
         audio_file_path: Optional[str] = None,
         audio_file_url: Optional[str] = None,
         version_notes: Optional[str] = None,
-        changed_by: Optional[int] = None
+        changed_by: Optional[UUID] = None
     ) -> AudioVersion:
         """Create a new version of a cut"""
         cut = await self.get_cut(cut_id)
@@ -216,7 +217,7 @@ class AudioCutService:
         logger.info("Audio cut version created", cut_id=cut_id, new_version=cut.version)
         return current_version
     
-    async def rollback_to_version(self, cut_id: int, version_number: int) -> AudioCut:
+    async def rollback_to_version(self, cut_id: UUID, version_number: int) -> AudioCut:
         """Rollback a cut to a previous version"""
         cut = await self.get_cut(cut_id)
         if not cut:
@@ -252,7 +253,7 @@ class AudioCutService:
         logger.info("Audio cut rolled back", cut_id=cut_id, to_version=version_number)
         return cut
     
-    async def get_versions(self, cut_id: int) -> List[AudioVersion]:
+    async def get_versions(self, cut_id: UUID) -> List[AudioVersion]:
         """Get all versions for a cut"""
         result = await self.db.execute(
             select(AudioVersion)
@@ -263,9 +264,9 @@ class AudioCutService:
     
     async def get_active_cuts_for_rotation(
         self,
-        copy_id: int,
-        daypart_id: Optional[int] = None,
-        program_id: Optional[int] = None
+        copy_id: UUID,
+        daypart_id: Optional[UUID] = None,
+        program_id: Optional[UUID] = None
     ) -> List[AudioCut]:
         """Get active cuts for rotation, filtered by daypart/program if specified"""
         query = select(AudioCut).where(
@@ -305,10 +306,10 @@ class AudioCutService:
     
     async def select_cut_for_rotation(
         self,
-        copy_id: int,
+        copy_id: UUID,
         rotation_mode: str,
-        daypart_id: Optional[int] = None,
-        program_id: Optional[int] = None,
+        daypart_id: Optional[UUID] = None,
+        program_id: Optional[UUID] = None,
         previous_cut_id: Optional[str] = None
     ) -> Optional[AudioCut]:
         """Select a cut for rotation based on rotation mode"""

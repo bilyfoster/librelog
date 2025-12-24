@@ -3,6 +3,7 @@ Audit Logs router
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from backend.database import get_db
@@ -18,11 +19,11 @@ router = APIRouter()
 
 
 class AuditLogResponse(BaseModel):
-    id: int
-    user_id: int
+    id: UUID
+    user_id: UUID
     action: str
     resource_type: str
-    resource_id: Optional[int]
+    resource_id: Optional[UUID]
     changes: Optional[dict] = None  # Mapped from details field
     ip_address: Optional[str]
     user_agent: Optional[str]
@@ -37,7 +38,7 @@ class AuditLogResponse(BaseModel):
 async def list_audit_logs(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    user_id: Optional[int] = Query(None),
+    user_id: Optional[UUID] = Query(None),
     action: Optional[str] = Query(None),
     resource_type: Optional[str] = Query(None),
     start_date: Optional[date] = Query(None),
@@ -90,7 +91,7 @@ async def list_audit_logs(
 
 @router.get("/{audit_log_id}", response_model=AuditLogResponse)
 async def get_audit_log(
-    audit_log_id: int,
+    audit_log_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

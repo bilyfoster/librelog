@@ -3,6 +3,7 @@ Notification service for email and in-app notifications
 """
 
 import smtplib
+from uuid import UUID
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import List, Dict, Any, Optional
@@ -23,7 +24,7 @@ class NotificationService:
     @staticmethod
     async def create_notification(
         db: AsyncSession,
-        user_id: int,
+        user_id: UUID,
         message: str,
         notification_type: NotificationType = NotificationType.IN_APP,
         subject: Optional[str] = None,
@@ -121,7 +122,7 @@ class NotificationService:
     @staticmethod
     async def _send_email(notification: Notification, db: AsyncSession = None) -> bool:
         """Send email notification"""
-        smtp_host = os.getenv("SMTP_HOST", "localhost")
+        smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")  # Default to Gmail SMTP instead of localhost
         smtp_port = int(os.getenv("SMTP_PORT", "587"))
         smtp_user = os.getenv("SMTP_USER")
         smtp_password = os.getenv("SMTP_PASSWORD")
@@ -178,8 +179,8 @@ class NotificationService:
     @staticmethod
     async def mark_read(
         db: AsyncSession,
-        notification_id: int,
-        user_id: int
+        notification_id: UUID,
+        user_id: UUID
     ) -> bool:
         """Mark notification as read"""
         result = await db.execute(
@@ -207,7 +208,7 @@ class NotificationService:
     @staticmethod
     async def get_user_notifications(
         db: AsyncSession,
-        user_id: int,
+        user_id: UUID,
         unread_only: bool = False,
         limit: int = 50
     ) -> List[Notification]:

@@ -36,6 +36,11 @@ import Notifications from './pages/admin/Notifications'
 import Settings from './pages/admin/Settings'
 import Backups from './pages/admin/Backups'
 import Users from './pages/admin/Users'
+import SalesTeams from './pages/admin/SalesTeams'
+import SalesOffices from './pages/admin/SalesOffices'
+import SalesRegions from './pages/admin/SalesRegions'
+import Stations from './pages/admin/Stations'
+import Clusters from './pages/admin/Clusters'
 import InventoryDashboard from './pages/analytics/InventoryDashboard'
 import RevenueDashboard from './pages/analytics/RevenueDashboard'
 import SalesGoals from './pages/analytics/SalesGoals'
@@ -83,6 +88,11 @@ function App() {
           <Route path="billing/payments" element={<Payments />} />
           <Route path="billing/makegoods" element={<Makegoods />} />
           <Route path="admin/users" element={<Users />} />
+          <Route path="admin/sales-teams" element={<SalesTeams />} />
+          <Route path="admin/sales-offices" element={<SalesOffices />} />
+          <Route path="admin/sales-regions" element={<SalesRegions />} />
+          <Route path="admin/stations" element={<Stations />} />
+          <Route path="admin/clusters" element={<Clusters />} />
           <Route path="admin/settings" element={<Settings />} />
           <Route path="admin/backups" element={<Backups />} />
           <Route path="admin/audit-logs" element={<AuditLogs />} />

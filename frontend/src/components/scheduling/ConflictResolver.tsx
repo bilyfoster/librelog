@@ -29,7 +29,7 @@ import {
 import { getLogConflicts, resolveSpotConflict, updateSpot } from '../../utils/api'
 
 interface Conflict {
-  spot_id: number
+  spot_id?: string
   conflict_type: string
   message: string
   conflicting_spots?: number[]

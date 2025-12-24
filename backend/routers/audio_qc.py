@@ -3,6 +3,7 @@ Audio QC router for quality control operations
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db
 from backend.routers.auth import get_current_user
@@ -22,8 +23,8 @@ class QCOverrideRequest(BaseModel):
 
 
 class QCResultResponse(BaseModel):
-    id: int
-    cut_id: Optional[int]
+    id: UUID
+    cut_id: Optional[UUID]
     qc_passed: bool
     qc_warnings: Optional[List[str]]
     qc_errors: Optional[List[str]]
@@ -40,7 +41,7 @@ class QCResultResponse(BaseModel):
 
 @router.post("/run/{cut_id}", response_model=QCResultResponse)
 async def run_qc(
-    cut_id: int,
+    cut_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -67,7 +68,7 @@ async def run_qc(
 
 @router.get("/{cut_id}/results", response_model=List[QCResultResponse])
 async def get_qc_results(
-    cut_id: int,
+    cut_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -79,7 +80,7 @@ async def get_qc_results(
 
 @router.post("/{qc_result_id}/override", response_model=QCResultResponse)
 async def override_qc(
-    qc_result_id: int,
+    qc_result_id: UUID,
     override_request: QCOverrideRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -101,7 +102,7 @@ async def override_qc(
 async def list_qc_results(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    cut_id: Optional[int] = Query(None),
+    cut_id: Optional[UUID] = Query(None),
     qc_passed: Optional[bool] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -128,7 +129,7 @@ async def list_qc_results(
 
 @router.post("/", response_model=QCResultResponse, status_code=status.HTTP_201_CREATED)
 async def create_qc_result(
-    cut_id: int,
+    cut_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -138,7 +139,7 @@ async def create_qc_result(
 
 @router.get("/{qc_result_id}", response_model=QCResultResponse)
 async def get_qc_result(
-    qc_result_id: int,
+    qc_result_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

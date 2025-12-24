@@ -3,6 +3,7 @@ ProductionApproval Service for multi-stage approval workflow
 """
 
 from typing import List, Optional, Dict, Any
+from uuid import UUID
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
@@ -34,7 +35,7 @@ class ProductionApprovalService:
     
     async def approve_copy(
         self,
-        copy_id: int,
+        copy_id: UUID,
         approved_by: int,
         auto_create_po: bool = True
     ) -> Copy:
@@ -88,7 +89,7 @@ class ProductionApprovalService:
     
     async def reject_copy(
         self,
-        copy_id: int,
+        copy_id: UUID,
         rejected_by: int,
         reason: Optional[str] = None
     ) -> Copy:
@@ -118,7 +119,7 @@ class ProductionApprovalService:
     
     async def approve_production_qc(
         self,
-        production_order_id: int,
+        production_order_id: UUID,
         approved_by: int
     ) -> ProductionOrder:
         """Approve production order at QC stage"""
@@ -149,7 +150,7 @@ class ProductionApprovalService:
     
     async def get_pending_approvals(
         self,
-        user_id: Optional[int] = None
+        user_id: Optional[UUID] = None
     ) -> List[Dict[str, Any]]:
         """Get list of items pending approval"""
         pending = []

@@ -3,6 +3,7 @@ Traffic Logs router for tracking traffic operations
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func
 from sqlalchemy.orm import selectinload
@@ -20,11 +21,11 @@ router = APIRouter(prefix="/traffic-logs", tags=["traffic-logs"])
 
 class TrafficLogCreate(BaseModel):
     log_type: str
-    log_id: Optional[int] = None
-    spot_id: Optional[int] = None
-    order_id: Optional[int] = None
-    campaign_id: Optional[int] = None
-    copy_id: Optional[int] = None
+    log_id: Optional[UUID] = None
+    spot_id: Optional[UUID] = None
+    order_id: Optional[UUID] = None
+    campaign_id: Optional[UUID] = None
+    copy_id: Optional[UUID] = None
     message: str
     metadata: Optional[Dict[str, Any]] = None
 
@@ -40,14 +41,14 @@ class TrafficLogBulkCreate(BaseModel):
 
 
 class TrafficLogResponse(BaseModel):
-    id: int
+    id: UUID
     log_type: str
-    log_id: Optional[int]
-    spot_id: Optional[int]
-    order_id: Optional[int]
-    campaign_id: Optional[int]
-    copy_id: Optional[int]
-    user_id: int
+    log_id: Optional[UUID]
+    spot_id: Optional[UUID]
+    order_id: Optional[UUID]
+    campaign_id: Optional[UUID]
+    copy_id: Optional[UUID]
+    user_id: UUID
     message: str
     metadata: Optional[Dict[str, Any]]
     ip_address: Optional[str]
@@ -64,11 +65,11 @@ async def list_traffic_logs(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     log_type: Optional[str] = None,
-    log_id: Optional[int] = None,
-    spot_id: Optional[int] = None,
-    order_id: Optional[int] = None,
-    campaign_id: Optional[int] = None,
-    user_id: Optional[int] = None,
+    log_id: Optional[UUID] = None,
+    spot_id: Optional[UUID] = None,
+    order_id: Optional[UUID] = None,
+    campaign_id: Optional[UUID] = None,
+    user_id: Optional[UUID] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     db: AsyncSession = Depends(get_db),
@@ -123,7 +124,7 @@ async def list_traffic_logs(
 
 @router.get("/{log_id}", response_model=TrafficLogResponse)
 async def get_traffic_log(
-    log_id: int,
+    log_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -233,7 +234,7 @@ async def create_traffic_logs_bulk(
 
 @router.put("/{log_id}", response_model=TrafficLogResponse)
 async def update_traffic_log(
-    log_id: int,
+    log_id: UUID,
     log_update: TrafficLogUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -277,7 +278,7 @@ async def update_traffic_log(
 
 @router.delete("/{log_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_traffic_log(
-    log_id: int,
+    log_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

@@ -2,7 +2,8 @@
 Copy Assignment model for linking copy to spots
 """
 
-from sqlalchemy import Column, Integer, DateTime, ForeignKey
+from sqlalchemy import Column, DateTime, ForeignKey, text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -12,12 +13,12 @@ class CopyAssignment(Base):
     """Copy Assignment model for linking copy/scripts to spots"""
     __tablename__ = "copy_assignments"
 
-    id = Column(Integer, primary_key=True, index=True)
-    spot_id = Column(Integer, ForeignKey("spots.id"), nullable=False, index=True)
-    copy_id = Column(Integer, ForeignKey("copy.id"), nullable=False, index=True)
-    order_id = Column(Integer, ForeignKey("orders.id"), nullable=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
+    spot_id = Column(UUID(as_uuid=True), ForeignKey("spots.id"), nullable=False, index=True)
+    copy_id = Column(UUID(as_uuid=True), ForeignKey("copy.id"), nullable=False, index=True)
+    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=True, index=True)
     assigned_at = Column(DateTime(timezone=True), server_default=func.now())
-    assigned_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    assigned_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships

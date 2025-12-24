@@ -3,6 +3,7 @@ Revenue Service for revenue management
 """
 
 from typing import Dict, Any, Optional
+from uuid import UUID
 from datetime import date, timedelta
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -86,7 +87,7 @@ class RevenueService:
     
     async def calculate_pacing_vs_goals(
         self,
-        sales_rep_id: Optional[int] = None
+        sales_rep_id: Optional[UUID] = None
     ) -> Dict[str, Any]:
         """Calculate revenue pacing vs sales goals"""
         query = select(SalesGoal)

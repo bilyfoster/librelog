@@ -4,6 +4,7 @@ Campaign management service with ad fallback logic
 
 from typing import List, Dict, Any, Optional
 from datetime import datetime, date
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
 from sqlalchemy.exc import IntegrityError
@@ -31,7 +32,7 @@ class CampaignService:
         target_hours: List[str],
         ad_type: str,
         file_path: Optional[str] = None,
-        user_id: int = None
+        user_id: Optional[UUID] = None
     ) -> Campaign:
         """Create a new campaign with validation"""
         # Validate date range
@@ -47,15 +48,14 @@ class CampaignService:
         if ad_type not in valid_types:
             raise ValueError(f"Ad type must be one of: {valid_types}")
         
+        # Note: Campaign model doesn't have name, target_hours, or ad_type fields
+        # These are stored in other ways or not yet implemented
         campaign = Campaign(
-            name=name,
-            advertiser=advertiser,
+            advertiser=advertiser,  # Use advertiser as the identifier (name is not in model)
             start_date=start_date,
             end_date=end_date,
             priority=priority,
-            target_hours=target_hours,
-            ad_type=ad_type,
-            file_path=file_path,
+            file_url=file_path,  # Use file_url instead of file_path
             active=True
         )
         
@@ -64,14 +64,14 @@ class CampaignService:
             await self.db.commit()
             await self.db.refresh(campaign)
             
-            logger.info("Campaign created", campaign_id=campaign.id, name=name)
+            logger.info("Campaign created", campaign_id=campaign.id, advertiser=advertiser)
             return campaign
             
         except IntegrityError:
             await self.db.rollback()
-            raise ValueError("Campaign name already exists")
+            raise ValueError("Campaign creation failed - possible duplicate")
     
-    async def get_campaign(self, campaign_id: int) -> Optional[Campaign]:
+    async def get_campaign(self, campaign_id: UUID) -> Optional[Campaign]:
         """Get a campaign by ID"""
         result = await self.db.execute(
             select(Campaign).where(Campaign.id == campaign_id)
@@ -106,7 +106,7 @@ class CampaignService:
     
     async def update_campaign(
         self,
-        campaign_id: int,
+        campaign_id: UUID,
         name: Optional[str] = None,
         advertiser: Optional[str] = None,
         start_date: Optional[date] = None,
@@ -152,7 +152,7 @@ class CampaignService:
             await self.db.rollback()
             raise ValueError("Campaign name already exists")
     
-    async def delete_campaign(self, campaign_id: int) -> bool:
+    async def delete_campaign(self, campaign_id: UUID) -> bool:
         """Delete a campaign"""
         campaign = await self.get_campaign(campaign_id)
         if not campaign:
@@ -258,7 +258,7 @@ class CampaignService:
         campaign_count = sum(1 for ad in existing_ads if ad["campaign_id"] == campaign.id)
         return campaign_count < 2
     
-    async def get_campaign_stats(self, campaign_id: int) -> Dict[str, Any]:
+    async def get_campaign_stats(self, campaign_id: UUID) -> Dict[str, Any]:
         """Get statistics for a campaign"""
         campaign = await self.get_campaign(campaign_id)
         if not campaign:

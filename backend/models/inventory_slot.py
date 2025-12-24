@@ -2,7 +2,8 @@
 Inventory Slot model for inventory management
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Date, Numeric, Boolean, CheckConstraint
+from sqlalchemy import Column, Integer, String, DateTime, Date, Numeric, Boolean, CheckConstraint, text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from backend.database import Base
 
@@ -11,7 +12,7 @@ class InventorySlot(Base):
     """Inventory Slot model for tracking available inventory"""
     __tablename__ = "inventory_slots"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
     date = Column(Date, nullable=False, index=True)
     hour = Column(Integer, CheckConstraint("hour >= 0 AND hour <= 23"), nullable=False, index=True)
     break_position = Column(String(10))  # A, B, C, etc.

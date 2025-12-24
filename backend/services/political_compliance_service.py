@@ -3,6 +3,7 @@ PoliticalComplianceService for tracking political ads and FCC compliance
 """
 
 from typing import List, Optional, Dict, Any
+from uuid import UUID
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
@@ -21,9 +22,9 @@ class PoliticalComplianceService:
     
     async def create_political_record(
         self,
-        copy_id: Optional[int] = None,
-        order_id: Optional[int] = None,
-        advertiser_id: Optional[int] = None,
+        copy_id: Optional[UUID] = None,
+        order_id: Optional[UUID] = None,
+        advertiser_id: Optional[UUID] = None,
         advertiser_category: str = "political",
         sponsor_name: str = "",
         sponsor_id: Optional[str] = None,
@@ -67,16 +68,16 @@ class PoliticalComplianceService:
         logger.info("Political record created", record_id=record.id, sponsor_name=sponsor_name)
         return record
     
-    async def get_political_record(self, record_id: int) -> Optional[PoliticalRecord]:
+    async def get_political_record(self, record_id: UUID) -> Optional[PoliticalRecord]:
         """Get a political record by ID"""
         result = await self.db.execute(select(PoliticalRecord).where(PoliticalRecord.id == record_id))
         return result.scalar_one_or_none()
     
     async def get_political_records(
         self,
-        copy_id: Optional[int] = None,
-        order_id: Optional[int] = None,
-        advertiser_id: Optional[int] = None,
+        copy_id: Optional[UUID] = None,
+        order_id: Optional[UUID] = None,
+        advertiser_id: Optional[UUID] = None,
         compliance_status: Optional[str] = None,
         archived: Optional[bool] = None
     ) -> List[PoliticalRecord]:
@@ -100,7 +101,7 @@ class PoliticalComplianceService:
     
     async def update_compliance_status(
         self,
-        record_id: int,
+        record_id: UUID,
         compliance_status: str,
         disclaimers_included: Optional[bool] = None
     ) -> PoliticalRecord:
@@ -121,7 +122,7 @@ class PoliticalComplianceService:
     
     async def archive_political_record(
         self,
-        record_id: int,
+        record_id: UUID,
         archive_location: Optional[str] = None
     ) -> PoliticalRecord:
         """Archive a political record (FCC requires 2-year retention)"""
@@ -154,7 +155,7 @@ class PoliticalComplianceService:
         )
         return list(result.scalars().all())
     
-    async def enforce_no_substitution(self, copy_id: int) -> bool:
+    async def enforce_no_substitution(self, copy_id: UUID) -> bool:
         """Check if substitution is allowed for a copy (political ads cannot be substituted)"""
         result = await self.db.execute(
             select(PoliticalRecord).where(

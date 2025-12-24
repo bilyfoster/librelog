@@ -37,12 +37,12 @@ import { getAuditLogsProxy, getAuditLog } from '../../utils/api'
 import api from '../../utils/api'
 
 interface AuditLog {
-  id: number
-  user_id: number
+  id?: string
+  user_id?: string
   username?: string
   action: string
   resource_type: string
-  resource_id?: number
+  resource_id?: string
   changes?: Record<string, any>
   ip_address?: string
   user_agent?: string

@@ -3,6 +3,7 @@ Production Archive router for searching production history
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db
 from backend.routers.auth import get_current_user
@@ -73,7 +74,7 @@ async def search_by_script(
 
 @router.get("/search/voice-talent")
 async def search_by_voice_talent(
-    talent_user_id: int = Query(...),
+    talent_user_id: UUID = Query(...),
     limit: int = Query(50, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -245,7 +246,7 @@ async def get_production_archive(
 
 @router.get("/{order_id}")
 async def get_production_archive_item(
-    order_id: int,
+    order_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

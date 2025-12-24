@@ -30,12 +30,13 @@ import {
   Delete as DeleteIcon,
   Schedule as ScheduleIcon,
 } from '@mui/icons-material'
-import { getOrdersProxy, createSpotsBulk, getSpots } from '../../utils/api'
+import { Autocomplete } from '@mui/material'
+import { getOrdersProxy, createSpotsBulk, getSpots, getStationsProxy } from '../../utils/api'
 
 interface Order {
-  id: number
+  id?: string
   order_number: string
-  advertiser_id: number
+  advertiser_id?: string
   start_date: string
   end_date: string
   total_spots: number
@@ -44,9 +45,18 @@ interface Order {
   status: string
 }
 
+interface Station {
+  id?: string
+  call_letters: string
+  frequency?: string
+  market?: string
+  active: boolean
+}
+
 interface Spot {
-  id: number
-  order_id: number
+  id?: string
+  order_id?: string
+  station_id?: string
   scheduled_date: string
   scheduled_time: string
   spot_length: number
@@ -57,19 +67,23 @@ interface Spot {
 
 const SpotScheduler: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([])
+  const [stations, setStations] = useState<Station[]>([])
   const [selectedOrder, setSelectedOrder] = useState<number | ''>('')
+  const [selectedStation, setSelectedStation] = useState<number | null>(null)
   const [startDate, setStartDate] = useState<Date | null>(new Date())
   const [endDate, setEndDate] = useState<Date | null>(new Date())
   const [spotLength, setSpotLength] = useState<number>(30)
   const [breakPosition, setBreakPosition] = useState<string>('')
   const [daypart, setDaypart] = useState<string>('')
   const [loading, setLoading] = useState(false)
+  const [loadingStations, setLoadingStations] = useState(true)
   const [scheduling, setScheduling] = useState(false)
   const [scheduledSpots, setScheduledSpots] = useState<Spot[]>([])
   const [previewOpen, setPreviewOpen] = useState(false)
 
   useEffect(() => {
     loadOrders()
+    loadStations()
   }, [])
 
   const loadOrders = async () => {
@@ -82,6 +96,22 @@ const SpotScheduler: React.FC = () => {
       console.error('Failed to load orders:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadStations = async () => {
+    try {
+      setLoadingStations(true)
+      const response = await getStationsProxy({ active_only: true })
+      const stationsList = Array.isArray(response) ? response : (response?.stations || [])
+      setStations(stationsList)
+      if (stationsList.length > 0) {
+        setSelectedStation(stationsList[0].id)
+      }
+    } catch (error) {
+      console.error('Failed to load stations:', error)
+    } finally {
+      setLoadingStations(false)
     }
   }
 
@@ -108,6 +138,7 @@ const SpotScheduler: React.FC = () => {
         for (let hour = 6; hour < 22; hour += 2) {
           spots.push({
             order_id: selectedOrder,
+            station_id: selectedStation,
             scheduled_date: dateStr,
             scheduled_time: `${hour.toString().padStart(2, '0')}:00:00`,
             spot_length: spotLength,
@@ -174,6 +205,33 @@ const SpotScheduler: React.FC = () => {
                   <br />
                   Rate Type: {selectedOrderData.rate_type}
                 </Alert>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Autocomplete
+                  options={stations}
+                  getOptionLabel={(option) => `${option.call_letters}${option.frequency ? ` - ${option.frequency}` : ''}`}
+                  value={stations.find(s => s.id === selectedStation) || null}
+                  onChange={(_, newValue) => setSelectedStation(newValue?.id || null)}
+                  loading={loadingStations}
+                  disabled={loadingStations || scheduling}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Station"
+                      required
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {loadingStations ? <CircularProgress size={20} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                />
               </Grid>
 
               <Grid item xs={12} md={6}>
@@ -256,7 +314,7 @@ const SpotScheduler: React.FC = () => {
                     variant="contained"
                     startIcon={<ScheduleIcon />}
                     onClick={handleSchedule}
-                    disabled={scheduling || !startDate || !endDate}
+                    disabled={scheduling || !startDate || !endDate || !selectedStation}
                     size="large"
                   >
                     {scheduling ? <CircularProgress size={24} /> : 'Schedule Spots'}
@@ -280,26 +338,31 @@ const SpotScheduler: React.FC = () => {
                   <TableRow>
                     <TableCell>Date</TableCell>
                     <TableCell>Time</TableCell>
+                    <TableCell>Station</TableCell>
                     <TableCell>Length</TableCell>
                     <TableCell>Break</TableCell>
                     <TableCell>Status</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {scheduledSpots.slice(0, 20).map(spot => (
+                  {scheduledSpots.slice(0, 20).map(spot => {
+                    const spotStation = stations.find(s => s.id === spot.station_id)
+                    return (
                     <TableRow key={spot.id}>
                       <TableCell>{new Date(spot.scheduled_date).toLocaleDateString()}</TableCell>
                       <TableCell>{spot.scheduled_time.substring(0, 5)}</TableCell>
+                      <TableCell>{spotStation ? `${spotStation.call_letters}${spotStation.frequency ? ` - ${spotStation.frequency}` : ''}` : 'N/A'}</TableCell>
                       <TableCell>{spot.spot_length}s</TableCell>
                       <TableCell>{spot.break_position || 'N/A'}</TableCell>
                       <TableCell>
                         <Chip label={spot.status} size="small" color="primary" />
                       </TableCell>
                     </TableRow>
-                  ))}
+                    )
+                  })}
                   {scheduledSpots.length > 20 && (
                     <TableRow>
-                      <TableCell colSpan={5} align="center">
+                      <TableCell colSpan={6} align="center">
                         <Typography variant="body2" color="textSecondary">
                           ... and {scheduledSpots.length - 20} more spots
                         </Typography>

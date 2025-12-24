@@ -36,6 +36,71 @@ const LibraryList: React.FC = () => {
   const [editingTrackId, setEditingTrackId] = useState<number | null>(null)
   const [selectedTrack, setSelectedTrack] = useState<any>(null)
 
+  // Prevent Material-UI Dialog from hiding navigation by removing aria-hidden from root and body
+  useEffect(() => {
+    const rootElement = document.getElementById('root')
+    const bodyElement = document.body
+    const sidebarElement = document.querySelector('[style*="display: flex"][style*="height: 100vh"]')?.firstElementChild as HTMLElement
+    
+    const removeAriaHidden = (element: HTMLElement | null) => {
+      if (element && element.getAttribute('aria-hidden') === 'true') {
+        element.removeAttribute('aria-hidden')
+      }
+    }
+    
+    // Remove immediately if present
+    removeAriaHidden(rootElement)
+    removeAriaHidden(bodyElement)
+    removeAriaHidden(sidebarElement)
+    
+    // Watch for changes on root, body, and sidebar
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'aria-hidden') {
+          const target = mutation.target as HTMLElement
+          // Remove aria-hidden from root, body, or sidebar
+          if (target.id === 'root' || target === bodyElement || target === sidebarElement) {
+            if (target.getAttribute('aria-hidden') === 'true') {
+              target.removeAttribute('aria-hidden')
+            }
+          }
+        }
+      })
+    })
+    
+    // Observe root, body, and sidebar
+    if (rootElement) {
+      observer.observe(rootElement, {
+        attributes: true,
+        attributeFilter: ['aria-hidden']
+      })
+    }
+    if (bodyElement) {
+      observer.observe(bodyElement, {
+        attributes: true,
+        attributeFilter: ['aria-hidden']
+      })
+    }
+    if (sidebarElement) {
+      observer.observe(sidebarElement, {
+        attributes: true,
+        attributeFilter: ['aria-hidden']
+      })
+    }
+    
+    // Also use a setInterval as a backup to continuously check
+    const interval = setInterval(() => {
+      removeAriaHidden(rootElement)
+      removeAriaHidden(bodyElement)
+      removeAriaHidden(sidebarElement)
+    }, 100)
+    
+    return () => {
+      observer.disconnect()
+      clearInterval(interval)
+    }
+  }, [])
+
   // Fetch tracks from server-side proxy endpoint (all processing happens on backend)
   const { data: tracksData, isLoading, error, refetch, isError } = useQuery({
     queryKey: ['tracks', selectedType, searchTerm],
@@ -52,6 +117,10 @@ const LibraryList: React.FC = () => {
         console.log('Loaded tracks:', tracks.length, 'Total count:', data.count)
         return { tracks, count: data.count }
       } catch (err: any) {
+        // Re-throw with more context for authentication errors
+        if (err?.response?.status === 401) {
+          throw new Error('Authentication required. Please log in to view tracks.')
+        }
         if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
           console.error('Tracks API timeout')
           return { tracks: [], count: 0 }
@@ -64,7 +133,12 @@ const LibraryList: React.FC = () => {
   })
 
   const tracks = Array.isArray(tracksData?.tracks) ? tracksData.tracks : []
-  const totalTracksInDB = tracksData?.count || 0
+  const totalTracksInDB = tracksData?.count ?? 0
+  // Check if we got undefined data (which indicates an error, likely 401)
+  const hasError = (isError || error) || (tracksData === undefined && !isLoading)
+  // Also check if we have an empty result but the API returned undefined count (indicates 401)
+  // This happens when the API returns 401 but doesn't throw an error
+  const likelyAuthError = !isLoading && tracksData && tracksData.count === undefined && tracks.length === 0 && !error
 
   // Handle sync
   const handleSync = async () => {
@@ -111,29 +185,50 @@ const LibraryList: React.FC = () => {
     )
   }
 
-  if ((isError || error) && !tracksData) {
+  if (hasError && !tracksData) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     const isTimeout = errorMessage.includes('timeout')
+    const isAuthError = errorMessage.includes('Authentication') || likelyAuthError
     
     return (
       <Box p={3}>
         <Typography variant="h4" gutterBottom>Audio Library</Typography>
-        {totalTracksInDB > 0 && (
+        {totalTracksInDB > 0 && !isAuthError && (
           <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
             There are {totalTracksInDB} tracks in the database, but loading them is timing out. 
             The database query may be slow. Try reducing the limit or check backend performance.
           </Alert>
         )}
-        <Alert severity={isTimeout ? 'warning' : 'error'} sx={{ mt: totalTracksInDB > 0 ? 0 : 2 }}>
+        <Alert 
+          severity={isTimeout ? 'warning' : 'error'} 
+          sx={{ mt: totalTracksInDB > 0 && !isAuthError ? 0 : 2 }}
+          action={
+            <Button 
+              color="inherit" 
+              size="small" 
+              onClick={() => {
+                if (isAuthError) {
+                  window.location.href = '/login'
+                } else {
+                  refetch()
+                }
+              }}
+            >
+              {isAuthError ? 'Log In' : 'Retry'}
+            </Button>
+          }
+        >
           {isTimeout 
             ? 'The tracks API is taking too long to respond. The backend may be slow or unavailable. You can try syncing tracks or check your connection.'
-            : `Failed to load tracks: ${errorMessage}`
+            : errorMessage
           }
         </Alert>
-        <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
-          <Button onClick={() => refetch()} variant="contained">Retry</Button>
-          <Button onClick={handleSync} variant="outlined">Sync from LibreTime</Button>
-        </Box>
+        {!isAuthError && (
+          <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+            <Button onClick={() => refetch()} variant="contained">Retry</Button>
+            <Button onClick={handleSync} variant="outlined">Sync from LibreTime</Button>
+          </Box>
+        )}
       </Box>
     )
   }
@@ -220,7 +315,28 @@ const LibraryList: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {tracks.length === 0 ? (
+                {likelyAuthError ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center">
+                      <Box sx={{ py: 3 }}>
+                        <Alert 
+                          severity="error"
+                          action={
+                            <Button 
+                              color="inherit" 
+                              size="small" 
+                              onClick={() => window.location.href = '/login'}
+                            >
+                              Log In
+                            </Button>
+                          }
+                        >
+                          Authentication required. Please log in to view tracks.
+                        </Alert>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ) : tracks.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center">
                       <Box sx={{ py: 3 }}>
@@ -314,7 +430,7 @@ const LibraryList: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Play Dialog */}
+      {/* Play Dialog - Only render when actually open */}
       {selectedTrack && playingTrackId === selectedTrack.id && (
         <TrackPlayDialog
           open={true}
@@ -323,7 +439,7 @@ const LibraryList: React.FC = () => {
         />
       )}
 
-      {/* Edit Dialog */}
+      {/* Edit Dialog - Only render when actually open */}
       {selectedTrack && editingTrackId === selectedTrack.id && (
         <TrackEditDialog
           open={true}

@@ -10,7 +10,6 @@ export default defineConfig({
     strictPort: false,
     allowedHosts: [
       'log-dev.gayphx.com',
-      'localhost',
       '.gayphx.com',
     ],
     proxy: {

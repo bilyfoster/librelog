@@ -25,7 +25,7 @@ import { Add, Edit, Delete } from '@mui/icons-material'
 import api from '../../utils/api'
 
 interface OrderTemplate {
-  id: number
+  id?: string
   name: string
   description?: string
   default_spot_lengths?: number[]

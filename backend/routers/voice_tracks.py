@@ -3,6 +3,7 @@ Voice tracks router
 """
 
 import os
+from uuid import UUID
 from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
@@ -56,14 +57,14 @@ VOICE_TRACKS_DIR = _ensure_directory(
 
 
 class VoiceTrackResponse(BaseModel):
-    id: int
+    id: UUID
     show_name: Optional[str]
     file_url: str
     scheduled_time: Optional[datetime]
     uploaded_by: int
     created_at: datetime
-    break_id: Optional[int] = None
-    playlist_id: Optional[int] = None
+    break_id: Optional[UUID] = None
+    playlist_id: Optional[UUID] = None
     break_type: Optional[str] = None
     slot_position: Optional[str] = None
     ramp_time: Optional[float] = None
@@ -116,7 +117,7 @@ async def upload_voice_track(
     file: UploadFile = File(...),
     show_name: Optional[str] = Form(None),
     scheduled_time: Optional[str] = Form(None),
-    slot_id: Optional[int] = Form(None),  # Link to voice track slot if provided
+    slot_id: Optional[UUID] = Form(None),  # Link to voice track slot if provided
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -236,7 +237,7 @@ async def upload_voice_track(
 
 @router.get("/{voice_track_id}", response_model=VoiceTrackResponse)
 async def get_voice_track(
-    voice_track_id: int,
+    voice_track_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -252,7 +253,7 @@ async def get_voice_track(
 
 @router.delete("/{voice_track_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_voice_track(
-    voice_track_id: int,
+    voice_track_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -290,7 +291,7 @@ async def delete_voice_track(
 
 @router.get("/{break_id}/{filename}/file")
 async def serve_voice_track_file_with_break(
-    break_id: int,
+    break_id: UUID,
     filename: str,
     db: AsyncSession = Depends(get_db)
 ):
@@ -400,7 +401,7 @@ async def serve_voice_track_file(
 
 @router.post("/{voice_track_id}/upload-to-libretime", response_model=VoiceTrackResponse)
 async def upload_voice_track_to_libretime(
-    voice_track_id: int,
+    voice_track_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -550,7 +551,7 @@ async def upload_voice_track_to_libretime(
 
 @router.get("/breaks/{break_id}/preview")
 async def get_break_preview(
-    break_id: int,
+    break_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -613,7 +614,7 @@ async def get_break_preview(
 
 @router.get("/tracks/{track_id}/waveform")
 async def get_track_waveform(
-    track_id: int,
+    track_id: UUID,
     width: int = Query(800, ge=100, le=2000),
     height: int = Query(200, ge=50, le=500),
     db: AsyncSession = Depends(get_db),
@@ -640,7 +641,7 @@ async def get_track_waveform(
 
 @router.get("/tracks/{track_id}/preview")
 async def stream_track_preview(
-    track_id: int,
+    track_id: UUID,
     start: float = Query(0.0, ge=0.0),
     duration: float = Query(30.0, ge=1.0, le=60.0),
     db: AsyncSession = Depends(get_db),
@@ -665,7 +666,7 @@ async def stream_track_preview(
 
 @router.post("/breaks/{break_id}/takes", response_model=VoiceTrackResponse, status_code=status.HTTP_201_CREATED)
 async def create_take(
-    break_id: int,
+    break_id: UUID,
     file: UploadFile = File(...),
     take_number: Optional[int] = Form(None),
     db: AsyncSession = Depends(get_db),
@@ -810,7 +811,7 @@ async def create_take(
 
 @router.get("/breaks/{break_id}/takes", response_model=list[VoiceTrackResponse])
 async def list_takes(
-    break_id: int,
+    break_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -826,7 +827,7 @@ async def list_takes(
 
 @router.put("/takes/{take_id}/select", response_model=VoiceTrackResponse)
 async def select_take(
-    take_id: int,
+    take_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -927,7 +928,7 @@ async def get_production_recordings(
 
 @router.delete("/recordings/{recording_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_recording(
-    recording_id: int,
+    recording_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -1161,7 +1162,7 @@ async def trim_audio(
 
 @router.post("/breaks/{break_id}/record", response_model=VoiceTrackResponse, status_code=status.HTTP_201_CREATED)
 async def record_voice_track(
-    break_id: int,
+    break_id: UUID,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)

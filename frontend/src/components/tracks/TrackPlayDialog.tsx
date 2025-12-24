@@ -23,12 +23,22 @@ const TrackPlayDialog: React.FC<TrackPlayDialogProps> = ({
   track,
   onClose,
 }) => {
-  if (!track) return null
+  if (!track || !open) return null
 
   const previewUrl = `/api/tracks/${track.id}/preview`
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="md" 
+      fullWidth
+      disableEnforceFocus
+      disableAutoFocus
+      disableScrollLock
+      hideBackdrop={false}
+      disablePortal={false}
+    >
       <DialogTitle>
         {track.title || 'Untitled'} {track.artist ? `- ${track.artist}` : ''}
       </DialogTitle>

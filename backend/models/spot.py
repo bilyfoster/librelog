@@ -2,7 +2,8 @@
 Spot model for traffic scheduling
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Date, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Date, ForeignKey, Enum as SQLEnum, text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -39,9 +40,10 @@ class Spot(Base):
     """Spot model for individual scheduled advertising spots"""
     __tablename__ = "spots"
 
-    id = Column(Integer, primary_key=True, index=True)
-    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False, index=True)
-    campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
+    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False, index=True)
+    campaign_id = Column(UUID(as_uuid=True), ForeignKey("campaigns.id"), nullable=True, index=True)
+    station_id = Column(UUID(as_uuid=True), ForeignKey("stations.id"), nullable=False, index=True)
     scheduled_date = Column(Date, nullable=False, index=True)
     scheduled_time = Column(String(8), nullable=False)  # HH:MM:SS format
     spot_length = Column(Integer, nullable=False)  # Length in seconds
@@ -49,7 +51,7 @@ class Spot(Base):
     daypart = Column(SQLEnum(Daypart), nullable=True, index=True)
     status = Column(SQLEnum(SpotStatus), nullable=False, default=SpotStatus.SCHEDULED, index=True)
     actual_air_time = Column(DateTime(timezone=True), nullable=True)
-    makegood_of_id = Column(Integer, ForeignKey("spots.id"), nullable=True)
+    makegood_of_id = Column(UUID(as_uuid=True), ForeignKey("spots.id"), nullable=True)
     conflict_resolved = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -57,6 +59,7 @@ class Spot(Base):
     # Relationships
     order = relationship("Order", back_populates="spots")
     campaign = relationship("Campaign", back_populates="spots")
+    station = relationship("Station", back_populates="spots")
     copy_assignment = relationship("CopyAssignment", back_populates="spot", uselist=False)
     makegood_of = relationship("Spot", remote_side=[id], backref="makegoods")
 

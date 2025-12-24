@@ -92,6 +92,8 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 10000, // 10 second timeout
+  maxRedirects: 5, // Follow redirects (default is 5)
+  validateStatus: (status) => status < 500, // Don't throw on 3xx redirects
 })
 
 // CRITICAL: Override axios's internal URL construction to prevent absolute URLs
@@ -253,21 +255,22 @@ if (typeof window !== 'undefined') {
     // CRITICAL: Final validation before calling adapter
   // Axios may construct URLs internally, so we need to ensure they're relative
   const finalBaseURL = configProxy.baseURL || '/api'
-  const finalUrl = configProxy.url || ''
+  let finalUrl = configProxy.url || ''
+  
+  // CRITICAL FIX: Ensure proper separator between baseURL and url
+  // If baseURL doesn't end with / and url doesn't start with /, we need to add /
+  // Axios should handle this, but we're seeing /apiauth/me instead of /api/auth/me
+  if (finalBaseURL && !finalBaseURL.endsWith('/') && finalUrl && !finalUrl.startsWith('/')) {
+    finalUrl = '/' + finalUrl
+    configProxy.url = finalUrl
+  }
+  
   const combinedUrl = finalBaseURL + finalUrl
   
-  // Debug logging
-  console.log('[API] Adapter: Final URL construction', {
-    baseURL: finalBaseURL,
-    url: finalUrl,
-    combined: combinedUrl,
-    configBaseURL: configProxy.baseURL,
-    configUrl: configProxy.url
-  })
+  // URL construction complete (debug logging disabled)
   
   // If combined URL contains Docker hostname, force correction
   if (combinedUrl.includes('api:8000') || combinedUrl.match(/^https?:\/\/[a-zA-Z0-9_-]+:\d+/)) {
-    console.error('[API] Adapter: FINAL CHECK - Docker hostname in combined URL:', combinedUrl)
     configProxy.baseURL = '/api'
     // Extract just the path
     if (combinedUrl.includes('api:8000')) {
@@ -309,10 +312,7 @@ if (typeof window !== 'undefined') {
   // Also check if axios might construct an absolute URL from current page
   // If the URL is relative but doesn't start with /api, ensure baseURL is /api
   if (configProxy.url && !configProxy.url.startsWith('http') && !configProxy.url.startsWith('/api')) {
-    console.warn('[API] Adapter: URL does not start with /api, ensuring baseURL is /api', {
-      url: configProxy.url,
-      baseURL: configProxy.baseURL
-    })
+    // Silently ensure baseURL is /api (this is expected behavior, already logged above)
     configProxy.baseURL = '/api'
     finalUrlCheck = '/api' + configProxy.url
   }
@@ -355,10 +355,52 @@ if (typeof window !== 'undefined') {
     }
   }
   
+  // CRITICAL: One final check - ensure baseURL and url are correct before calling adapter
+  // Axios might construct absolute URLs if url starts with / and baseURL is relative
+  if (configProxy.url && configProxy.url.startsWith('/') && !configProxy.url.startsWith('/api')) {
+    // If url starts with / but not /api, ensure baseURL is /api
+    if (configProxy.baseURL !== '/api') {
+      console.warn('[API] Adapter: URL starts with / but baseURL is not /api, correcting', {
+        url: configProxy.url,
+        baseURL: configProxy.baseURL
+      })
+      configProxy.baseURL = '/api'
+    }
+  }
+  
+  // Ensure baseURL is always /api for relative URLs
+  if (configProxy.url && !configProxy.url.startsWith('http') && configProxy.baseURL !== '/api') {
+    console.warn('[API] Adapter: Ensuring baseURL is /api for relative URL', {
+      url: configProxy.url,
+      baseURL: configProxy.baseURL
+    })
+    configProxy.baseURL = '/api'
+  }
+  
   // Call the default adapter with our corrected config
     if (defaultAdapter) {
       try {
-        return defaultAdapter(configProxy)
+        // Wrap the adapter call to catch any URL construction issues
+        const result = defaultAdapter(configProxy)
+        // If result is a promise, add error handling
+        if (result && typeof result.then === 'function') {
+          return result.catch((error: any) => {
+            // Log if the error is related to URL construction
+            if (error.config && error.config.url) {
+              const errorUrl = error.config.url
+              if ((errorUrl.startsWith('http://') || errorUrl.startsWith('https://')) && !errorUrl.includes('/api/') && !errorUrl.endsWith('/api')) {
+                console.error('[API] Adapter: Request failed with URL missing /api prefix!', {
+                  errorUrl,
+                  baseURL: error.config.baseURL,
+                  url: error.config.url,
+                  message: 'This suggests axios constructed an absolute URL incorrectly'
+                })
+              }
+            }
+            throw error
+          })
+        }
+        return result
       } catch (e) {
         console.error('[API] Adapter execution error:', e)
         throw e
@@ -381,15 +423,18 @@ if (typeof window !== 'undefined') {
       if (typeof url === 'string') {
         const originalUrl = url
         
-        // Log problematic URLs for debugging
-        if (url.includes('api:8000') || (url.startsWith('http://') && url.includes(':8000'))) {
-          console.error('[API] XHR.open INTERCEPTED PROBLEMATIC URL:', { method, url, stack: new Error().stack })
+        // CRITICAL: Always fix URLs before they're used
+        // This is the last chance to fix URLs before they're sent to the server
+        
+        // Log ALL XHR.open calls for debugging (filter by method/url pattern)
+        if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+          console.log('[API] XHR.open: Intercepted request:', { method, url, originalUrl, isAbsolute: url.startsWith('http') })
         }
         
-        // CRITICAL: Check for absolute URLs that are missing /api prefix
-        // Pattern: https://log.gayphx.com/voice/ should be https://log.gayphx.com/api/voice/
+        // CRITICAL: Check for absolute URLs that are missing /api prefix FIRST
+        // Pattern: https://log.gayphx.com/copy/ should be https://log.gayphx.com/api/copy/
+        // Pattern: https://log.gayphx.com/advertisers/ should be https://log.gayphx.com/api/advertisers/
         if (url.startsWith('http://') || url.startsWith('https://')) {
-          const originalUrl = url
           try {
             const urlObj = new URL(url)
             // If pathname doesn't start with /api, add it
@@ -397,7 +442,8 @@ if (typeof window !== 'undefined') {
               console.error('[API] XHR.open: CRITICAL - Absolute URL missing /api prefix!', {
                 original: url,
                 pathname: urlObj.pathname,
-                hostname: urlObj.hostname
+                hostname: urlObj.hostname,
+                method
               })
               urlObj.pathname = '/api' + urlObj.pathname
               url = urlObj.toString()
@@ -422,6 +468,20 @@ if (typeof window !== 'undefined') {
             url = url.replace(/(https?:\/\/[^/]+)(\/[^?]*)/, '$1/api$2')
             console.error('[API] XHR.open: Final corrected URL:', url)
           }
+        } else if (url.startsWith('/') && !url.startsWith('/api') && !url.startsWith('/api/')) {
+          // If it's a relative URL starting with / but not /api, add /api
+          url = '/api' + url
+          console.log('[API] XHR Override: Fixed relative URL missing /api:', originalUrl, '->', url)
+        }
+        
+        // Log all absolute URLs for debugging
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          console.log('[API] XHR.open: Intercepted absolute URL:', { method, url, originalUrl })
+        }
+        
+        // Log problematic URLs for debugging
+        if (url.includes('api:8000') || (url.startsWith('http://') && url.includes(':8000'))) {
+          console.error('[API] XHR.open INTERCEPTED PROBLEMATIC URL:', { method, url, stack: new Error().stack })
         }
         
         // CRITICAL: Check for Docker hostnames (with or without protocol)
@@ -535,9 +595,10 @@ if (typeof window !== 'undefined') {
     window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
       let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
       
+      // FontAwesome/WebAwesome error suppression removed - no longer using WebAwesome
+      
       // Check for Docker hostnames
       if (typeof url === 'string' && (url.includes('api:8000') || (url.startsWith('http://') && url.includes(':8000')))) {
-        console.error('[API] fetch() INTERCEPTED PROBLEMATIC URL:', url)
         
         // Extract path from URL
         if (url.includes('api:8000')) {
@@ -557,7 +618,7 @@ if (typeof window !== 'undefined') {
           url = '/' + url
         }
         
-        console.warn('[API] fetch() corrected URL:', url)
+        // URL corrected (debug logging disabled)
         
         // Update input
         if (typeof input === 'string') {
@@ -639,6 +700,21 @@ api.interceptors.request.use(
       // FORCE baseURL to '/api' in browser - never allow absolute URLs
       config.baseURL = '/api'
       
+      // CRITICAL: If url starts with / but not /api, we need to ensure proper combination
+      // Axios combines baseURL + url, but we need to ensure there's a / separator
+      // If baseURL is /api (no trailing /) and url is /auth/me, axios should create /api/auth/me
+      // But if we remove the leading /, we get auth/me, and axios might not add the separator correctly
+      // Solution: Keep the leading / but ensure baseURL is /api (which it already is)
+      if (config.url && config.url.startsWith('/') && !config.url.startsWith('/api')) {
+        // Keep the leading / - axios will combine /api + /auth/me = /api/auth/me correctly
+        // (axios removes duplicate / when combining)
+        config.baseURL = '/api'
+      } else if (config.url && !config.url.startsWith('/') && !config.url.startsWith('http')) {
+        // If url doesn't start with /, ensure it does for proper combination
+        config.url = '/' + config.url
+        config.baseURL = '/api'
+      }
+      
       // Validate and fix URLs to prevent Docker hostnames and absolute URLs
       const { url: normalizedUrl, baseURL: normalizedBaseURL } = validateAndFixUrl(config.url, config.baseURL)
       
@@ -646,14 +722,52 @@ api.interceptors.request.use(
       config.baseURL = '/api' // Force again after validation
       config.url = normalizedUrl
       
-      // Additional safety check: if axios somehow constructed an absolute URL, fix it
-      // This can happen if axios combines baseURL and url into an absolute URL
+      // CRITICAL: Final check - ensure proper URL format for axios combination
+      // Axios combines baseURL + url. If baseURL is /api and url is /auth/me, 
+      // axios will create /api/auth/me (removing duplicate /)
+      // We should keep the leading / on the url to ensure proper combination
+      // Only remove it if it would cause issues (which it shouldn't with axios)
+      // Actually, axios handles /api + /auth/me correctly, so we can keep the /
+      // But we need to ensure baseURL doesn't end with / to avoid double /
+      if (config.baseURL && config.baseURL.endsWith('/') && config.url && config.url.startsWith('/')) {
+        // Remove trailing / from baseURL to let axios handle the combination
+        config.baseURL = config.baseURL.slice(0, -1)
+        // Removed trailing / from baseURL to prevent double /
+      }
+      
+      // CRITICAL: If url is absolute and missing /api, fix it immediately
       if (config.url && (config.url.startsWith('http://') || config.url.startsWith('https://'))) {
-        console.warn('[API] Interceptor caught absolute URL, normalizing:', {
-          original: config.url,
-          normalized: normalizeUrl(config.url)
-        })
-        config.url = normalizeUrl(config.url)
+        try {
+          const urlObj = new URL(config.url)
+          if (!urlObj.pathname.startsWith('/api') && !urlObj.pathname.startsWith('/api/')) {
+            console.error('[API] Interceptor: CRITICAL - Absolute URL missing /api prefix!', {
+              original: config.url,
+              pathname: urlObj.pathname
+            })
+            urlObj.pathname = '/api' + urlObj.pathname
+            // Convert back to relative URL
+            config.url = urlObj.pathname + urlObj.search
+            config.baseURL = '/api'
+            console.error('[API] Interceptor: Fixed to relative URL:', config.url)
+          } else {
+            // If it has /api, convert to relative
+            config.url = urlObj.pathname + urlObj.search
+            config.baseURL = '/api'
+          }
+        } catch (e) {
+          // If URL parsing fails, try to fix manually
+          if (!config.url.includes('/api/') && !config.url.endsWith('/api')) {
+            console.error('[API] Interceptor: CRITICAL - URL parsing failed, manually fixing:', config.url)
+            const fixedUrl = config.url.replace(/(https?:\/\/[^/]+)(\/[^?]*)/, '$1/api$2')
+            // Extract path from fixed URL
+            const pathMatch = fixedUrl.match(/https?:\/\/[^/]+(\/.*)$/)
+            if (pathMatch) {
+              config.url = pathMatch[1]
+              config.baseURL = '/api'
+              console.error('[API] Interceptor: Manually fixed to relative URL:', config.url)
+            }
+          }
+        }
       }
       
       // CRITICAL: Check if baseURL contains any absolute URL patterns
@@ -675,6 +789,27 @@ api.interceptors.request.use(
         })
         config.baseURL = '/api'
         config.url = normalizeUrl(config.url)
+      }
+      
+      // CRITICAL: Final check - ensure URL is relative and baseURL is /api
+      // This prevents axios from constructing absolute URLs
+      if (config.url && (config.url.startsWith('http://') || config.url.startsWith('https://'))) {
+        console.error('[API] CRITICAL: Interceptor caught absolute URL in config.url!', {
+          url: config.url,
+          baseURL: config.baseURL,
+          action: 'Normalizing to relative'
+        })
+        config.url = normalizeUrl(config.url)
+      }
+      
+      // Ensure baseURL is always /api for relative URLs
+      if (config.url && !config.url.startsWith('http') && config.baseURL !== '/api') {
+        console.warn('[API] Interceptor: Ensuring baseURL is /api', {
+          url: config.url,
+          baseURL: config.baseURL,
+          action: 'Setting baseURL to /api'
+        })
+        config.baseURL = '/api'
       }
       
       // Final safety check: ensure baseURL is exactly '/api'
@@ -717,13 +852,7 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`
     }
     
-    // Log requests for debugging (final URL after normalization)
-    const finalUrl = (config.baseURL || '') + (config.url || '')
-    console.log('[API] Request:', config.method?.toUpperCase(), finalUrl, {
-      hasToken: !!token,
-      timeout: config.timeout,
-      params: config.params
-    })
+    // Request prepared (debug logging disabled)
     
     return config
   },
@@ -741,7 +870,7 @@ api.interceptors.response.use(
     }
     return response
   },
-  (error) => {
+  async (error) => {
     // Enhanced error logging with Docker hostname detection
     const url = error.config?.baseURL + (error.config?.url || '')
     const errorUrl = error.request?.responseURL || error.config?.url || url
@@ -862,6 +991,32 @@ api.interceptors.response.use(
     }
     
     if (error.response?.status === 401) {
+      // Try to refresh the token before redirecting to login
+      const token = localStorage.getItem('token')
+      if (token) {
+        try {
+          // Attempt to refresh the token
+          const refreshResponse = await api.post('/auth/refresh', {}, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          })
+          
+          if (refreshResponse.data?.access_token) {
+            // Token refreshed successfully - update stored token
+            localStorage.setItem('token', refreshResponse.data.access_token)
+            // Retry the original request with the new token
+            const originalRequest = error.config
+            originalRequest.headers.Authorization = `Bearer ${refreshResponse.data.access_token}`
+            return api(originalRequest)
+          }
+        } catch (refreshError: any) {
+          // Refresh failed - token is invalid or expired, proceed with logout
+          console.warn('[API] Token refresh failed, redirecting to login')
+        }
+      }
+      
+      // If refresh failed or no token, remove token and redirect to login
       localStorage.removeItem('token')
       window.location.href = '/login'
     }
@@ -926,12 +1081,12 @@ export const getTracks = async (params?: {
   return { tracks: response.data }
 }
 
-export const getTrack = async (track_id: number) => {
+export const getTrack = async (track_id?: string) => {
   const response = await api.get(`/tracks/${track_id}`)
   return response.data
 }
 
-export const updateTrack = async (track_id: number, updates: {
+export const updateTrack = async (track_id?: string, updates: {
   title?: string
   artist?: string
   genre?: string
@@ -1002,7 +1157,7 @@ export const getDashboardStats = async () => {
 export const getSpots = async (params?: {
   skip?: number
   limit?: number
-  order_id?: number
+  order_id?: string
   scheduled_date?: string
   status_filter?: string
 }) => {
@@ -1011,8 +1166,8 @@ export const getSpots = async (params?: {
 }
 
 export const createSpot = async (spot: {
-  order_id: number
-  campaign_id?: number
+  order_id?: string
+  campaign_id?: string
   scheduled_date: string
   scheduled_time: string
   spot_length: number
@@ -1024,14 +1179,14 @@ export const createSpot = async (spot: {
   return response.data
 }
 
-export const createSpotsBulk = async (order_id: number, spots: any[]) => {
+export const createSpotsBulk = async (order_id?: string, spots: any[]) => {
   const response = await api.post('/spots/bulk', spots, {
     params: { order_id }
   })
   return response.data
 }
 
-export const updateSpot = async (spot_id: number, updates: {
+export const updateSpot = async (spot_id?: string, updates: {
   scheduled_date?: string
   scheduled_time?: string
   spot_length?: number
@@ -1044,11 +1199,11 @@ export const updateSpot = async (spot_id: number, updates: {
   return response.data
 }
 
-export const deleteSpot = async (spot_id: number) => {
+export const deleteSpot = async (spot_id?: string) => {
   await api.delete(`/spots/${spot_id}`)
 }
 
-export const resolveSpotConflict = async (spot_id: number) => {
+export const resolveSpotConflict = async (spot_id?: string) => {
   const response = await api.post(`/spots/${spot_id}/resolve-conflict`)
   return response.data
 }
@@ -1059,66 +1214,68 @@ export const getLogs = async (params?: {
   limit?: number
   published_only?: boolean
   date_filter?: string
+  station_id?: string
 }) => {
   const response = await api.get('/logs', { params })
   return response.data
 }
 
-export const getLog = async (log_id: number) => {
+export const getLog = async (log_id?: string) => {
   const response = await api.get(`/logs/${log_id}`)
   return response.data
 }
 
-export const getLogTimeline = async (log_id: number, hour?: string) => {
+export const getLogTimeline = async (log_id?: string, hour?: string) => {
   const response = await api.get(`/logs/${log_id}/timeline`, {
     params: { hour }
   })
   return response.data
 }
 
-export const lockLog = async (log_id: number) => {
+export const lockLog = async (log_id?: string) => {
   const response = await api.post(`/logs/${log_id}/lock`)
   return response.data
 }
 
-export const unlockLog = async (log_id: number) => {
+export const unlockLog = async (log_id?: string) => {
   const response = await api.post(`/logs/${log_id}/unlock`)
   return response.data
 }
 
-export const getLogConflicts = async (log_id: number) => {
+export const getLogConflicts = async (log_id?: string) => {
   const response = await api.get(`/logs/${log_id}/conflicts`)
   return response.data
 }
 
-export const getLogAvails = async (log_id: number) => {
+export const getLogAvails = async (log_id?: string) => {
   const response = await api.get(`/logs/${log_id}/avails`)
   return response.data
 }
 
-export const addSpotToLog = async (log_id: number, spot: any) => {
+export const addSpotToLog = async (log_id?: string, spot: any) => {
   const response = await api.post(`/logs/${log_id}/spots`, spot)
   return response.data
 }
 
-export const updateSpotInLog = async (log_id: number, spot_id: number, updates: any) => {
+export const updateSpotInLog = async (log_id?: string, spot_id?: string, updates: any) => {
   const response = await api.put(`/logs/${log_id}/spots/${spot_id}`, updates)
   return response.data
 }
 
-export const removeSpotFromLog = async (log_id: number, spot_id: number) => {
+export const removeSpotFromLog = async (log_id?: string, spot_id?: string) => {
   await api.delete(`/logs/${log_id}/spots/${spot_id}`)
 }
 
-export const generateLog = async (target_date: string, clock_template_id: number) => {
+export const generateLog = async (target_date: string, clock_template_id?: string, station_id?: string) => {
   const response = await api.post('/logs/generate', {
     target_date,
     clock_template_id,
+    station_id,
   })
   return response.data
 }
 
-export const previewLog = async (target_date: string, clock_template_id: number, preview_hours?: string[]) => {
+export const previewLog = async (target_date: string, clock_template_id?: string, preview_hours?: string[]) => {
   const response = await api.post('/logs/preview', {
     target_date,
     clock_template_id,
@@ -1127,22 +1284,22 @@ export const previewLog = async (target_date: string, clock_template_id: number,
   return response.data
 }
 
-export const publishLog = async (log_id: number) => {
+export const publishLog = async (log_id?: string) => {
   const response = await api.post(`/logs/${log_id}/publish`)
   return response.data
 }
 
-export const publishLogHour = async (log_id: number, hour: string) => {
+export const publishLogHour = async (log_id?: string, hour: string) => {
   const response = await api.post(`/logs/${log_id}/publish-hour`, { hour })
   return response.data
 }
 
-export const getVoiceSlotContext = async (log_id: number, slot_id: number) => {
+export const getVoiceSlotContext = async (log_id?: string, slot_id?: string) => {
   const response = await api.get(`/logs/${log_id}/voice-slots/${slot_id}/context`)
   return response.data
 }
 
-export const reorderElements = async (log_id: number, hour: string, from_index: number, to_index: number) => {
+export const reorderElements = async (log_id?: string, hour: string, from_index: number, to_index: number) => {
   const response = await api.post(`/logs/${log_id}/elements/${hour}/reorder`, {
     from_index,
     to_index
@@ -1150,7 +1307,7 @@ export const reorderElements = async (log_id: number, hour: string, from_index: 
   return response.data
 }
 
-export const addElementToLog = async (log_id: number, hour: string, element: any, position?: number) => {
+export const addElementToLog = async (log_id?: string, hour: string, element: any, position?: number) => {
   const response = await api.post(`/logs/${log_id}/elements/${hour}`, {
     element,
     position
@@ -1158,7 +1315,7 @@ export const addElementToLog = async (log_id: number, hour: string, element: any
   return response.data
 }
 
-export const removeElementFromLog = async (log_id: number, hour: string, element_index: number) => {
+export const removeElementFromLog = async (log_id?: string, hour: string, element_index: number) => {
   await api.delete(`/logs/${log_id}/elements/${hour}/${element_index}`)
 }
 
@@ -1168,11 +1325,12 @@ export const getClocks = async (params?: {
   limit?: number
   search?: string
 }) => {
-  const response = await api.get('/clocks', { params })
+  // Use trailing slash to avoid 307 redirect which can lose auth headers
+  const response = await api.get('/clocks/', { params })
   return response.data
 }
 
-export const getClock = async (clock_id: number) => {
+export const getClock = async (clock_id?: string) => {
   const response = await api.get(`/clocks/${clock_id}`)
   return response.data
 }
@@ -1188,12 +1346,12 @@ export const createDaypart = async (daypart: any) => {
   return response.data
 }
 
-export const updateDaypart = async (daypart_id: number, updates: any) => {
+export const updateDaypart = async (daypart_id?: string, updates: any) => {
   const response = await api.put(`/dayparts/${daypart_id}`, updates)
   return response.data
 }
 
-export const deleteDaypart = async (daypart_id: number) => {
+export const deleteDaypart = async (daypart_id?: string) => {
   await api.delete(`/dayparts/${daypart_id}`)
 }
 
@@ -1208,7 +1366,7 @@ export const getAdvertisers = async (params?: {
   return response.data
 }
 
-export const getAdvertiser = async (advertiser_id: number) => {
+export const getAdvertiser = async (advertiser_id?: string) => {
   const response = await api.get(`/advertisers/${advertiser_id}`)
   return response.data
 }
@@ -1218,12 +1376,12 @@ export const createAdvertiser = async (advertiser: any) => {
   return response.data
 }
 
-export const updateAdvertiser = async (advertiser_id: number, updates: any) => {
+export const updateAdvertiser = async (advertiser_id?: string, updates: any) => {
   const response = await api.put(`/advertisers/${advertiser_id}`, updates)
   return response.data
 }
 
-export const deleteAdvertiser = async (advertiser_id: number) => {
+export const deleteAdvertiser = async (advertiser_id?: string) => {
   await api.delete(`/advertisers/${advertiser_id}`)
 }
 
@@ -1238,7 +1396,7 @@ export const getAgencies = async (params?: {
   return response.data
 }
 
-export const getAgency = async (agency_id: number) => {
+export const getAgency = async (agency_id?: string) => {
   const response = await api.get(`/agencies/${agency_id}`)
   return response.data
 }
@@ -1248,12 +1406,12 @@ export const createAgency = async (agency: any) => {
   return response.data
 }
 
-export const updateAgency = async (agency_id: number, updates: any) => {
+export const updateAgency = async (agency_id?: string, updates: any) => {
   const response = await api.put(`/agencies/${agency_id}`, updates)
   return response.data
 }
 
-export const deleteAgency = async (agency_id: number) => {
+export const deleteAgency = async (agency_id?: string) => {
   await api.delete(`/agencies/${agency_id}`)
 }
 
@@ -1268,7 +1426,7 @@ export const getCampaigns = async (params?: {
   return response.data
 }
 
-export const getCampaign = async (campaign_id: number) => {
+export const getCampaign = async (campaign_id?: string) => {
   const response = await api.get(`/campaigns/${campaign_id}`)
   return response.data
 }
@@ -1278,12 +1436,12 @@ export const createCampaign = async (campaign: any) => {
   return response.data
 }
 
-export const updateCampaign = async (campaign_id: number, updates: any) => {
+export const updateCampaign = async (campaign_id?: string, updates: any) => {
   const response = await api.put(`/campaigns/${campaign_id}`, updates)
   return response.data
 }
 
-export const deleteCampaign = async (campaign_id: number) => {
+export const deleteCampaign = async (campaign_id?: string) => {
   await api.delete(`/campaigns/${campaign_id}`)
 }
 
@@ -1292,7 +1450,7 @@ export const getOrders = async (params?: {
   skip?: number
   limit?: number
   status?: string
-  advertiser_id?: number
+  advertiser_id?: string
   start_date?: string
   end_date?: string
 }) => {
@@ -1300,7 +1458,7 @@ export const getOrders = async (params?: {
   return response.data
 }
 
-export const getOrder = async (order_id: number) => {
+export const getOrder = async (order_id?: string) => {
   const response = await api.get(`/orders/${order_id}`)
   return response.data
 }
@@ -1310,12 +1468,12 @@ export const createOrder = async (order: any) => {
   return response.data
 }
 
-export const updateOrder = async (order_id: number, updates: any) => {
+export const updateOrder = async (order_id?: string, updates: any) => {
   const response = await api.put(`/orders/${order_id}`, updates)
   return response.data
 }
 
-export const deleteOrder = async (order_id: number) => {
+export const deleteOrder = async (order_id?: string) => {
   await api.delete(`/orders/${order_id}`)
 }
 
@@ -1323,22 +1481,22 @@ export const deleteOrder = async (order_id: number) => {
 export const getCopy = async (params?: {
   skip?: number
   limit?: number
-  order_id?: number
-  advertiser_id?: number
+  order_id?: string
+  advertiser_id?: string
   search?: string
 }) => {
   const response = await api.get('/copy', { params })
   return response.data
 }
 
-export const getCopyById = async (copy_id: number) => {
+export const getCopyById = async (copy_id?: string) => {
   const response = await api.get(`/copy/${copy_id}`)
   return response.data
 }
 
 export const createCopy = async (copy: {
-  order_id?: number
-  advertiser_id?: number
+  order_id?: string
+  advertiser_id?: string
   title: string
   script_text?: string
   audio_file_path?: string
@@ -1352,8 +1510,8 @@ export const createCopy = async (copy: {
 export const uploadCopy = async (
   file: File,
   title: string,
-  order_id?: number,
-  advertiser_id?: number,
+  order_id?: string,
+  advertiser_id?: string,
   onUploadProgress?: (progress: number) => void
 ) => {
   const formData = new FormData()
@@ -1376,7 +1534,7 @@ export const uploadCopy = async (
   return response.data
 }
 
-export const updateCopy = async (copy_id: number, updates: {
+export const updateCopy = async (copy_id?: string, updates: {
   title?: string
   script_text?: string
   audio_file_path?: string
@@ -1388,7 +1546,7 @@ export const updateCopy = async (copy_id: number, updates: {
   return response.data
 }
 
-export const deleteCopy = async (copy_id: number) => {
+export const deleteCopy = async (copy_id?: string) => {
   await api.delete(`/copy/${copy_id}`)
 }
 
@@ -1399,7 +1557,7 @@ export const getExpiringCopy = async (days_ahead: number = 30) => {
   return response.data
 }
 
-export const assignCopyToSpot = async (copy_id: number, spot_id: number) => {
+export const assignCopyToSpot = async (copy_id?: string, spot_id?: string) => {
   const response = await api.post(`/copy/${copy_id}/assign`, null, {
     params: { spot_id }
   })
@@ -1410,17 +1568,17 @@ export const assignCopyToSpot = async (copy_id: number, spot_id: number) => {
 export const getCopyAssignments = async (params?: {
   skip?: number
   limit?: number
-  spot_id?: number
-  copy_id?: number
+  spot_id?: string
+  copy_id?: string
 }) => {
   const response = await api.get('/copy-assignments', { params })
   return response.data
 }
 
 export const createCopyAssignment = async (assignment: {
-  spot_id: number
-  copy_id: number
-  order_id?: number
+  spot_id?: string
+  copy_id?: string
+  order_id?: string
 }) => {
   const response = await api.post('/copy-assignments', null, {
     params: assignment
@@ -1428,7 +1586,7 @@ export const createCopyAssignment = async (assignment: {
   return response.data
 }
 
-export const deleteCopyAssignment = async (assignment_id: number) => {
+export const deleteCopyAssignment = async (assignment_id?: string) => {
   await api.delete(`/copy-assignments/${assignment_id}`)
 }
 
@@ -1436,24 +1594,25 @@ export const deleteCopyAssignment = async (assignment_id: number) => {
 export const getInvoices = async (params?: {
   skip?: number
   limit?: number
-  advertiser_id?: number
+  advertiser_id?: string
   status_filter?: string
+  station_id?: string
 }) => {
   const response = await api.get('/invoices', { params })
   return response.data
 }
 
-export const getInvoice = async (invoice_id: number) => {
+export const getInvoice = async (invoice_id?: string) => {
   const response = await api.get(`/invoices/${invoice_id}`)
   return response.data
 }
 
 export const createInvoice = async (invoice: {
   invoice_number: string
-  advertiser_id: number
-  agency_id?: number
-  order_id?: number
-  campaign_id?: number
+  advertiser_id?: string
+  agency_id?: string
+  order_id?: string
+  campaign_id?: string
   invoice_date: string
   due_date: string
   payment_terms?: string
@@ -1462,14 +1621,14 @@ export const createInvoice = async (invoice: {
     description: string
     quantity?: number
     unit_price: number | string
-    spot_ids?: number[]
+    spot_ids?: string[]
   }>
 }) => {
   const response = await api.post('/invoices', invoice)
   return response.data
 }
 
-export const updateInvoice = async (invoice_id: number, updates: {
+export const updateInvoice = async (invoice_id?: string, updates: {
   invoice_number?: string
   invoice_date?: string
   due_date?: string
@@ -1481,12 +1640,12 @@ export const updateInvoice = async (invoice_id: number, updates: {
   return response.data
 }
 
-export const sendInvoice = async (invoice_id: number) => {
+export const sendInvoice = async (invoice_id?: string) => {
   const response = await api.post(`/invoices/${invoice_id}/send`)
   return response.data
 }
 
-export const markInvoicePaid = async (invoice_id: number, payment_data: {
+export const markInvoicePaid = async (invoice_id?: string, payment_data: {
   amount?: number | string
   payment_method?: string
   reference_number?: string
@@ -1505,19 +1664,19 @@ export const getAgingReport = async () => {
 export const getPayments = async (params?: {
   skip?: number
   limit?: number
-  invoice_id?: number
+  invoice_id?: string
 }) => {
   const response = await api.get('/payments', { params })
   return response.data
 }
 
-export const getPayment = async (payment_id: number) => {
+export const getPayment = async (payment_id?: string) => {
   const response = await api.get(`/payments/${payment_id}`)
   return response.data
 }
 
 export const createPayment = async (payment: {
-  invoice_id: number
+  invoice_id?: string
   amount: number | string
   payment_date: string
   payment_method?: string
@@ -1528,7 +1687,7 @@ export const createPayment = async (payment: {
   return response.data
 }
 
-export const updatePayment = async (payment_id: number, updates: {
+export const updatePayment = async (payment_id?: string, updates: {
   amount?: number | string
   payment_date?: string
   payment_method?: string
@@ -1539,7 +1698,7 @@ export const updatePayment = async (payment_id: number, updates: {
   return response.data
 }
 
-export const deletePayment = async (payment_id: number) => {
+export const deletePayment = async (payment_id?: string) => {
   await api.delete(`/payments/${payment_id}`)
 }
 
@@ -1547,46 +1706,52 @@ export const deletePayment = async (payment_id: number) => {
 export const getMakegoods = async (params?: {
   skip?: number
   limit?: number
-  campaign_id?: number
+  campaign_id?: string
 }) => {
   const response = await api.get('/makegoods', { params })
   return response.data
 }
 
 export const createMakegood = async (makegood: {
-  original_spot_id: number
-  makegood_spot_id: number
-  campaign_id?: number
+  original_spot_id?: string
+  makegood_spot_id?: string
+  campaign_id?: string
   reason?: string
 }) => {
   const response = await api.post('/makegoods', makegood)
   return response.data
 }
 
-export const approveMakegood = async (makegood_id: number) => {
+export const approveMakegood = async (makegood_id?: string) => {
   const response = await api.post(`/makegoods/${makegood_id}/approve`)
   return response.data
 }
 
 // Reports API functions
-export const getReconciliationReport = async (start_date: string, end_date: string) => {
-  const response = await api.get('/reports/reconciliation', {
-    params: { start_date, end_date }
-  })
+export const getReconciliationReport = async (start_date: string, end_date: string, station_id?: string) => {
+  const params: any = { start_date, end_date }
+  if (station_id) {
+    params.station_id = station_id
+  }
+  const response = await api.get('/reports/reconciliation', { params })
   return response.data
 }
 
-export const getComplianceReport = async (start_date: string, end_date: string, format: string = 'csv') => {
-  const response = await api.get('/reports/compliance', {
-    params: { start_date, end_date, format }
-  })
+export const getComplianceReport = async (start_date: string, end_date: string, format: string = 'csv', station_id?: string) => {
+  const params: any = { start_date, end_date, format }
+  if (station_id) {
+    params.station_id = station_id
+  }
+  const response = await api.get('/reports/compliance', { params })
   return response.data
 }
 
-export const getPlaybackHistory = async (start_date: string, end_date: string) => {
-  const response = await api.get('/reports/playback', {
-    params: { start_date, end_date }
-  })
+export const getPlaybackHistory = async (start_date: string, end_date: string, station_id?: string) => {
+  const params: any = { start_date, end_date }
+  if (station_id) {
+    params.station_id = station_id
+  }
+  const response = await api.get('/reports/playback', { params })
   return response.data
 }
 
@@ -1628,7 +1793,7 @@ export const getExpirationsReport = async (days_ahead: number = 30) => {
 
 // Billing Reports
 export const getContractActualizationReport = async (
-  order_id: number,
+  order_id?: string,
   start_date?: string,
   end_date?: string
 ) => {
@@ -1701,7 +1866,7 @@ export const exportReport = async (
 export const getAuditLogs = async (params?: {
   skip?: number
   limit?: number
-  user_id?: number
+  user_id?: string
   action?: string
   resource_type?: string
   start_date?: string
@@ -1711,23 +1876,23 @@ export const getAuditLogs = async (params?: {
   return response.data
 }
 
-export const getAuditLog = async (audit_log_id: number) => {
+export const getAuditLog = async (audit_log_id?: string) => {
   const response = await api.get(`/admin/audit-logs/${audit_log_id}`)
   return response.data
 }
 
 // Log Revisions API functions
-export const getLogRevisions = async (log_id: number) => {
+export const getLogRevisions = async (log_id?: string) => {
   const response = await api.get(`/log-revisions/logs/${log_id}/revisions`)
   return response.data
 }
 
-export const getLogRevision = async (log_id: number, revision_id: number) => {
+export const getLogRevision = async (log_id?: string, revision_id?: string) => {
   const response = await api.get(`/log-revisions/logs/${log_id}/revisions/${revision_id}`)
   return response.data
 }
 
-export const revertToRevision = async (log_id: number, revision_id: number) => {
+export const revertToRevision = async (log_id?: string, revision_id?: string) => {
   const response = await api.post(`/log-revisions/logs/${log_id}/revert`, null, {
     params: { revision_id }
   })
@@ -1792,14 +1957,14 @@ export const getSalesReps = async (params?: {
 export const getSalesGoals = async (params?: {
   skip?: number
   limit?: number
-  sales_rep_id?: number
+  sales_rep_id?: string
 }) => {
   const response = await api.get('/sales-goals', { params })
   return response.data
 }
 
 export const createSalesGoal = async (goal: {
-  sales_rep_id: number
+  sales_rep_id?: string
   period: string
   target_date: string
   goal_amount: number | string
@@ -1808,7 +1973,7 @@ export const createSalesGoal = async (goal: {
   return response.data
 }
 
-export const getSalesGoalsProgress = async (sales_rep_id?: number) => {
+export const getSalesGoalsProgress = async (sales_rep_id?: string) => {
   const response = await api.get('/sales-goals/progress', {
     params: sales_rep_id ? { sales_rep_id } : {}
   })
@@ -1831,12 +1996,12 @@ export const createUser = async (userData: { username: string; password: string;
   return response.data
 }
 
-export const updateUser = async (userId: number, userData: { username?: string; password?: string; role?: string }) => {
+export const updateUser = async (userId: string, userData: { username?: string; password?: string; role?: string }) => {
   const response = await api.put(`/users/${userId}`, userData)
   return response.data
 }
 
-export const deleteUser = async (userId: number) => {
+export const deleteUser = async (userId: string) => {
   await api.delete(`/users/${userId}`)
 }
 
@@ -1850,7 +2015,7 @@ export const getWebhooks = async (params?: {
   return response.data
 }
 
-export const getWebhook = async (webhook_id: number) => {
+export const getWebhook = async (webhook_id?: string) => {
   const response = await api.get(`/webhooks/${webhook_id}`)
   return response.data
 }
@@ -1867,7 +2032,7 @@ export const createWebhook = async (webhook: {
   return response.data
 }
 
-export const updateWebhook = async (webhook_id: number, updates: {
+export const updateWebhook = async (webhook_id?: string, updates: {
   name?: string
   url?: string
   events?: string[]
@@ -1879,11 +2044,11 @@ export const updateWebhook = async (webhook_id: number, updates: {
   return response.data
 }
 
-export const deleteWebhook = async (webhook_id: number) => {
+export const deleteWebhook = async (webhook_id?: string) => {
   await api.delete(`/webhooks/${webhook_id}`)
 }
 
-export const testWebhook = async (webhook_id: number) => {
+export const testWebhook = async (webhook_id?: string) => {
   const response = await api.post(`/webhooks/${webhook_id}/test`)
   return response.data
 }
@@ -1903,7 +2068,7 @@ export const getUnreadCount = async () => {
   return response.data
 }
 
-export const markNotificationRead = async (notification_id: number) => {
+export const markNotificationRead = async (notification_id?: string) => {
   const response = await api.post(`/notifications/${notification_id}/read`)
   return response.data
 }
@@ -1959,6 +2124,22 @@ export const testBackblazeConnection = async (config: {
   return response.data
 }
 
+export const getBrandingPublicSettings = async () => {
+  const response = await api.get('/settings/branding/public')
+  return response.data
+}
+
+export const uploadBrandingLogo = async (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await api.post('/settings/branding/upload-logo', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+  return response.data
+}
+
 // Backups API functions
 export const getBackups = async (params?: {
   skip?: number
@@ -1969,7 +2150,7 @@ export const getBackups = async (params?: {
   return response.data
 }
 
-export const getBackup = async (backup_id: number) => {
+export const getBackup = async (backup_id?: string) => {
   const response = await api.get(`/backups/${backup_id}`)
   return response.data
 }
@@ -1983,7 +2164,7 @@ export const createBackup = async (backup: {
   return response.data
 }
 
-export const restoreBackup = async (backup_id: number, restore: {
+export const restoreBackup = async (backup_id?: string, restore: {
   restore_database?: boolean
   restore_files?: boolean
 }) => {
@@ -1991,8 +2172,13 @@ export const restoreBackup = async (backup_id: number, restore: {
   return response.data
 }
 
-export const deleteBackup = async (backup_id: number) => {
+export const deleteBackup = async (backup_id?: string) => {
   await api.delete(`/backups/${backup_id}`)
+}
+
+export const downloadBackup = (backup_id?: string): string => {
+  // Return the download URL - this will be handled by the browser
+  return `/api/backups/${backup_id}/download`
 }
 
 // Daypart Categories API functions
@@ -2005,7 +2191,7 @@ export const getDaypartCategories = async (params?: {
   return response.data
 }
 
-export const getDaypartCategory = async (category_id: number) => {
+export const getDaypartCategory = async (category_id?: string) => {
   const response = await api.get(`/daypart-categories/${category_id}`)
   return response.data
 }
@@ -2021,7 +2207,7 @@ export const createDaypartCategory = async (category: {
   return response.data
 }
 
-export const updateDaypartCategory = async (category_id: number, updates: {
+export const updateDaypartCategory = async (category_id?: string, updates: {
   name?: string
   description?: string
   color?: string
@@ -2033,7 +2219,7 @@ export const updateDaypartCategory = async (category_id: number, updates: {
   return response.data
 }
 
-export const deleteDaypartCategory = async (category_id: number) => {
+export const deleteDaypartCategory = async (category_id?: string) => {
   await api.delete(`/daypart-categories/${category_id}`)
 }
 
@@ -2042,14 +2228,14 @@ export const getRotationRules = async (params?: {
   skip?: number
   limit?: number
   active_only?: boolean
-  daypart_id?: number
-  campaign_id?: number
+  daypart_id?: string
+  campaign_id?: string
 }) => {
   const response = await api.get('/rotation-rules', { params })
   return response.data
 }
 
-export const getRotationRule = async (rule_id: number) => {
+export const getRotationRule = async (rule_id?: string) => {
   const response = await api.get(`/rotation-rules/${rule_id}`)
   return response.data
 }
@@ -2058,8 +2244,8 @@ export const createRotationRule = async (rule: {
   name: string
   description?: string
   rotation_type?: string
-  daypart_id?: number
-  campaign_id?: number
+  daypart_id?: string
+  campaign_id?: string
   min_separation?: number
   max_per_hour?: number
   max_per_day?: number
@@ -2072,12 +2258,12 @@ export const createRotationRule = async (rule: {
   return response.data
 }
 
-export const updateRotationRule = async (rule_id: number, updates: {
+export const updateRotationRule = async (rule_id?: string, updates: {
   name?: string
   description?: string
   rotation_type?: string
-  daypart_id?: number
-  campaign_id?: number
+  daypart_id?: string
+  campaign_id?: string
   min_separation?: number
   max_per_hour?: number
   max_per_day?: number
@@ -2091,7 +2277,7 @@ export const updateRotationRule = async (rule_id: number, updates: {
   return response.data
 }
 
-export const deleteRotationRule = async (rule_id: number) => {
+export const deleteRotationRule = async (rule_id?: string) => {
   await api.delete(`/rotation-rules/${rule_id}`)
 }
 
@@ -2100,11 +2286,11 @@ export const getTrafficLogs = async (params?: {
   skip?: number
   limit?: number
   log_type?: string
-  log_id?: number
-  spot_id?: number
-  order_id?: number
-  campaign_id?: number
-  user_id?: number
+  log_id?: string
+  spot_id?: string
+  order_id?: string
+  campaign_id?: string
+  user_id?: string
   start_date?: string
   end_date?: string
 }) => {
@@ -2112,18 +2298,18 @@ export const getTrafficLogs = async (params?: {
   return response.data
 }
 
-export const getTrafficLog = async (log_id: number) => {
+export const getTrafficLog = async (log_id?: string) => {
   const response = await api.get(`/traffic-logs/${log_id}`)
   return response.data
 }
 
 export const createTrafficLog = async (log: {
   log_type: string
-  log_id?: number
-  spot_id?: number
-  order_id?: number
-  campaign_id?: number
-  copy_id?: number
+  log_id?: string
+  spot_id?: string
+  order_id?: string
+  campaign_id?: string
+  copy_id?: string
   message: string
   metadata?: Record<string, any>
 }) => {
@@ -2133,11 +2319,11 @@ export const createTrafficLog = async (log: {
 
 export const createTrafficLogsBulk = async (logs: Array<{
   log_type: string
-  log_id?: number
-  spot_id?: number
-  order_id?: number
-  campaign_id?: number
-  copy_id?: number
+  log_id?: string
+  spot_id?: string
+  order_id?: string
+  campaign_id?: string
+  copy_id?: string
   message: string
   metadata?: Record<string, any>
 }>) => {
@@ -2216,11 +2402,63 @@ export const getSalesRepsProxy = async (params?: {
   return response.data
 }
 
+export const getSalesTeamsProxy = async (params?: {
+  skip?: number
+  limit?: number
+  active_only?: boolean
+  search?: string
+}) => {
+  const response = await api.get('/proxy/sales-teams', { params })
+  return response.data
+}
+
+export const getSalesOfficesProxy = async (params?: {
+  skip?: number
+  limit?: number
+  active_only?: boolean
+  region_id?: string
+  search?: string
+}) => {
+  const response = await api.get('/proxy/sales-offices', { params })
+  return response.data
+}
+
+export const getSalesRegionsProxy = async (params?: {
+  skip?: number
+  limit?: number
+  active_only?: boolean
+  search?: string
+}) => {
+  const response = await api.get('/proxy/sales-regions', { params })
+  return response.data
+}
+
+export const getStationsProxy = async (params?: {
+  skip?: number
+  limit?: number
+  active_only?: boolean
+  cluster_id?: string
+  search?: string
+}) => {
+  const response = await api.get('/proxy/stations', { params })
+  return response.data
+}
+
+export const getClustersProxy = async (params?: {
+  skip?: number
+  limit?: number
+  active_only?: boolean
+  search?: string
+}) => {
+  const response = await api.get('/proxy/clusters', { params })
+  return response.data
+}
+
 export const getOrdersProxy = async (params?: {
   skip?: number
   limit?: number
   status?: string
-  advertiser_id?: number
+  advertiser_id?: string
   search?: string
 }) => {
   const response = await api.get('/proxy/orders', { params })
@@ -2232,7 +2470,7 @@ export const getDaypartsProxy = async (params?: {
   skip?: number
   limit?: number
   active_only?: boolean
-  category_id?: number
+  category_id?: string
 }) => {
   const response = await api.get('/proxy/dayparts', { params })
   return response.data
@@ -2268,8 +2506,8 @@ export const getTrafficLogsProxy = async (params?: {
 export const getCopyProxy = async (params?: {
   skip?: number
   limit?: number
-  advertiser_id?: number
-  order_id?: number
+  advertiser_id?: string
+  order_id?: string
   search?: string
 }) => {
   const response = await api.get('/proxy/copy', { params })
@@ -2289,7 +2527,7 @@ export const getInvoicesProxy = async (params?: {
   skip?: number
   limit?: number
   status?: string
-  advertiser_id?: number
+  advertiser_id?: string
 }) => {
   const response = await api.get('/proxy/invoices', { params })
   return response.data
@@ -2298,7 +2536,7 @@ export const getInvoicesProxy = async (params?: {
 export const getPaymentsProxy = async (params?: {
   skip?: number
   limit?: number
-  invoice_id?: number
+  invoice_id?: string
 }) => {
   const response = await api.get('/proxy/payments', { params })
   return response.data
@@ -2307,7 +2545,7 @@ export const getPaymentsProxy = async (params?: {
 export const getMakegoodsProxy = async (params?: {
   skip?: number
   limit?: number
-  campaign_id?: number
+  campaign_id?: string
 }) => {
   const response = await api.get('/proxy/makegoods', { params })
   return response.data
@@ -2324,7 +2562,7 @@ export const getInventoryProxy = async (params: {
 export const getSalesGoalsProxy = async (params?: {
   skip?: number
   limit?: number
-  sales_rep_id?: number
+  sales_rep_id?: string
 }) => {
   const response = await api.get('/proxy/sales-goals', { params })
   return response.data
@@ -2338,7 +2576,7 @@ export const getSettingsProxy = async () => {
 export const getAuditLogsProxy = async (params?: {
   skip?: number
   limit?: number
-  user_id?: number
+  user_id?: string
   action?: string
   resource_type?: string
 }) => {
@@ -2375,7 +2613,7 @@ export const getBackupsProxy = async (params?: {
 // Production Orders API
 export const getProductionOrders = async (params?: {
   status?: string
-  advertiser_id?: number
+  advertiser_id?: string
   assigned_to?: number
   deadline_before?: string
   limit?: number
@@ -2385,32 +2623,34 @@ export const getProductionOrders = async (params?: {
   return response.data
 }
 
-export const getProductionOrder = async (po_id: number) => {
+export const getProductionOrder = async (po_id?: string) => {
   const response = await api.get(`/production-orders/${po_id}`)
   return response.data
 }
 
 export const createProductionOrder = async (data: {
-  copy_id: number
+  copy_id?: string
   client_name?: string
   deadline?: string
   instructions?: string
   talent_needs?: any
   audio_references?: string[]
   stations?: string[]
+  spot_lengths?: number[]
+  is_spec?: boolean
 }) => {
   const response = await api.post('/production-orders', data)
   return response.data
 }
 
-export const updateProductionOrder = async (po_id: number, updates: any) => {
+export const updateProductionOrder = async (po_id?: string, updates: any) => {
   const response = await api.put(`/production-orders/${po_id}`, updates)
   return response.data
 }
 
 export const assignProductionOrder = async (
-  po_id: number,
-  user_id: number,
+  po_id?: string,
+  user_id?: string,
   assignment_type: string,
   notes?: string
 ) => {
@@ -2420,7 +2660,7 @@ export const assignProductionOrder = async (
   return response.data
 }
 
-export const updateProductionOrderStatus = async (po_id: number, new_status: string) => {
+export const updateProductionOrderStatus = async (po_id?: string, new_status: string) => {
   const response = await api.post(`/production-orders/${po_id}/update-status`, null, {
     params: { new_status }
   })
@@ -2428,7 +2668,7 @@ export const updateProductionOrderStatus = async (po_id: number, new_status: str
 }
 
 export const deliverProductionOrder = async (
-  po_id: number,
+  po_id?: string,
   delivery_method: string = 'local',
   target_server?: string,
   target_path?: string
@@ -2445,7 +2685,7 @@ export const getVoiceTalentRequests = async (status?: string) => {
   return response.data
 }
 
-export const uploadTake = async (request_id: number, file: File, take_number?: number) => {
+export const uploadTake = async (request_id?: string, file: File, take_number?: number) => {
   const formData = new FormData()
   formData.append('file', file)
   const response = await api.post(`/voice-talent/requests/${request_id}/upload-take`, formData, {
@@ -2455,7 +2695,7 @@ export const uploadTake = async (request_id: number, file: File, take_number?: n
   return response.data
 }
 
-export const approveTake = async (request_id: number, take_number: number) => {
+export const approveTake = async (request_id?: string, take_number: number) => {
   const response = await api.post(`/voice-talent/requests/${request_id}/approve-take`, null, {
     params: { take_number }
   })
@@ -2464,8 +2704,8 @@ export const approveTake = async (request_id: number, take_number: number) => {
 
 // Production Assignments API
 export const getProductionAssignments = async (params?: {
-  production_order_id?: number
-  user_id?: number
+  production_order_id?: string
+  user_id?: string
   assignment_type?: string
   status?: string
 }) => {
@@ -2474,8 +2714,8 @@ export const getProductionAssignments = async (params?: {
 }
 
 export const createProductionAssignment = async (data: {
-  production_order_id: number
-  user_id: number
+  production_order_id?: string
+  user_id?: string
   assignment_type: string
   notes?: string
 }) => {
@@ -2483,7 +2723,7 @@ export const createProductionAssignment = async (data: {
   return response.data
 }
 
-export const updateProductionAssignment = async (assignment_id: number, updates: {
+export const updateProductionAssignment = async (assignment_id?: string, updates: {
   status?: string
   notes?: string
 }) => {
@@ -2492,28 +2732,28 @@ export const updateProductionAssignment = async (assignment_id: number, updates:
 }
 
 // Copy Production API
-export const setNeedsProduction = async (copy_id: number, needs_production: boolean) => {
+export const setNeedsProduction = async (copy_id?: string, needs_production: boolean) => {
   const response = await api.post(`/copy/${copy_id}/set-needs-production`, null, {
     params: { needs_production }
   })
   return response.data
 }
 
-export const approveCopy = async (copy_id: number, auto_create_po: boolean = true) => {
+export const approveCopy = async (copy_id?: string, auto_create_po: boolean = true) => {
   const response = await api.post(`/copy/${copy_id}/approve`, null, {
     params: { auto_create_po }
   })
   return response.data
 }
 
-export const rejectCopy = async (copy_id: number, reason?: string) => {
+export const rejectCopy = async (copy_id?: string, reason?: string) => {
   const response = await api.post(`/copy/${copy_id}/reject`, null, {
     params: { reason }
   })
   return response.data
 }
 
-export const getCopyProductionStatus = async (copy_id: number) => {
+export const getCopyProductionStatus = async (copy_id?: string) => {
   const response = await api.get(`/copy/${copy_id}/production-status`)
   return response.data
 }
@@ -2559,7 +2799,7 @@ export const getProductionTurnaroundReport = async (start_date?: string, end_dat
   return response.data
 }
 
-export const getProductionWorkloadReport = async (user_id?: number) => {
+export const getProductionWorkloadReport = async (user_id?: string) => {
   const response = await api.get('/reports/production/workload', {
     params: { user_id }
   })
@@ -2571,6 +2811,98 @@ export const getMissedDeadlinesReport = async (days_overdue?: number) => {
     params: { days_overdue }
   })
   return response.data
+}
+
+// Token refresh utility
+let refreshTimer: NodeJS.Timeout | null = null
+
+/**
+ * Decode JWT token to get expiration time
+ */
+function getTokenExpiration(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.exp ? payload.exp * 1000 : null // Convert to milliseconds
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Refresh the access token
+ */
+export const refreshAccessToken = async (): Promise<string | null> => {
+  const token = localStorage.getItem('token')
+  if (!token) {
+    return null
+  }
+
+  try {
+    const response = await api.post('/auth/refresh', {}, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+
+    if (response.data?.access_token) {
+      localStorage.setItem('token', response.data.access_token)
+      return response.data.access_token
+    }
+  } catch (error) {
+    console.warn('[API] Token refresh failed:', error)
+    return null
+  }
+
+  return null
+}
+
+/**
+ * Set up automatic token refresh before expiration
+ * Checks token expiration every 5 minutes and refreshes if it expires within 30 minutes
+ */
+export const setupAutoTokenRefresh = () => {
+  // Clear any existing timer
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+  }
+
+  // Check every 5 minutes
+  refreshTimer = setInterval(async () => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      return
+    }
+
+    const expiration = getTokenExpiration(token)
+    if (!expiration) {
+      return
+    }
+
+    const now = Date.now()
+    const timeUntilExpiration = expiration - now
+    const thirtyMinutes = 30 * 60 * 1000 // 30 minutes in milliseconds
+
+    // If token expires within 30 minutes, refresh it
+    if (timeUntilExpiration > 0 && timeUntilExpiration < thirtyMinutes) {
+      console.log('[API] Token expires soon, refreshing...')
+      await refreshAccessToken()
+    }
+  }, 5 * 60 * 1000) // Check every 5 minutes
+}
+
+/**
+ * Clear automatic token refresh timer
+ */
+export const clearAutoTokenRefresh = () => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+}
+
+// Set up auto-refresh when module loads (in browser context)
+if (typeof window !== 'undefined') {
+  setupAutoTokenRefresh()
 }
 
 export default api

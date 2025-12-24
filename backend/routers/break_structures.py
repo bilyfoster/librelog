@@ -3,6 +3,7 @@ Break Structures router for traffic scheduling
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from backend.database import get_db
@@ -30,7 +31,7 @@ class BreakStructureUpdate(BaseModel):
 
 
 class BreakStructureResponse(BaseModel):
-    id: int
+    id: UUID
     name: str
     hour: int
     break_positions: Optional[List[int]]
@@ -88,7 +89,7 @@ async def create_break_structure(
 
 @router.get("/{break_structure_id}", response_model=BreakStructureResponse)
 async def get_break_structure(
-    break_structure_id: int,
+    break_structure_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -104,7 +105,7 @@ async def get_break_structure(
 
 @router.put("/{break_structure_id}", response_model=BreakStructureResponse)
 async def update_break_structure(
-    break_structure_id: int,
+    break_structure_id: UUID,
     break_structure_update: BreakStructureUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -132,7 +133,7 @@ async def update_break_structure(
 
 @router.delete("/{break_structure_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_break_structure(
-    break_structure_id: int,
+    break_structure_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

@@ -3,6 +3,7 @@ Invoices router for billing
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from backend.database import get_db
@@ -36,15 +37,15 @@ class InvoiceLineCreate(BaseModel):
     description: str
     quantity: int = 1
     unit_price: Decimal
-    spot_ids: Optional[List[int]] = None
+    spot_ids: Optional[List[UUID]] = None
 
 
 class InvoiceCreate(BaseModel):
     invoice_number: str
-    advertiser_id: int
-    agency_id: Optional[int] = None
-    order_id: Optional[int] = None
-    campaign_id: Optional[int] = None
+    advertiser_id: UUID
+    agency_id: Optional[UUID] = None
+    order_id: Optional[UUID] = None
+    campaign_id: Optional[UUID] = None
     invoice_date: date
     due_date: date
     payment_terms: Optional[str] = None
@@ -53,12 +54,12 @@ class InvoiceCreate(BaseModel):
 
 
 class InvoiceResponse(BaseModel):
-    id: int
+    id: UUID
     invoice_number: str
-    advertiser_id: int
-    agency_id: Optional[int]
-    order_id: Optional[int]
-    campaign_id: Optional[int]
+    advertiser_id: UUID
+    agency_id: Optional[UUID]
+    order_id: Optional[UUID]
+    campaign_id: Optional[UUID]
     invoice_date: date
     due_date: date
     subtotal: Decimal
@@ -100,9 +101,9 @@ def invoice_to_response_dict(invoice: Invoice) -> dict:
 async def list_invoices(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    advertiser_id: Optional[int] = Query(None),
+    advertiser_id: Optional[UUID] = Query(None),
     status_filter: Optional[str] = Query(None),
-    station_id: Optional[int] = Query(None),
+    station_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -191,7 +192,7 @@ async def create_invoice(
 
 @router.get("/{invoice_id}", response_model=InvoiceResponse)
 async def get_invoice(
-    invoice_id: int,
+    invoice_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -207,7 +208,7 @@ async def get_invoice(
 
 @router.put("/{invoice_id}", response_model=InvoiceResponse)
 async def update_invoice(
-    invoice_id: int,
+    invoice_id: UUID,
     invoice_update: Dict[str, Any],
     request: Request,
     db: AsyncSession = Depends(get_db),
@@ -252,7 +253,7 @@ async def update_invoice(
 
 @router.post("/{invoice_id}/send")
 async def send_invoice(
-    invoice_id: int,
+    invoice_id: UUID,
     request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -403,7 +404,7 @@ LibreLog Billing Team
 
 @router.post("/{invoice_id}/mark-paid")
 async def mark_invoice_paid(
-    invoice_id: int,
+    invoice_id: UUID,
     payment_data: Dict[str, Any],
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -441,7 +442,7 @@ async def mark_invoice_paid(
 
 @router.delete("/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_invoice(
-    invoice_id: int,
+    invoice_id: UUID,
     request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)

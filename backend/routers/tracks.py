@@ -3,7 +3,8 @@ Tracks router
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from fastapi.responses import StreamingResponse, RedirectResponse
+from uuid import UUID
+from fastapi.responses import StreamingResponse, RedirectResponse, FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from typing import Optional
@@ -129,7 +130,7 @@ async def create_track(
 
 @router.get("/{track_id}", response_model=TrackResponse)
 async def get_track(
-    track_id: int,
+    track_id: UUID,
     db: AsyncSession = Depends(get_db)
 ):
     """Get a specific track"""
@@ -144,7 +145,7 @@ async def get_track(
 
 @router.put("/{track_id}", response_model=TrackResponse)
 async def update_track(
-    track_id: int,
+    track_id: UUID,
     track: TrackUpdate,
     db: AsyncSession = Depends(get_db)
 ):
@@ -189,7 +190,7 @@ async def update_track(
 
 @router.delete("/{track_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_track(
-    track_id: int,
+    track_id: UUID,
     db: AsyncSession = Depends(get_db)
 ):
     """Delete a track"""
@@ -207,10 +208,116 @@ async def delete_track(
     return None
 
 
+@router.get("/preview/by-path", include_in_schema=True)
+async def preview_track_by_path(
+    path: str = Query(..., description="File path to preview"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Preview a track by file path - finds the track and returns preview directly.
+    This endpoint requires authentication but streams the file directly.
+    """
+    import structlog
+    logger = structlog.get_logger()
+    
+    # Validate path is not empty
+    if not path or not path.strip():
+        raise HTTPException(status_code=422, detail="Path parameter cannot be empty")
+    
+    # Log the received path for debugging
+    logger.info("preview_track_by_path called", path=path, path_length=len(path))
+    
+    # Try to find track by exact filepath match
+    result = await db.execute(select(Track).where(Track.filepath == path))
+    track = result.scalar_one_or_none()
+    
+    if not track:
+        # Try case-insensitive search or partial match as fallback
+        from sqlalchemy import func
+        result = await db.execute(
+            select(Track).where(func.lower(Track.filepath) == func.lower(path))
+        )
+        track = result.scalar_one_or_none()
+        
+        if not track:
+            # Try to find by path containing the given path
+            result = await db.execute(
+                select(Track).where(Track.filepath.contains(path))
+            )
+            track = result.scalar_one_or_none()
+    
+    if not track:
+        logger.warning("Track not found for path", path=path)
+        raise HTTPException(status_code=404, detail=f"Track not found for path: {path}")
+    
+    # Use the same logic as preview_track but return directly (no redirect)
+    # Get LibreTime URL from environment
+    libretime_url = os.getenv("LIBRETIME_URL", "").rstrip("/api/v2").rstrip("/")
+    libretime_api_key = os.getenv("LIBRETIME_API_KEY", "")
+    
+    if not libretime_url:
+        raise HTTPException(
+            status_code=500,
+            detail="LibreTime URL not configured"
+        )
+    
+    if track.libretime_id and libretime_api_key:
+        # Try to get file from LibreTime API
+        try:
+            api_url = libretime_url.rstrip('/api/v2').rstrip('/')
+            download_url = f"{api_url}/api/v2/files/{track.libretime_id}/download"
+            
+            async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
+                headers = {"Authorization": f"Api-Key {libretime_api_key}"}
+                response = await client.get(download_url, headers=headers)
+                
+                if response.status_code == 200:
+                    # Determine content type
+                    content_type = response.headers.get("content-type", "audio/mpeg")
+                    if "text/html" in content_type or not content_type:
+                        if track.filepath and track.filepath.endswith((".mp3", ".MP3")):
+                            content_type = "audio/mpeg"
+                        elif track.filepath and track.filepath.endswith((".ogg", ".OGG")):
+                            content_type = "audio/ogg"
+                        elif track.filepath and track.filepath.endswith((".wav", ".WAV")):
+                            content_type = "audio/wav"
+                        else:
+                            content_type = "audio/mpeg"
+                    
+                    if "charset" in content_type:
+                        content_type = content_type.split(";")[0].strip()
+                    
+                    # Stream the file to the browser
+                    return StreamingResponse(
+                        iter([response.content]),
+                        media_type=content_type,
+                        headers={
+                            "Content-Disposition": f'inline; filename="{track.title or "track"}.mp3"',
+                            "Accept-Ranges": "bytes",
+                            "Content-Length": str(len(response.content)),
+                        }
+                    )
+        except Exception as e:
+            logger.error("Failed to preview track via LibreTime", track_id=track.id, error=str(e), exc_info=True)
+    
+    # Fallback: try to serve from local filepath if available
+    if track.filepath and os.path.exists(track.filepath):
+        return FileResponse(
+            path=track.filepath,
+            media_type="audio/mpeg",
+            filename=f"{track.title or 'track'}.mp3"
+        )
+    
+    raise HTTPException(
+        status_code=404,
+        detail=f"Track file not available for preview. Track ID: {track.id}, LibreTime ID: {track.libretime_id or 'None'}, Filepath: {track.filepath or 'None'}"
+    )
+
+
 @router.get("/{track_id}/preview")
 @router.head("/{track_id}/preview")
 async def preview_track(
-    track_id: int,
+    track_id: UUID,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -429,21 +536,3 @@ async def preview_track(
         status_code=501,
         detail=f"Preview not available. Track ID: {track_id}, LibreTime ID: {track.libretime_id or 'None'}, Filepath: {track.filepath or 'None'}"
     )
-
-
-@router.get("/preview-by-path")
-async def preview_track_by_path(
-    path: str = Query(..., description="File path to preview"),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Preview a track by file path - finds the track and redirects to preview
-    """
-    result = await db.execute(select(Track).where(Track.filepath == path))
-    track = result.scalar_one_or_none()
-    
-    if not track:
-        raise HTTPException(status_code=404, detail=f"Track not found for path: {path}")
-    
-    # Redirect to the track preview endpoint
-    return RedirectResponse(url=f"/api/tracks/{track.id}/preview", status_code=302)

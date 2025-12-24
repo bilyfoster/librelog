@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../utils/api'
 
 interface User {
-  id: number
+  id?: string
   username: string
   role: 'admin' | 'producer' | 'dj' | 'sales'
 }

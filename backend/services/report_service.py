@@ -3,6 +3,7 @@ Report Service for generating various reports
 """
 
 import io
+from uuid import UUID
 import os
 from typing import Dict, Any, List, Optional
 from datetime import date, datetime, timedelta
@@ -38,15 +39,18 @@ class ReportService:
     def __init__(self, db: AsyncSession):
         self.db = db
     
-    async def generate_daily_log_report(self, log_date: date) -> Dict[str, Any]:
+    async def generate_daily_log_report(self, log_date: date, station_id: Optional[UUID] = None) -> Dict[str, Any]:
         """Generate daily log report"""
-        result = await self.db.execute(
-            select(DailyLog).where(DailyLog.date == log_date)
-        )
+        query = select(DailyLog).where(DailyLog.date == log_date)
+        
+        if station_id is not None:
+            query = query.where(DailyLog.station_id == station_id)
+        
+        result = await self.db.execute(query)
         log = result.scalar_one_or_none()
         
         if not log:
-            return {"date": log_date.isoformat(), "log_exists": False}
+            return {"date": log_date.isoformat(), "log_exists": False, "station_id": station_id}
         
         return {
             "date": log_date.isoformat(),
@@ -64,7 +68,8 @@ class ReportService:
     async def generate_missing_copy_report(
         self,
         start_date: Optional[date],
-        end_date: Optional[date]
+        end_date: Optional[date],
+        station_id: Optional[UUID] = None
     ) -> Dict[str, Any]:
         """Generate missing copy report"""
         # Get spots without copy assignments
@@ -74,6 +79,8 @@ class ReportService:
             query = query.where(Spot.scheduled_date >= start_date)
         if end_date:
             query = query.where(Spot.scheduled_date <= end_date)
+        if station_id is not None:
+            query = query.where(Spot.station_id == station_id)
         
         result = await self.db.execute(query)
         spots = result.scalars().all()
@@ -410,7 +417,7 @@ class ReportService:
     
     async def generate_cut_rotation_performance(
         self,
-        copy_id: Optional[int] = None,
+        copy_id: Optional[UUID] = None,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None
     ) -> Dict[str, Any]:
@@ -766,7 +773,7 @@ class ReportService:
     
     async def generate_production_workload_report(
         self,
-        user_id: Optional[int] = None
+        user_id: Optional[UUID] = None
     ) -> Dict[str, Any]:
         """Generate production workload report by user"""
         from backend.models.production_assignment import ProductionAssignment, AssignmentStatus

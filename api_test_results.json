@@ -1,0 +1,2294 @@
+{
+  "total_tested": 195,
+  "passed": 122,
+  "failed": 73,
+  "skipped": 10,
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/health",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.003863,
+      "timestamp": "2025-11-23T15:36:11.332779"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.002978,
+      "timestamp": "2025-11-23T15:36:11.335853"
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.00295,
+      "timestamp": "2025-11-23T15:36:11.338882"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/login",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.015626,
+      "timestamp": "2025-11-23T15:36:11.354578"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/profile",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.005036,
+      "timestamp": "2025-11-23T15:36:11.359697"
+    },
+    {
+      "method": "PUT",
+      "path": "/auth/profile",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.007227,
+      "timestamp": "2025-11-23T15:36:11.367045"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/refresh",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.004819,
+      "timestamp": "2025-11-23T15:36:11.371958"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/logout",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.004095,
+      "timestamp": "2025-11-23T15:36:11.376132"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/me",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.005201,
+      "timestamp": "2025-11-23T15:36:11.381421"
+    },
+    {
+      "method": "GET",
+      "path": "/setup/status",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.005559,
+      "timestamp": "2025-11-23T15:36:11.387077"
+    },
+    {
+      "method": "POST",
+      "path": "/setup/initialize",
+      "status": "skipped",
+      "status_code": null,
+      "error": "Setup already initialized",
+      "response_time": null,
+      "timestamp": "2025-11-23T15:36:11.387181"
+    },
+    {
+      "method": "GET",
+      "path": "/tracks",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.348645,
+      "timestamp": "2025-11-23T15:36:11.735858"
+    },
+    {
+      "method": "GET",
+      "path": "/tracks/count",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.007941,
+      "timestamp": "2025-11-23T15:36:11.744753"
+    },
+    {
+      "method": "POST",
+      "path": "/tracks/",
+      "status": "passed",
+      "status_code": 201,
+      "error": null,
+      "response_time": 0.011072,
+      "timestamp": "2025-11-23T15:36:11.755932"
+    },
+    {
+      "method": "GET",
+      "path": "/tracks/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.007021,
+      "timestamp": "2025-11-23T15:36:11.763066"
+    },
+    {
+      "method": "PUT",
+      "path": "/tracks/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.008024,
+      "timestamp": "2025-11-23T15:36:11.771198"
+    },
+    {
+      "method": "DELETE",
+      "path": "/tracks/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.005028,
+      "timestamp": "2025-11-23T15:36:11.776314"
+    },
+    {
+      "method": "GET",
+      "path": "/campaigns",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.340452,
+      "timestamp": "2025-11-23T15:36:12.116900"
+    },
+    {
+      "method": "POST",
+      "path": "/campaigns/",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.013753,
+      "timestamp": "2025-11-23T15:36:12.132314"
+    },
+    {
+      "method": "GET",
+      "path": "/campaigns/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.007775,
+      "timestamp": "2025-11-23T15:36:12.140199"
+    },
+    {
+      "method": "PUT",
+      "path": "/campaigns/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.00653,
+      "timestamp": "2025-11-23T15:36:12.146849"
+    },
+    {
+      "method": "DELETE",
+      "path": "/campaigns/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.005277,
+      "timestamp": "2025-11-23T15:36:12.152224"
+    },
+    {
+      "method": "GET",
+      "path": "/clocks",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.342905,
+      "timestamp": "2025-11-23T15:36:12.495257"
+    },
+    {
+      "method": "POST",
+      "path": "/clocks/",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.012963,
+      "timestamp": "2025-11-23T15:36:12.509914"
+    },
+    {
+      "method": "GET",
+      "path": "/clocks/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.007261,
+      "timestamp": "2025-11-23T15:36:12.517288"
+    },
+    {
+      "method": "PUT",
+      "path": "/clocks/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.009544,
+      "timestamp": "2025-11-23T15:36:12.526940"
+    },
+    {
+      "method": "DELETE",
+      "path": "/clocks/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.005607,
+      "timestamp": "2025-11-23T15:36:12.532643"
+    },
+    {
+      "method": "GET",
+      "path": "/logs",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.035784,
+      "timestamp": "2025-11-23T15:36:12.568561"
+    },
+    {
+      "method": "GET",
+      "path": "/logs/count",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.00702,
+      "timestamp": "2025-11-23T15:36:12.575678"
+    },
+    {
+      "method": "POST",
+      "path": "/logs/generate",
+      "status": "passed",
+      "status_code": 400,
+      "error": null,
+      "response_time": 0.007407,
+      "timestamp": "2025-11-23T15:36:12.583210"
+    },
+    {
+      "method": "POST",
+      "path": "/logs/preview",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.073329,
+      "timestamp": "2025-11-23T15:36:12.656644"
+    },
+    {
+      "method": "GET",
+      "path": "/logs/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.039744,
+      "timestamp": "2025-11-23T15:36:12.696549"
+    },
+    {
+      "method": "POST",
+      "path": "/logs/1/publish",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 1.132669,
+      "timestamp": "2025-11-23T15:36:13.829385"
+    },
+    {
+      "method": "DELETE",
+      "path": "/logs/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.009313,
+      "timestamp": "2025-11-23T15:36:13.838824"
+    },
+    {
+      "method": "GET",
+      "path": "/voice",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.012639,
+      "timestamp": "2025-11-23T15:36:13.851582"
+    },
+    {
+      "method": "POST",
+      "path": "/voice/upload",
+      "status": "skipped",
+      "status_code": null,
+      "error": "Requires file upload",
+      "response_time": null,
+      "timestamp": "2025-11-23T15:36:13.851676"
+    },
+    {
+      "method": "GET",
+      "path": "/voice/1",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.007401,
+      "timestamp": "2025-11-23T15:36:13.859093"
+    },
+    {
+      "method": "DELETE",
+      "path": "/voice/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.00587,
+      "timestamp": "2025-11-23T15:36:13.865067"
+    },
+    {
+      "method": "GET",
+      "path": "/advertisers",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.353301,
+      "timestamp": "2025-11-23T15:36:14.218496"
+    },
+    {
+      "method": "POST",
+      "path": "/advertisers/",
+      "status": "passed",
+      "status_code": 201,
+      "error": null,
+      "response_time": 0.012562,
+      "timestamp": "2025-11-23T15:36:14.231988"
+    },
+    {
+      "method": "GET",
+      "path": "/agencies",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.342838,
+      "timestamp": "2025-11-23T15:36:14.574932"
+    },
+    {
+      "method": "POST",
+      "path": "/agencies/",
+      "status": "passed",
+      "status_code": 201,
+      "error": null,
+      "response_time": 0.012064,
+      "timestamp": "2025-11-23T15:36:14.587758"
+    },
+    {
+      "method": "GET",
+      "path": "/sales-reps",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.344988,
+      "timestamp": "2025-11-23T15:36:14.932840"
+    },
+    {
+      "method": "GET",
+      "path": "/orders",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.344468,
+      "timestamp": "2025-11-23T15:36:15.278073"
+    },
+    {
+      "method": "POST",
+      "path": "/orders/",
+      "status": "passed",
+      "status_code": 500,
+      "error": null,
+      "response_time": 0.010332,
+      "timestamp": "2025-11-23T15:36:15.289308"
+    },
+    {
+      "method": "GET",
+      "path": "/spots",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.342538,
+      "timestamp": "2025-11-23T15:36:15.631984"
+    },
+    {
+      "method": "POST",
+      "path": "/spots/",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.009664,
+      "timestamp": "2025-11-23T15:36:15.643174"
+    },
+    {
+      "method": "GET",
+      "path": "/stations",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.350636,
+      "timestamp": "2025-11-23T15:36:16.003257"
+    },
+    {
+      "method": "POST",
+      "path": "/stations/",
+      "status": "failed",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'call_letters'], 'msg': 'Field required', 'input': {'name': 'Test Station', 'call_sign': 'TEST', 'frequency': '100.1'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]",
+      "response_time": 0.008265,
+      "timestamp": "2025-11-23T15:36:16.012406"
+    },
+    {
+      "method": "GET",
+      "path": "/stations/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Station not found",
+      "response_time": 0.007517,
+      "timestamp": "2025-11-23T15:36:16.020032"
+    },
+    {
+      "method": "PUT",
+      "path": "/stations/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Station not found",
+      "response_time": 0.007038,
+      "timestamp": "2025-11-23T15:36:16.027184"
+    },
+    {
+      "method": "DELETE",
+      "path": "/stations/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.006027,
+      "timestamp": "2025-11-23T15:36:16.033321"
+    },
+    {
+      "method": "GET",
+      "path": "/clusters",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.352467,
+      "timestamp": "2025-11-23T15:36:16.385908"
+    },
+    {
+      "method": "POST",
+      "path": "/clusters/",
+      "status": "passed",
+      "status_code": 201,
+      "error": null,
+      "response_time": 0.017502,
+      "timestamp": "2025-11-23T15:36:16.404312"
+    },
+    {
+      "method": "GET",
+      "path": "/clusters/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.011581,
+      "timestamp": "2025-11-23T15:36:16.416017"
+    },
+    {
+      "method": "PUT",
+      "path": "/clusters/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.012529,
+      "timestamp": "2025-11-23T15:36:16.428639"
+    },
+    {
+      "method": "DELETE",
+      "path": "/clusters/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.006466,
+      "timestamp": "2025-11-23T15:36:16.435179"
+    },
+    {
+      "method": "GET",
+      "path": "/sales-teams",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.338334,
+      "timestamp": "2025-11-23T15:36:16.773609"
+    },
+    {
+      "method": "POST",
+      "path": "/sales-teams/",
+      "status": "passed",
+      "status_code": 201,
+      "error": null,
+      "response_time": 0.01234,
+      "timestamp": "2025-11-23T15:36:16.786697"
+    },
+    {
+      "method": "GET",
+      "path": "/sales-teams/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.008406,
+      "timestamp": "2025-11-23T15:36:16.795207"
+    },
+    {
+      "method": "PUT",
+      "path": "/sales-teams/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.007842,
+      "timestamp": "2025-11-23T15:36:16.803135"
+    },
+    {
+      "method": "DELETE",
+      "path": "/sales-teams/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.006263,
+      "timestamp": "2025-11-23T15:36:16.809479"
+    },
+    {
+      "method": "GET",
+      "path": "/sales-offices",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.344128,
+      "timestamp": "2025-11-23T15:36:17.153687"
+    },
+    {
+      "method": "POST",
+      "path": "/sales-offices/",
+      "status": "passed",
+      "status_code": 201,
+      "error": null,
+      "response_time": 0.010603,
+      "timestamp": "2025-11-23T15:36:17.165100"
+    },
+    {
+      "method": "GET",
+      "path": "/sales-offices/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.006671,
+      "timestamp": "2025-11-23T15:36:17.171877"
+    },
+    {
+      "method": "PUT",
+      "path": "/sales-offices/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.008208,
+      "timestamp": "2025-11-23T15:36:17.180180"
+    },
+    {
+      "method": "DELETE",
+      "path": "/sales-offices/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.006383,
+      "timestamp": "2025-11-23T15:36:17.186632"
+    },
+    {
+      "method": "GET",
+      "path": "/sales-regions",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.3466,
+      "timestamp": "2025-11-23T15:36:17.533320"
+    },
+    {
+      "method": "POST",
+      "path": "/sales-regions/",
+      "status": "passed",
+      "status_code": 201,
+      "error": null,
+      "response_time": 0.011725,
+      "timestamp": "2025-11-23T15:36:17.545765"
+    },
+    {
+      "method": "GET",
+      "path": "/sales-regions/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.009473,
+      "timestamp": "2025-11-23T15:36:17.555341"
+    },
+    {
+      "method": "PUT",
+      "path": "/sales-regions/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.008758,
+      "timestamp": "2025-11-23T15:36:17.564198"
+    },
+    {
+      "method": "DELETE",
+      "path": "/sales-regions/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.006639,
+      "timestamp": "2025-11-23T15:36:17.570927"
+    },
+    {
+      "method": "GET",
+      "path": "/order-lines",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.343189,
+      "timestamp": "2025-11-23T15:36:17.914222"
+    },
+    {
+      "method": "GET",
+      "path": "/order-lines/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Order line not found",
+      "response_time": 0.010133,
+      "timestamp": "2025-11-23T15:36:17.925642"
+    },
+    {
+      "method": "PUT",
+      "path": "/order-lines/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Order line not found",
+      "response_time": 0.006994,
+      "timestamp": "2025-11-23T15:36:17.932789"
+    },
+    {
+      "method": "DELETE",
+      "path": "/order-lines/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.007294,
+      "timestamp": "2025-11-23T15:36:17.940156"
+    },
+    {
+      "method": "GET",
+      "path": "/order-attachments",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.343989,
+      "timestamp": "2025-11-23T15:36:18.284277"
+    },
+    {
+      "method": "POST",
+      "path": "/order-attachments/upload",
+      "status": "skipped",
+      "status_code": null,
+      "error": "Requires file upload",
+      "response_time": null,
+      "timestamp": "2025-11-23T15:36:18.286043"
+    },
+    {
+      "method": "GET",
+      "path": "/order-attachments/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Attachment not found",
+      "response_time": 0.009382,
+      "timestamp": "2025-11-23T15:36:18.295466"
+    },
+    {
+      "method": "DELETE",
+      "path": "/order-attachments/999999",
+      "status": "failed",
+      "status_code": 500,
+      "error": "Status 500: Internal server error",
+      "response_time": 0.011414,
+      "timestamp": "2025-11-23T15:36:18.307009"
+    },
+    {
+      "method": "GET",
+      "path": "/invoices",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.345407,
+      "timestamp": "2025-11-23T15:36:18.652570"
+    },
+    {
+      "method": "GET",
+      "path": "/invoices/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Invoice not found",
+      "response_time": 0.009085,
+      "timestamp": "2025-11-23T15:36:18.662628"
+    },
+    {
+      "method": "PUT",
+      "path": "/invoices/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Invoice not found",
+      "response_time": 0.017456,
+      "timestamp": "2025-11-23T15:36:18.680258"
+    },
+    {
+      "method": "GET",
+      "path": "/invoices/1/pdf",
+      "status": "skipped",
+      "status_code": null,
+      "error": "Requires PDF generation",
+      "response_time": null,
+      "timestamp": "2025-11-23T15:36:18.680361"
+    },
+    {
+      "method": "DELETE",
+      "path": "/invoices/999999",
+      "status": "failed",
+      "status_code": 405,
+      "error": "Status 405: Method Not Allowed",
+      "response_time": 0.004948,
+      "timestamp": "2025-11-23T15:36:18.685328"
+    },
+    {
+      "method": "GET",
+      "path": "/payments",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.351482,
+      "timestamp": "2025-11-23T15:36:19.036902"
+    },
+    {
+      "method": "GET",
+      "path": "/payments/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Payment not found",
+      "response_time": 0.011609,
+      "timestamp": "2025-11-23T15:36:19.050165"
+    },
+    {
+      "method": "PUT",
+      "path": "/payments/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Payment not found",
+      "response_time": 0.007904,
+      "timestamp": "2025-11-23T15:36:19.058201"
+    },
+    {
+      "method": "DELETE",
+      "path": "/payments/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.007681,
+      "timestamp": "2025-11-23T15:36:19.066006"
+    },
+    {
+      "method": "GET",
+      "path": "/makegoods",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.344877,
+      "timestamp": "2025-11-23T15:36:19.410995"
+    },
+    {
+      "method": "POST",
+      "path": "/makegoods/",
+      "status": "failed",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'original_spot_id'], 'msg': 'Field required', 'input': {'order_id': None, 'reason': 'Test makegood'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['body', 'makegood_spot_id'], 'msg': 'Field required', 'input': {'order_id': None, 'reason': 'Test makegood'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]",
+      "response_time": 0.051872,
+      "timestamp": "2025-11-23T15:36:19.463878"
+    },
+    {
+      "method": "GET",
+      "path": "/makegoods/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.004306,
+      "timestamp": "2025-11-23T15:36:19.468311"
+    },
+    {
+      "method": "PUT",
+      "path": "/makegoods/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.00366,
+      "timestamp": "2025-11-23T15:36:19.472077"
+    },
+    {
+      "method": "DELETE",
+      "path": "/makegoods/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.003493,
+      "timestamp": "2025-11-23T15:36:19.475664"
+    },
+    {
+      "method": "GET",
+      "path": "/copy",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.343087,
+      "timestamp": "2025-11-23T15:36:19.818862"
+    },
+    {
+      "method": "POST",
+      "path": "/copy/",
+      "status": "failed",
+      "status_code": 500,
+      "error": "Status 500: Internal server error",
+      "response_time": 0.018885,
+      "timestamp": "2025-11-23T15:36:19.839403"
+    },
+    {
+      "method": "GET",
+      "path": "/copy/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Copy not found",
+      "response_time": 0.03867,
+      "timestamp": "2025-11-23T15:36:19.878196"
+    },
+    {
+      "method": "PUT",
+      "path": "/copy/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Copy not found",
+      "response_time": 0.009153,
+      "timestamp": "2025-11-23T15:36:19.887507"
+    },
+    {
+      "method": "POST",
+      "path": "/copy/upload",
+      "status": "skipped",
+      "status_code": null,
+      "error": "Requires file upload",
+      "response_time": null,
+      "timestamp": "2025-11-23T15:36:19.887648"
+    },
+    {
+      "method": "DELETE",
+      "path": "/copy/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.008363,
+      "timestamp": "2025-11-23T15:36:19.896033"
+    },
+    {
+      "method": "GET",
+      "path": "/copy-assignments",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.339822,
+      "timestamp": "2025-11-23T15:36:20.235968"
+    },
+    {
+      "method": "POST",
+      "path": "/copy-assignments/",
+      "status": "failed",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['query', 'spot_id'], 'msg': 'Field required', 'input': None, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['query', 'copy_id'], 'msg': 'Field required', 'input': None, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]",
+      "response_time": 0.008032,
+      "timestamp": "2025-11-23T15:36:20.244899"
+    },
+    {
+      "method": "GET",
+      "path": "/copy-assignments/1",
+      "status": "failed",
+      "status_code": 405,
+      "error": "Status 405: Method Not Allowed",
+      "response_time": 0.004093,
+      "timestamp": "2025-11-23T15:36:20.249127"
+    },
+    {
+      "method": "PUT",
+      "path": "/copy-assignments/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Assignment not found",
+      "response_time": 0.010255,
+      "timestamp": "2025-11-23T15:36:20.259505"
+    },
+    {
+      "method": "DELETE",
+      "path": "/copy-assignments/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.007274,
+      "timestamp": "2025-11-23T15:36:20.266880"
+    },
+    {
+      "method": "GET",
+      "path": "/dayparts",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.344812,
+      "timestamp": "2025-11-23T15:36:20.611804"
+    },
+    {
+      "method": "POST",
+      "path": "/dayparts/",
+      "status": "passed",
+      "status_code": 201,
+      "error": null,
+      "response_time": 0.016099,
+      "timestamp": "2025-11-23T15:36:20.628944"
+    },
+    {
+      "method": "GET",
+      "path": "/dayparts/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.01082,
+      "timestamp": "2025-11-23T15:36:20.639862"
+    },
+    {
+      "method": "PUT",
+      "path": "/dayparts/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.011477,
+      "timestamp": "2025-11-23T15:36:20.651438"
+    },
+    {
+      "method": "DELETE",
+      "path": "/dayparts/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.006417,
+      "timestamp": "2025-11-23T15:36:20.657956"
+    },
+    {
+      "method": "GET",
+      "path": "/daypart-categories",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.345044,
+      "timestamp": "2025-11-23T15:36:21.003081"
+    },
+    {
+      "method": "POST",
+      "path": "/daypart-categories/",
+      "status": "failed",
+      "status_code": 400,
+      "error": "Status 400: Daypart category with this name already exists",
+      "response_time": 0.010663,
+      "timestamp": "2025-11-23T15:36:21.014577"
+    },
+    {
+      "method": "GET",
+      "path": "/daypart-categories/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.00748,
+      "timestamp": "2025-11-23T15:36:21.022147"
+    },
+    {
+      "method": "PUT",
+      "path": "/daypart-categories/1",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.009682,
+      "timestamp": "2025-11-23T15:36:21.031934"
+    },
+    {
+      "method": "DELETE",
+      "path": "/daypart-categories/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.006495,
+      "timestamp": "2025-11-23T15:36:21.038513"
+    },
+    {
+      "method": "GET",
+      "path": "/rotation-rules",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.341234,
+      "timestamp": "2025-11-23T15:36:21.379831"
+    },
+    {
+      "method": "POST",
+      "path": "/rotation-rules/",
+      "status": "failed",
+      "status_code": 500,
+      "error": "Status 500: Internal server error",
+      "response_time": 0.019566,
+      "timestamp": "2025-11-23T15:36:21.401130"
+    },
+    {
+      "method": "GET",
+      "path": "/rotation-rules/1",
+      "status": "failed",
+      "status_code": 500,
+      "error": "Status 500: Internal server error",
+      "response_time": 0.011885,
+      "timestamp": "2025-11-23T15:36:21.413164"
+    },
+    {
+      "method": "PUT",
+      "path": "/rotation-rules/1",
+      "status": "failed",
+      "status_code": 500,
+      "error": "Status 500: Internal server error",
+      "response_time": 0.013285,
+      "timestamp": "2025-11-23T15:36:21.426594"
+    },
+    {
+      "method": "DELETE",
+      "path": "/rotation-rules/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.025888,
+      "timestamp": "2025-11-23T15:36:21.452607"
+    },
+    {
+      "method": "GET",
+      "path": "/traffic-logs",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.348034,
+      "timestamp": "2025-11-23T15:36:21.800803"
+    },
+    {
+      "method": "POST",
+      "path": "/traffic-logs/",
+      "status": "failed",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'log_type'], 'msg': 'Field required', 'input': {'log_date': '2024-01-15', 'station_id': 1}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['body', 'message'], 'msg': 'Field required', 'input': {'log_date': '2024-01-15', 'station_id': 1}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]",
+      "response_time": 0.007709,
+      "timestamp": "2025-11-23T15:36:21.809403"
+    },
+    {
+      "method": "GET",
+      "path": "/traffic-logs/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Traffic log not found",
+      "response_time": 0.018053,
+      "timestamp": "2025-11-23T15:36:21.827601"
+    },
+    {
+      "method": "PUT",
+      "path": "/traffic-logs/1",
+      "status": "failed",
+      "status_code": 405,
+      "error": "Status 405: Method Not Allowed",
+      "response_time": 0.004299,
+      "timestamp": "2025-11-23T15:36:21.832018"
+    },
+    {
+      "method": "DELETE",
+      "path": "/traffic-logs/999999",
+      "status": "failed",
+      "status_code": 405,
+      "error": "Status 405: Method Not Allowed",
+      "response_time": 0.002916,
+      "timestamp": "2025-11-23T15:36:21.835014"
+    },
+    {
+      "method": "GET",
+      "path": "/break-structures",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.344069,
+      "timestamp": "2025-11-23T15:36:22.179185"
+    },
+    {
+      "method": "POST",
+      "path": "/break-structures/",
+      "status": "failed",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'hour'], 'msg': 'Field required', 'input': {'name': 'Test Break', 'duration': 180}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]",
+      "response_time": 0.007623,
+      "timestamp": "2025-11-23T15:36:22.188321"
+    },
+    {
+      "method": "GET",
+      "path": "/break-structures/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Break structure not found",
+      "response_time": 0.010008,
+      "timestamp": "2025-11-23T15:36:22.198428"
+    },
+    {
+      "method": "PUT",
+      "path": "/break-structures/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Break structure not found",
+      "response_time": 0.008025,
+      "timestamp": "2025-11-23T15:36:22.206603"
+    },
+    {
+      "method": "DELETE",
+      "path": "/break-structures/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.006293,
+      "timestamp": "2025-11-23T15:36:22.213038"
+    },
+    {
+      "method": "GET",
+      "path": "/inventory",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.347387,
+      "timestamp": "2025-11-23T15:36:22.560521"
+    },
+    {
+      "method": "GET",
+      "path": "/inventory/avails",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.005289,
+      "timestamp": "2025-11-23T15:36:22.566729"
+    },
+    {
+      "method": "GET",
+      "path": "/inventory/slots",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.003185,
+      "timestamp": "2025-11-23T15:36:22.569995"
+    },
+    {
+      "method": "GET",
+      "path": "/revenue",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.004806,
+      "timestamp": "2025-11-23T15:36:22.574907"
+    },
+    {
+      "method": "GET",
+      "path": "/revenue/summary",
+      "status": "failed",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['query', 'start_date'], 'msg': 'Field required', 'input': None, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['query', 'end_date'], 'msg': 'Field required', 'input': None, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]",
+      "response_time": 0.0069,
+      "timestamp": "2025-11-23T15:36:22.581935"
+    },
+    {
+      "method": "GET",
+      "path": "/revenue/by-station",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.0036,
+      "timestamp": "2025-11-23T15:36:22.585761"
+    },
+    {
+      "method": "GET",
+      "path": "/revenue/by-advertiser",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.003321,
+      "timestamp": "2025-11-23T15:36:22.589169"
+    },
+    {
+      "method": "GET",
+      "path": "/sales-goals",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.341837,
+      "timestamp": "2025-11-23T15:36:22.931083"
+    },
+    {
+      "method": "POST",
+      "path": "/sales-goals/",
+      "status": "failed",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'sales_rep_id'], 'msg': 'Field required', 'input': {'target_amount': 10000, 'period': '2024-01'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['body', 'target_date'], 'msg': 'Field required', 'input': {'target_amount': 10000, 'period': '2024-01'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['body', 'goal_amount'], 'msg': 'Field required', 'input': {'target_amount': 10000, 'period': '2024-01'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]",
+      "response_time": 0.008019,
+      "timestamp": "2025-11-23T15:36:22.939826"
+    },
+    {
+      "method": "GET",
+      "path": "/sales-goals/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.004903,
+      "timestamp": "2025-11-23T15:36:22.944842"
+    },
+    {
+      "method": "PUT",
+      "path": "/sales-goals/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.003677,
+      "timestamp": "2025-11-23T15:36:22.948627"
+    },
+    {
+      "method": "DELETE",
+      "path": "/sales-goals/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.003151,
+      "timestamp": "2025-11-23T15:36:22.951849"
+    },
+    {
+      "method": "GET",
+      "path": "/production-orders",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.346872,
+      "timestamp": "2025-11-23T15:36:23.298798"
+    },
+    {
+      "method": "GET",
+      "path": "/audio-cuts",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.347909,
+      "timestamp": "2025-11-23T15:36:23.647517"
+    },
+    {
+      "method": "GET",
+      "path": "/voice-talent",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.347362,
+      "timestamp": "2025-11-23T15:36:23.996602"
+    },
+    {
+      "method": "GET",
+      "path": "/production-assignments",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.346892,
+      "timestamp": "2025-11-23T15:36:24.345192"
+    },
+    {
+      "method": "POST",
+      "path": "/production-assignments/",
+      "status": "failed",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'user_id'], 'msg': 'Field required', 'input': {'production_order_id': 1, 'assigned_to': 1}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['body', 'assignment_type'], 'msg': 'Field required', 'input': {'production_order_id': 1, 'assigned_to': 1}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]",
+      "response_time": 0.007828,
+      "timestamp": "2025-11-23T15:36:24.353947"
+    },
+    {
+      "method": "GET",
+      "path": "/production-assignments/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Assignment not found",
+      "response_time": 0.017479,
+      "timestamp": "2025-11-23T15:36:24.371545"
+    },
+    {
+      "method": "PUT",
+      "path": "/production-assignments/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Assignment not found",
+      "response_time": 0.008697,
+      "timestamp": "2025-11-23T15:36:24.380385"
+    },
+    {
+      "method": "DELETE",
+      "path": "/production-assignments/999999",
+      "status": "failed",
+      "status_code": 405,
+      "error": "Status 405: Method Not Allowed",
+      "response_time": 0.003572,
+      "timestamp": "2025-11-23T15:36:24.384063"
+    },
+    {
+      "method": "GET",
+      "path": "/production-archive",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.003787,
+      "timestamp": "2025-11-23T15:36:24.387948"
+    },
+    {
+      "method": "GET",
+      "path": "/production-archive/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.003163,
+      "timestamp": "2025-11-23T15:36:24.391195"
+    },
+    {
+      "method": "GET",
+      "path": "/audio-delivery",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.346176,
+      "timestamp": "2025-11-23T15:36:24.737474"
+    },
+    {
+      "method": "POST",
+      "path": "/audio-delivery/",
+      "status": "failed",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'cut_id'], 'msg': 'Field required', 'input': {'order_id': None, 'delivery_method': 'ftp'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['body', 'target_server'], 'msg': 'Field required', 'input': {'order_id': None, 'delivery_method': 'ftp'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]",
+      "response_time": 0.01038,
+      "timestamp": "2025-11-23T15:36:24.749311"
+    },
+    {
+      "method": "GET",
+      "path": "/audio-delivery/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.004439,
+      "timestamp": "2025-11-23T15:36:24.753856"
+    },
+    {
+      "method": "PUT",
+      "path": "/audio-delivery/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.003945,
+      "timestamp": "2025-11-23T15:36:24.757888"
+    },
+    {
+      "method": "GET",
+      "path": "/audio-qc",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.003601,
+      "timestamp": "2025-11-23T15:36:24.761582"
+    },
+    {
+      "method": "POST",
+      "path": "/audio-qc/",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.003835,
+      "timestamp": "2025-11-23T15:36:24.765492"
+    },
+    {
+      "method": "GET",
+      "path": "/audio-qc/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.003591,
+      "timestamp": "2025-11-23T15:36:24.769175"
+    },
+    {
+      "method": "PUT",
+      "path": "/audio-qc/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.003805,
+      "timestamp": "2025-11-23T15:36:24.773102"
+    },
+    {
+      "method": "GET",
+      "path": "/live-reads",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.346463,
+      "timestamp": "2025-11-23T15:36:25.119657"
+    },
+    {
+      "method": "POST",
+      "path": "/live-reads/",
+      "status": "failed",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'script_text'], 'msg': 'Field required', 'input': {'order_id': None, 'read_date': '2024-01-15'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]",
+      "response_time": 0.017108,
+      "timestamp": "2025-11-23T15:36:25.137631"
+    },
+    {
+      "method": "GET",
+      "path": "/live-reads/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.005077,
+      "timestamp": "2025-11-23T15:36:25.142857"
+    },
+    {
+      "method": "PUT",
+      "path": "/live-reads/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.005199,
+      "timestamp": "2025-11-23T15:36:25.148142"
+    },
+    {
+      "method": "DELETE",
+      "path": "/live-reads/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.005052,
+      "timestamp": "2025-11-23T15:36:25.153269"
+    },
+    {
+      "method": "GET",
+      "path": "/political-compliance",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.344474,
+      "timestamp": "2025-11-23T15:36:25.497834"
+    },
+    {
+      "method": "POST",
+      "path": "/political-compliance/",
+      "status": "failed",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'sponsor_name'], 'msg': 'Field required', 'input': {'order_id': None, 'compliance_status': 'pending'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]",
+      "response_time": 0.008806,
+      "timestamp": "2025-11-23T15:36:25.507397"
+    },
+    {
+      "method": "GET",
+      "path": "/political-compliance/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.005106,
+      "timestamp": "2025-11-23T15:36:25.512585"
+    },
+    {
+      "method": "PUT",
+      "path": "/political-compliance/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.003996,
+      "timestamp": "2025-11-23T15:36:25.516658"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/audit-logs",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.347579,
+      "timestamp": "2025-11-23T15:36:25.864332"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/audit-logs/1",
+      "status": "failed",
+      "status_code": 500,
+      "error": "Status 500: Internal server error",
+      "response_time": 0.014236,
+      "timestamp": "2025-11-23T15:36:25.879914"
+    },
+    {
+      "method": "GET",
+      "path": "/log-revisions",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.005322,
+      "timestamp": "2025-11-23T15:36:25.885351"
+    },
+    {
+      "method": "GET",
+      "path": "/log-revisions/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.004819,
+      "timestamp": "2025-11-23T15:36:25.890258"
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.343726,
+      "timestamp": "2025-11-23T15:36:26.234075"
+    },
+    {
+      "method": "POST",
+      "path": "/webhooks/",
+      "status": "failed",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'name'], 'msg': 'Field required', 'input': {'url': 'https://example.com/webhook', 'event_type': 'order.created'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['body', 'webhook_type'], 'msg': 'Field required', 'input': {'url': 'https://example.com/webhook', 'event_type': 'order.created'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['body', 'events'], 'msg': 'Field required', 'input': {'url': 'https://example.com/webhook', 'event_type': 'order.created'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]",
+      "response_time": 0.007902,
+      "timestamp": "2025-11-23T15:36:26.242787"
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Webhook not found",
+      "response_time": 0.00663,
+      "timestamp": "2025-11-23T15:36:26.249518"
+    },
+    {
+      "method": "PUT",
+      "path": "/webhooks/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Webhook not found",
+      "response_time": 0.018041,
+      "timestamp": "2025-11-23T15:36:26.267670"
+    },
+    {
+      "method": "DELETE",
+      "path": "/webhooks/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.005909,
+      "timestamp": "2025-11-23T15:36:26.273700"
+    },
+    {
+      "method": "GET",
+      "path": "/notifications",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.341613,
+      "timestamp": "2025-11-23T15:36:26.615451"
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/unread",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.005566,
+      "timestamp": "2025-11-23T15:36:26.621818"
+    },
+    {
+      "method": "PUT",
+      "path": "/notifications/1/read",
+      "status": "failed",
+      "status_code": 405,
+      "error": "Status 405: Method Not Allowed",
+      "response_time": 0.003048,
+      "timestamp": "2025-11-23T15:36:26.624969"
+    },
+    {
+      "method": "DELETE",
+      "path": "/notifications/999999",
+      "status": "passed",
+      "status_code": 404,
+      "error": null,
+      "response_time": 0.003355,
+      "timestamp": "2025-11-23T15:36:26.628426"
+    },
+    {
+      "method": "GET",
+      "path": "/collaboration/comments",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.003178,
+      "timestamp": "2025-11-23T15:36:26.631693"
+    },
+    {
+      "method": "POST",
+      "path": "/collaboration/comments",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.00371,
+      "timestamp": "2025-11-23T15:36:26.635525"
+    },
+    {
+      "method": "GET",
+      "path": "/collaboration/comments/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Not Found",
+      "response_time": 0.003315,
+      "timestamp": "2025-11-23T15:36:26.638941"
+    },
+    {
+      "method": "GET",
+      "path": "/backups",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.349606,
+      "timestamp": "2025-11-23T15:36:26.988659"
+    },
+    {
+      "method": "POST",
+      "path": "/backups/create",
+      "status": "failed",
+      "status_code": 405,
+      "error": "Status 405: Method Not Allowed",
+      "response_time": 0.005644,
+      "timestamp": "2025-11-23T15:36:26.995781"
+    },
+    {
+      "method": "GET",
+      "path": "/backups/1",
+      "status": "failed",
+      "status_code": 404,
+      "error": "Status 404: Backup not found",
+      "response_time": 0.017685,
+      "timestamp": "2025-11-23T15:36:27.013554"
+    },
+    {
+      "method": "POST",
+      "path": "/backups/1/restore",
+      "status": "skipped",
+      "status_code": null,
+      "error": "Requires careful handling",
+      "response_time": null,
+      "timestamp": "2025-11-23T15:36:27.013640"
+    },
+    {
+      "method": "GET",
+      "path": "/settings",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.340458,
+      "timestamp": "2025-11-23T15:36:27.354126"
+    },
+    {
+      "method": "GET",
+      "path": "/settings/branding/public",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.008036,
+      "timestamp": "2025-11-23T15:36:27.364128"
+    },
+    {
+      "method": "GET",
+      "path": "/users",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.348591,
+      "timestamp": "2025-11-23T15:36:27.712808"
+    },
+    {
+      "method": "GET",
+      "path": "/activity/recent",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.047196,
+      "timestamp": "2025-11-23T15:36:27.760938"
+    },
+    {
+      "method": "GET",
+      "path": "/sync/status",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.222832,
+      "timestamp": "2025-11-23T15:36:27.983884"
+    },
+    {
+      "method": "POST",
+      "path": "/sync/tracks",
+      "status": "skipped",
+      "status_code": null,
+      "error": "Requires LibreTime connection",
+      "response_time": null,
+      "timestamp": "2025-11-23T15:36:27.983979"
+    },
+    {
+      "method": "GET",
+      "path": "/reports",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.346678,
+      "timestamp": "2025-11-23T15:36:28.330677"
+    },
+    {
+      "method": "GET",
+      "path": "/help/articles",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.02434,
+      "timestamp": "2025-11-23T15:36:28.355938"
+    },
+    {
+      "method": "GET",
+      "path": "/proxy/dashboard",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.011031,
+      "timestamp": "2025-11-23T15:36:28.367095"
+    },
+    {
+      "method": "GET",
+      "path": "/sync/status",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.212369,
+      "timestamp": "2025-11-23T15:36:28.579574"
+    },
+    {
+      "method": "POST",
+      "path": "/sync/tracks",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.222719,
+      "timestamp": "2025-11-23T15:36:28.802408"
+    },
+    {
+      "method": "POST",
+      "path": "/sync/playback-history",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 3.666144,
+      "timestamp": "2025-11-23T15:36:32.468656"
+    },
+    {
+      "method": "GET",
+      "path": "/sync/libretime/config",
+      "status": "passed",
+      "status_code": 200,
+      "error": null,
+      "response_time": 0.007246,
+      "timestamp": "2025-11-23T15:36:32.476025"
+    },
+    {
+      "method": "POST",
+      "path": "/logs/1/publish",
+      "status": "skipped",
+      "status_code": null,
+      "error": "Requires valid log and LibreTime connection",
+      "response_time": null,
+      "timestamp": "2025-11-23T15:36:32.476095"
+    },
+    {
+      "method": "POST",
+      "path": "/logs/1/publish-hour",
+      "status": "skipped",
+      "status_code": null,
+      "error": "Requires valid log and LibreTime connection",
+      "response_time": null,
+      "timestamp": "2025-11-23T15:36:32.476099"
+    },
+    {
+      "method": "POST",
+      "path": "/voice/1/upload-to-libretime",
+      "status": "skipped",
+      "status_code": null,
+      "error": "Requires valid voice track and LibreTime connection",
+      "response_time": null,
+      "timestamp": "2025-11-23T15:36:32.476101"
+    }
+  ],
+  "errors": [
+    {
+      "method": "POST",
+      "path": "/stations/",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'call_letters'], 'msg': 'Field required', 'input': {'name': 'Test Station', 'call_sign': 'TEST', 'frequency': '100.1'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]"
+    },
+    {
+      "method": "GET",
+      "path": "/stations/1",
+      "status_code": 404,
+      "error": "Status 404: Station not found"
+    },
+    {
+      "method": "PUT",
+      "path": "/stations/1",
+      "status_code": 404,
+      "error": "Status 404: Station not found"
+    },
+    {
+      "method": "GET",
+      "path": "/order-lines/1",
+      "status_code": 404,
+      "error": "Status 404: Order line not found"
+    },
+    {
+      "method": "PUT",
+      "path": "/order-lines/1",
+      "status_code": 404,
+      "error": "Status 404: Order line not found"
+    },
+    {
+      "method": "GET",
+      "path": "/order-attachments/1",
+      "status_code": 404,
+      "error": "Status 404: Attachment not found"
+    },
+    {
+      "method": "DELETE",
+      "path": "/order-attachments/999999",
+      "status_code": 500,
+      "error": "Status 500: Internal server error"
+    },
+    {
+      "method": "GET",
+      "path": "/invoices/1",
+      "status_code": 404,
+      "error": "Status 404: Invoice not found"
+    },
+    {
+      "method": "PUT",
+      "path": "/invoices/1",
+      "status_code": 404,
+      "error": "Status 404: Invoice not found"
+    },
+    {
+      "method": "DELETE",
+      "path": "/invoices/999999",
+      "status_code": 405,
+      "error": "Status 405: Method Not Allowed"
+    },
+    {
+      "method": "GET",
+      "path": "/payments/1",
+      "status_code": 404,
+      "error": "Status 404: Payment not found"
+    },
+    {
+      "method": "PUT",
+      "path": "/payments/1",
+      "status_code": 404,
+      "error": "Status 404: Payment not found"
+    },
+    {
+      "method": "POST",
+      "path": "/makegoods/",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'original_spot_id'], 'msg': 'Field required', 'input': {'order_id': None, 'reason': 'Test makegood'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['body', 'makegood_spot_id'], 'msg': 'Field required', 'input': {'order_id': None, 'reason': 'Test makegood'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]"
+    },
+    {
+      "method": "GET",
+      "path": "/makegoods/1",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "PUT",
+      "path": "/makegoods/1",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "POST",
+      "path": "/copy/",
+      "status_code": 500,
+      "error": "Status 500: Internal server error"
+    },
+    {
+      "method": "GET",
+      "path": "/copy/1",
+      "status_code": 404,
+      "error": "Status 404: Copy not found"
+    },
+    {
+      "method": "PUT",
+      "path": "/copy/1",
+      "status_code": 404,
+      "error": "Status 404: Copy not found"
+    },
+    {
+      "method": "POST",
+      "path": "/copy-assignments/",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['query', 'spot_id'], 'msg': 'Field required', 'input': None, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['query', 'copy_id'], 'msg': 'Field required', 'input': None, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]"
+    },
+    {
+      "method": "GET",
+      "path": "/copy-assignments/1",
+      "status_code": 405,
+      "error": "Status 405: Method Not Allowed"
+    },
+    {
+      "method": "PUT",
+      "path": "/copy-assignments/1",
+      "status_code": 404,
+      "error": "Status 404: Assignment not found"
+    },
+    {
+      "method": "POST",
+      "path": "/daypart-categories/",
+      "status_code": 400,
+      "error": "Status 400: Daypart category with this name already exists"
+    },
+    {
+      "method": "POST",
+      "path": "/rotation-rules/",
+      "status_code": 500,
+      "error": "Status 500: Internal server error"
+    },
+    {
+      "method": "GET",
+      "path": "/rotation-rules/1",
+      "status_code": 500,
+      "error": "Status 500: Internal server error"
+    },
+    {
+      "method": "PUT",
+      "path": "/rotation-rules/1",
+      "status_code": 500,
+      "error": "Status 500: Internal server error"
+    },
+    {
+      "method": "POST",
+      "path": "/traffic-logs/",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'log_type'], 'msg': 'Field required', 'input': {'log_date': '2024-01-15', 'station_id': 1}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['body', 'message'], 'msg': 'Field required', 'input': {'log_date': '2024-01-15', 'station_id': 1}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]"
+    },
+    {
+      "method": "GET",
+      "path": "/traffic-logs/1",
+      "status_code": 404,
+      "error": "Status 404: Traffic log not found"
+    },
+    {
+      "method": "PUT",
+      "path": "/traffic-logs/1",
+      "status_code": 405,
+      "error": "Status 405: Method Not Allowed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/traffic-logs/999999",
+      "status_code": 405,
+      "error": "Status 405: Method Not Allowed"
+    },
+    {
+      "method": "POST",
+      "path": "/break-structures/",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'hour'], 'msg': 'Field required', 'input': {'name': 'Test Break', 'duration': 180}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]"
+    },
+    {
+      "method": "GET",
+      "path": "/break-structures/1",
+      "status_code": 404,
+      "error": "Status 404: Break structure not found"
+    },
+    {
+      "method": "PUT",
+      "path": "/break-structures/1",
+      "status_code": 404,
+      "error": "Status 404: Break structure not found"
+    },
+    {
+      "method": "GET",
+      "path": "/inventory/avails",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "GET",
+      "path": "/inventory/slots",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "GET",
+      "path": "/revenue",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "GET",
+      "path": "/revenue/summary",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['query', 'start_date'], 'msg': 'Field required', 'input': None, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['query', 'end_date'], 'msg': 'Field required', 'input': None, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]"
+    },
+    {
+      "method": "GET",
+      "path": "/revenue/by-station",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "GET",
+      "path": "/revenue/by-advertiser",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "POST",
+      "path": "/sales-goals/",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'sales_rep_id'], 'msg': 'Field required', 'input': {'target_amount': 10000, 'period': '2024-01'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['body', 'target_date'], 'msg': 'Field required', 'input': {'target_amount': 10000, 'period': '2024-01'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['body', 'goal_amount'], 'msg': 'Field required', 'input': {'target_amount': 10000, 'period': '2024-01'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]"
+    },
+    {
+      "method": "GET",
+      "path": "/sales-goals/1",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "PUT",
+      "path": "/sales-goals/1",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "POST",
+      "path": "/production-assignments/",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'user_id'], 'msg': 'Field required', 'input': {'production_order_id': 1, 'assigned_to': 1}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['body', 'assignment_type'], 'msg': 'Field required', 'input': {'production_order_id': 1, 'assigned_to': 1}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]"
+    },
+    {
+      "method": "GET",
+      "path": "/production-assignments/1",
+      "status_code": 404,
+      "error": "Status 404: Assignment not found"
+    },
+    {
+      "method": "PUT",
+      "path": "/production-assignments/1",
+      "status_code": 404,
+      "error": "Status 404: Assignment not found"
+    },
+    {
+      "method": "DELETE",
+      "path": "/production-assignments/999999",
+      "status_code": 405,
+      "error": "Status 405: Method Not Allowed"
+    },
+    {
+      "method": "GET",
+      "path": "/production-archive",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "GET",
+      "path": "/production-archive/1",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "POST",
+      "path": "/audio-delivery/",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'cut_id'], 'msg': 'Field required', 'input': {'order_id': None, 'delivery_method': 'ftp'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['body', 'target_server'], 'msg': 'Field required', 'input': {'order_id': None, 'delivery_method': 'ftp'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]"
+    },
+    {
+      "method": "GET",
+      "path": "/audio-delivery/1",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "PUT",
+      "path": "/audio-delivery/1",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "GET",
+      "path": "/audio-qc",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "POST",
+      "path": "/audio-qc/",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "GET",
+      "path": "/audio-qc/1",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "PUT",
+      "path": "/audio-qc/1",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "POST",
+      "path": "/live-reads/",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'script_text'], 'msg': 'Field required', 'input': {'order_id': None, 'read_date': '2024-01-15'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]"
+    },
+    {
+      "method": "GET",
+      "path": "/live-reads/1",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "PUT",
+      "path": "/live-reads/1",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "POST",
+      "path": "/political-compliance/",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'sponsor_name'], 'msg': 'Field required', 'input': {'order_id': None, 'compliance_status': 'pending'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]"
+    },
+    {
+      "method": "GET",
+      "path": "/political-compliance/1",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "PUT",
+      "path": "/political-compliance/1",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/audit-logs/1",
+      "status_code": 500,
+      "error": "Status 500: Internal server error"
+    },
+    {
+      "method": "GET",
+      "path": "/log-revisions",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "GET",
+      "path": "/log-revisions/1",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "POST",
+      "path": "/webhooks/",
+      "status_code": 422,
+      "error": "Status 422: [{'type': 'missing', 'loc': ['body', 'name'], 'msg': 'Field required', 'input': {'url': 'https://example.com/webhook', 'event_type': 'order.created'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['body', 'webhook_type'], 'msg': 'Field required', 'input': {'url': 'https://example.com/webhook', 'event_type': 'order.created'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}, {'type': 'missing', 'loc': ['body', 'events'], 'msg': 'Field required', 'input': {'url': 'https://example.com/webhook', 'event_type': 'order.created'}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]"
+    },
+    {
+      "method": "GET",
+      "path": "/webhooks/1",
+      "status_code": 404,
+      "error": "Status 404: Webhook not found"
+    },
+    {
+      "method": "PUT",
+      "path": "/webhooks/1",
+      "status_code": 404,
+      "error": "Status 404: Webhook not found"
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/unread",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "PUT",
+      "path": "/notifications/1/read",
+      "status_code": 405,
+      "error": "Status 405: Method Not Allowed"
+    },
+    {
+      "method": "GET",
+      "path": "/collaboration/comments",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "POST",
+      "path": "/collaboration/comments",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "GET",
+      "path": "/collaboration/comments/1",
+      "status_code": 404,
+      "error": "Status 404: Not Found"
+    },
+    {
+      "method": "POST",
+      "path": "/backups/create",
+      "status_code": 405,
+      "error": "Status 405: Method Not Allowed"
+    },
+    {
+      "method": "GET",
+      "path": "/backups/1",
+      "status_code": 404,
+      "error": "Status 404: Backup not found"
+    }
+  ],
+  "timestamp": "2025-11-23T15:36:10.581063"
+}

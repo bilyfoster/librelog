@@ -3,6 +3,7 @@ Backup service for database and file backups with cloud storage integration
 """
 
 import os
+from uuid import UUID
 import subprocess
 import tarfile
 import tempfile
@@ -236,7 +237,7 @@ class BackupService:
     @staticmethod
     async def restore_backup(
         db: AsyncSession,
-        backup_id: int,
+        backup_id: UUID,
         restore_database: bool = True,
         restore_files: bool = True
     ) -> Dict[str, Any]:

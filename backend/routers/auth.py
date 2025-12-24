@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db
 from backend.auth.oauth2 import authenticate_user, create_access_token, verify_token, get_user_by_username
@@ -14,6 +14,9 @@ from backend.auth.password_validator import validate_password, PasswordValidatio
 from backend.models.user import User
 from backend.logging.audit import audit_logger
 from backend.services.auth_security_service import AuthSecurityService, MAX_FAILED_ATTEMPTS
+import structlog
+
+logger = structlog.get_logger()
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -183,7 +186,7 @@ async def login(
     is_locked, lockout_until = await auth_security.is_account_locked(login_data.username)
     
     if is_locked:
-        remaining_minutes = int((lockout_until - datetime.utcnow()).total_seconds() / 60) + 1
+        remaining_minutes = int((lockout_until - datetime.now(timezone.utc)).total_seconds() / 60) + 1
         raise HTTPException(
             status_code=status.HTTP_423_LOCKED,
             detail=f"Account is locked due to too many failed login attempts. "
@@ -206,17 +209,26 @@ async def login(
         )
         
         # Log failed login attempt
-        audit_logger.warning(
-            "Failed login attempt",
-            username=login_data.username,
-            ip_address=client_ip,
-            user_agent=user_agent
-        )
+        try:
+            await audit_logger.log_security_event(
+                db_session=db,
+                user_id=None,
+                event_type="FAILED_LOGIN",
+                event_description=f"Failed login attempt for username: {login_data.username}",
+                resource_type="Authentication",
+                resource_id=None,
+                ip_address=client_ip,
+                user_agent=user_agent,
+                metadata={"username": login_data.username}
+            )
+        except Exception as e:
+            # Don't fail login if audit logging fails
+            logger.warning("Failed to log failed login attempt", error=str(e))
         
         # Check if account is now locked after this failed attempt
         is_locked, lockout_until = await auth_security.is_account_locked(login_data.username)
         if is_locked:
-            remaining_minutes = int((lockout_until - datetime.utcnow()).total_seconds() / 60) + 1
+            remaining_minutes = int((lockout_until - datetime.now(timezone.utc)).total_seconds() / 60) + 1
             
             # Send notification to user about account lockout (if user exists)
             try:
@@ -275,12 +287,39 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
     }
 
 
+async def get_current_user_for_refresh(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db)
+) -> User:
+    """Get current authenticated user for refresh - allows expired tokens"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    # Allow expired tokens for refresh
+    payload = verify_token(token, allow_expired=True)
+    if payload is None:
+        raise credentials_exception
+    
+    username: str = payload.get("sub")
+    if username is None:
+        raise credentials_exception
+    
+    user = await get_user_by_username(db, username)
+    if user is None:
+        raise credentials_exception
+    
+    return user
+
+
 @router.post("/refresh")
 async def refresh_token(
     request: Request,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_for_refresh)
 ):
-    """Refresh JWT token - returns new access token"""
+    """Refresh JWT token - returns new access token (allows expired tokens)"""
     # Create new token with same user
     new_access_token = create_access_token(data={"sub": current_user.username})
     

@@ -355,24 +355,8 @@ const Settings: React.FC = () => {
                   
                   setLogoUploading(true)
                   try {
-                    const formData = new FormData()
-                    formData.append('file', file)
-                    
-                    const token = localStorage.getItem('token')
-                    const response = await fetch('/api/settings/branding/upload-logo', {
-                      method: 'POST',
-                      headers: {
-                        'Authorization': `Bearer ${token}`,
-                      },
-                      body: formData,
-                    })
-                    
-                    if (!response.ok) {
-                      const error = await response.json()
-                      throw new Error(error.detail || 'Failed to upload logo')
-                    }
-                    
-                    const result = await response.json()
+                    const { uploadBrandingLogo } = await import('../../utils/api')
+                    const result = await uploadBrandingLogo(file)
                     handleChange('branding', 'logo_url', result.logo_url)
                     // Also save the logo_url to settings immediately
                     await updateCategorySettings('branding', {

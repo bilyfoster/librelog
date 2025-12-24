@@ -3,6 +3,7 @@ User management router
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
@@ -34,7 +35,7 @@ class UserUpdate(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: int
+    id: UUID
     username: str
     role: str
     created_at: str
@@ -99,7 +100,7 @@ async def list_users(
 
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
-    user_id: int,
+    user_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):
@@ -205,7 +206,7 @@ async def create_user(
 
 @router.put("/{user_id}", response_model=UserResponse)
 async def update_user(
-    user_id: int,
+    user_id: UUID,
     user_data: UserUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_admin)
@@ -276,7 +277,7 @@ async def update_user(
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
-    user_id: int,
+    user_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):

@@ -3,6 +3,7 @@ Advertisers router for traffic management
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from backend.database import get_db
@@ -18,18 +19,35 @@ router = APIRouter()
 
 class AdvertiserCreate(BaseModel):
     name: str
-    contact_name: Optional[str] = None
+    contact_first_name: Optional[str] = None
+    contact_last_name: Optional[str] = None
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     address: Optional[str] = None
     tax_id: Optional[str] = None
     payment_terms: Optional[str] = None
     credit_limit: Optional[Decimal] = None
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "Acme Corporation",
+                "contact_first_name": "John",
+                "contact_last_name": "Doe",
+                "email": "john.doe@acme.com",
+                "phone": "555-1234",
+                "address": "123 Main St, City, State 12345",
+                "tax_id": "12-3456789",
+                "payment_terms": "Net 30",
+                "credit_limit": 10000.00
+            }
+        }
 
 
 class AdvertiserUpdate(BaseModel):
     name: Optional[str] = None
-    contact_name: Optional[str] = None
+    contact_first_name: Optional[str] = None
+    contact_last_name: Optional[str] = None
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     address: Optional[str] = None
@@ -40,9 +58,10 @@ class AdvertiserUpdate(BaseModel):
 
 
 class AdvertiserResponse(BaseModel):
-    id: int
+    id: UUID
     name: str
-    contact_name: Optional[str]
+    contact_first_name: Optional[str]
+    contact_last_name: Optional[str]
     email: Optional[str]
     phone: Optional[str]
     address: Optional[str]
@@ -62,7 +81,8 @@ def advertiser_to_response(adv: Advertiser) -> AdvertiserResponse:
     return AdvertiserResponse(
         id=adv.id,
         name=adv.name,
-        contact_name=adv.contact_name,
+        contact_first_name=adv.contact_first_name,
+        contact_last_name=adv.contact_last_name,
         email=adv.email,
         phone=adv.phone,
         address=adv.address,
@@ -77,14 +97,18 @@ def advertiser_to_response(adv: Advertiser) -> AdvertiserResponse:
 
 @router.get("/", response_model=list[AdvertiserResponse])
 async def list_advertisers(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
-    active_only: bool = Query(True),
-    search: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0, description="Number of records to skip for pagination"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
+    active_only: bool = Query(True, description="Filter to show only active advertisers"),
+    search: Optional[str] = Query(None, description="Search term to filter advertisers by name"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """List all advertisers with optional filtering"""
+    """
+    List all advertisers with optional filtering
+    
+    Returns a paginated list of advertisers. Use the search parameter to filter by name.
+    """
     query = select(Advertiser)
     
     if active_only:
@@ -109,7 +133,12 @@ async def create_advertiser(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Create a new advertiser"""
+    """
+    Create a new advertiser
+    
+    Creates a new advertiser record. The name field is required.
+    Contact information, payment terms, and credit limit are optional.
+    """
     new_advertiser = Advertiser(**advertiser.model_dump())
     db.add(new_advertiser)
     await db.commit()
@@ -120,7 +149,7 @@ async def create_advertiser(
 
 @router.get("/{advertiser_id}", response_model=AdvertiserResponse)
 async def get_advertiser(
-    advertiser_id: int,
+    advertiser_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -136,7 +165,7 @@ async def get_advertiser(
 
 @router.put("/{advertiser_id}", response_model=AdvertiserResponse)
 async def update_advertiser(
-    advertiser_id: int,
+    advertiser_id: UUID,
     advertiser_update: AdvertiserUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -161,7 +190,7 @@ async def update_advertiser(
 
 @router.delete("/{advertiser_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_advertiser(
-    advertiser_id: int,
+    advertiser_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

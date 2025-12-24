@@ -3,6 +3,7 @@ Log generation engine - core algorithm for building radio logs
 """
 
 from typing import List, Dict, Any, Optional, Tuple
+from uuid import UUID
 from datetime import datetime, date, time, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
@@ -14,7 +15,7 @@ from backend.services.voice_track_slot_service import VoiceTrackSlotService
 from backend.models.daily_log import DailyLog
 from backend.services.campaign_service import CampaignService
 from backend.services.clock_service import ClockTemplateService
-from backend.integrations.libretime_client import libretime_client
+from backend.integrations.libretime_client import libretime_client, get_libretime_client_for_station
 import structlog
 import json
 import random
@@ -33,15 +34,18 @@ class LogGenerator:
     async def generate_daily_log(
         self,
         target_date: date,
-        clock_template_id: int,
-        user_id: int
+        clock_template_id: UUID,
+        station_id: UUID,
+        user_id: UUID
     ) -> Dict[str, Any]:
-        """Generate a complete daily log for a specific date"""
+        """Generate a complete daily log for a specific date and station"""
         
-        # Get clock template
+        # Get clock template (must be for this station)
         clock_template = await self.clock_service.get_template(clock_template_id)
         if not clock_template:
             raise ValueError("Clock template not found")
+        if hasattr(clock_template, 'station_id') and clock_template.station_id != station_id:
+            raise ValueError(f"Clock template belongs to different station (template station_id={clock_template.station_id}, requested station_id={station_id})")
         
         # Generate hourly logs
         hourly_logs = {}
@@ -67,6 +71,7 @@ class LogGenerator:
         # Save to database
         daily_log = DailyLog(
             date=target_date,
+            station_id=station_id,
             generated_by=user_id,
             json_data=daily_log_data,
             published=False
@@ -567,7 +572,7 @@ class LogGenerator:
     async def preview_log(
         self,
         target_date: date,
-        clock_template_id: int,
+        clock_template_id: UUID,
         preview_hours: List[str] = None
     ) -> Dict[str, Any]:
         """Generate a preview of the log without saving"""
@@ -594,7 +599,7 @@ class LogGenerator:
         
         return preview
     
-    async def publish_log(self, log_id: int) -> bool:
+    async def publish_log(self, log_id: UUID) -> bool:
         """Publish a generated log to LibreTime"""
         from backend.services.log_editor import LogEditor
         
@@ -622,8 +627,11 @@ class LogGenerator:
                 logger.warning("No entries to publish", log_id=log_id)
                 return False
             
+            # Get station-specific LibreTime client
+            client = await get_libretime_client_for_station(log.station_id, self.db)
+            
             # Push to LibreTime API
-            success = await libretime_client.publish_schedule(log.date, libretime_entries)
+            success = await client.publish_schedule(log.date, libretime_entries)
             
             if success:
                 log.published = True
@@ -639,7 +647,7 @@ class LogGenerator:
             await self.db.rollback()
             return False
     
-    async def publish_log_hour(self, log_id: int, hour: int) -> bool:
+    async def publish_log_hour(self, log_id: UUID, hour: int) -> bool:
         """Publish a specific hour of a log to LibreTime"""
         
         # Get the log
@@ -656,8 +664,11 @@ class LogGenerator:
             return False
         
         try:
+            # Get station-specific LibreTime client
+            client = await get_libretime_client_for_station(log.station_id, self.db)
+            
             # Get current schedule from LibreTime for the day
-            current_schedule = await libretime_client.get_schedule(log.date)
+            current_schedule = await client.get_schedule(log.date)
             
             # Convert the hour from log to LibreTime format
             hour_str = f"{hour:02d}:00"
@@ -673,44 +684,8 @@ class LogGenerator:
                 hour_data, log.date, hour
             )
             
-            # Remove existing entries for this hour from current schedule
-            # LibreTime schedule entries have "start" field with ISO datetime
-            target_date_start = datetime.combine(log.date, time(hour=hour, minute=0, second=0))
-            target_date_end = datetime.combine(log.date, time(hour=hour, minute=59, second=59))
-            
-            # Helper function to parse datetime from string
-            def parse_entry_time(entry_start: str) -> Optional[datetime]:
-                try:
-                    # Handle various ISO formats
-                    if entry_start.endswith("Z"):
-                        entry_start = entry_start[:-1] + "+00:00"
-                    elif "+" not in entry_start and "-" in entry_start and "T" in entry_start:
-                        # Assume UTC if no timezone
-                        entry_start = entry_start + "+00:00"
-                    return datetime.fromisoformat(entry_start)
-                except (ValueError, AttributeError):
-                    return None
-            
-            # Remove filtered entries from current schedule (keep entries outside this hour)
-            filtered_entries = []
-            for entry in current_schedule:
-                entry_start_str = entry.get("start")
-                if entry_start_str:
-                    entry_time = parse_entry_time(entry_start_str)
-                    if entry_time and (entry_time < target_date_start or entry_time > target_date_end):
-                        filtered_entries.append(entry)
-                else:
-                    # Keep entry if no start time (shouldn't happen, but be safe)
-                    filtered_entries.append(entry)
-            
-            # Add new hour entries
-            filtered_entries.extend(hour_entries)
-            
-            # Sort by start time
-            filtered_entries.sort(key=lambda x: x.get("start", ""))
-            
-            # Push updated schedule to LibreTime
-            success = await libretime_client.publish_schedule(log.date, filtered_entries)
+            # Use the new replace-hour endpoint
+            success = await client.replace_hour(log.date, hour, hour_entries)
             
             if success:
                 logger.info("Hour published to LibreTime", log_id=log_id, hour=hour, entries=len(hour_entries))

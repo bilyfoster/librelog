@@ -3,6 +3,7 @@ Log Revisions router
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from backend.database import get_db
@@ -18,8 +19,8 @@ router = APIRouter()
 
 
 class LogRevisionResponse(BaseModel):
-    id: int
-    log_id: int
+    id: UUID
+    log_id: UUID
     revision_number: int
     json_data: dict
     changed_by: int
@@ -33,7 +34,7 @@ class LogRevisionResponse(BaseModel):
 
 @router.get("/logs/{log_id}/revisions", response_model=list[LogRevisionResponse])
 async def list_log_revisions(
-    log_id: int,
+    log_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -62,8 +63,8 @@ async def list_log_revisions(
 
 @router.get("/logs/{log_id}/revisions/{revision_id}", response_model=LogRevisionResponse)
 async def get_log_revision(
-    log_id: int,
-    revision_id: int,
+    log_id: UUID,
+    revision_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -88,8 +89,8 @@ async def get_log_revision(
 
 @router.post("/logs/{log_id}/revert")
 async def revert_to_revision(
-    log_id: int,
-    revision_id: int,
+    log_id: UUID,
+    revision_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -107,7 +108,7 @@ async def revert_to_revision(
 async def list_log_revisions(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    log_id: Optional[int] = Query(None),
+    log_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -134,7 +135,7 @@ async def list_log_revisions(
 
 @router.get("/{revision_id}", response_model=LogRevisionResponse)
 async def get_log_revision_by_id(
-    revision_id: int,
+    revision_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

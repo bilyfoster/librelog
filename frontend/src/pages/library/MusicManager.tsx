@@ -38,7 +38,7 @@ import api from '../../utils/api'
 import { getTracksAggregated } from '../../utils/api'
 
 interface MusicTrack {
-  id: number
+  id?: string
   title: string
   artist: string
   album?: string

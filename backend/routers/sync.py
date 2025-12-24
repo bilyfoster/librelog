@@ -3,6 +3,7 @@ Sync endpoints for LibreTime integration
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from sqlalchemy.sql import func as sql_func

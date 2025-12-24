@@ -31,7 +31,7 @@ import { Add, Edit, Delete } from '@mui/icons-material'
 import { getUsersProxy, createUser, updateUser, deleteUser } from '../../utils/api'
 
 interface User {
-  id: number
+  id?: string
   username: string
   role: string
   created_at: string
@@ -50,7 +50,7 @@ const Users: React.FC = () => {
     queryKey: ['users', roleFilter],
     queryFn: async () => {
       const params: any = { limit: 100, skip: 0 }
-      if (roleFilter) params.role_filter = roleFilter
+      if (roleFilter) params.role = roleFilter
       // Use server-side proxy endpoint - all processing happens on backend
       const data = await getUsersProxy(params)
       return Array.isArray(data) ? data : []
@@ -83,7 +83,7 @@ const Users: React.FC = () => {
   })
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: { username?: string; password?: string; role?: string } }) => {
+    mutationFn: async ({ id, data }: { id?: string; data: { username?: string; password?: string; role?: string } }) => {
       return await updateUser(id, data)
     },
     onSuccess: () => {
@@ -107,7 +107,7 @@ const Users: React.FC = () => {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id?: string) => {
       await deleteUser(id)
     },
     onSuccess: () => {
@@ -134,7 +134,7 @@ const Users: React.FC = () => {
     setErrorMessage(null)
   }
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id?: string) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       deleteMutation.mutate(id)
     }

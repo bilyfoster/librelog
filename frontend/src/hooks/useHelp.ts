@@ -49,10 +49,19 @@ export const useHelpArticle = (articleId: string) => {
   return useQuery({
     queryKey: ['help-article', articleId],
     queryFn: async () => {
-      const response = await api.get(`/help/articles/${articleId}`)
-      return response.data as HelpArticle
+      try {
+        const response = await api.get(`/help/articles/${articleId}`)
+        return response.data as HelpArticle
+      } catch (error: any) {
+        // Handle 404 gracefully - return null instead of throwing
+        if (error?.response?.status === 404) {
+          return null
+        }
+        throw error
+      }
     },
     enabled: !!articleId,
+    retry: false, // Don't retry on 404s
   })
 }
 
@@ -73,10 +82,19 @@ export const useTerm = (termId: string) => {
   return useQuery({
     queryKey: ['term', termId],
     queryFn: async () => {
-      const response = await api.get(`/help/terminology/${termId}`)
-      return response.data as Term
+      try {
+        const response = await api.get(`/help/terminology/${termId}`)
+        return response.data as Term
+      } catch (error: any) {
+        // Handle 404 gracefully - return null instead of throwing
+        if (error?.response?.status === 404) {
+          return null
+        }
+        throw error
+      }
     },
     enabled: !!termId,
+    retry: false, // Don't retry on 404s
   })
 }
 

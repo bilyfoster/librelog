@@ -3,6 +3,7 @@ Backups router for backup and restore operations
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from typing import List, Optional
@@ -25,7 +26,7 @@ class BackupCreate(BaseModel):
 
 
 class BackupResponse(BaseModel):
-    id: int
+    id: UUID
     backup_type: BackupType
     status: BackupStatus
     storage_provider: StorageProvider
@@ -74,7 +75,7 @@ async def list_backups(
 
 @router.get("/{backup_id}", response_model=BackupResponse)
 async def get_backup(
-    backup_id: int,
+    backup_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -110,7 +111,7 @@ async def create_backup(
 
 @router.post("/{backup_id}/restore", status_code=status.HTTP_200_OK)
 async def restore_backup(
-    backup_id: int,
+    backup_id: UUID,
     restore_request: RestoreRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -139,7 +140,7 @@ async def restore_backup(
 
 @router.delete("/{backup_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_backup(
-    backup_id: int,
+    backup_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

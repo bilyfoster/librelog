@@ -261,6 +261,52 @@
       "help_text": "Name or username for this sales representative. Used to identify who is responsible for orders and accounts.",
       "article_id": "sales-reps",
       "term_id": "sales_rep"
+    },
+    {
+      "path": "production_order.is_spec",
+      "label": "Spec Spot",
+      "help_text": "Check this box to create a spec spot (speculative spot) - a production order without an associated sales order. Use for pitches, demos, or speculative work before client commitment. Spec spots are marked with 'SPEC' type and can be converted to regular orders later.",
+      "article_id": "spec-spots-workflow",
+      "term_id": "spec_spot"
+    },
+    {
+      "path": "log.station",
+      "label": "Station",
+      "help_text": "Select which station this log is for. Required - each log belongs to a specific station. Clock templates must belong to the selected station.",
+      "article_id": "log-generator-workflow",
+      "term_id": "station"
+    },
+    {
+      "path": "spot_scheduler.station",
+      "label": "Station",
+      "help_text": "Select which station to schedule spots for. Required - spots must be assigned to a station. This determines which inventory, dayparts, and break structures are available.",
+      "article_id": "traffic-manager-workflow",
+      "term_id": "station"
+    },
+    {
+      "path": "order_line.station",
+      "label": "Station",
+      "help_text": "Select which station this order line applies to. Required - each order line specifies which station will air the spots. Multi-station orders have multiple order lines.",
+      "article_id": "traffic-manager-workflow",
+      "term_id": "station"
+    },
+    {
+      "path": "station.libretime_config.api_url",
+      "label": "LibreTime API URL",
+      "help_text": "The API endpoint URL for this station's LibreTime instance. If set, this station will use its own LibreTime configuration. If not set, the station will use global LibreTime settings.",
+      "article_id": "log-generator-workflow"
+    },
+    {
+      "path": "station.libretime_config.api_key",
+      "label": "LibreTime API Key",
+      "help_text": "Authentication key for this station's LibreTime API. Required if using station-specific LibreTime configuration. Keep this secure.",
+      "article_id": "log-generator-workflow"
+    },
+    {
+      "path": "station.libretime_config.public_url",
+      "label": "LibreTime Public URL",
+      "help_text": "Public-facing URL for this station's LibreTime instance. Used for links and references. Optional but recommended.",
+      "article_id": "log-generator-workflow"
     }
   ]
 }

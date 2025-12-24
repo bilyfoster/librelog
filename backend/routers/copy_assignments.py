@@ -3,6 +3,7 @@ Copy Assignments router
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from backend.database import get_db
@@ -16,10 +17,10 @@ router = APIRouter()
 
 
 class CopyAssignmentResponse(BaseModel):
-    id: int
-    spot_id: int
-    copy_id: int
-    order_id: Optional[int]
+    id: UUID
+    spot_id: UUID
+    copy_id: UUID
+    order_id: Optional[UUID]
     assigned_at: str
     assigned_by: Optional[int]
     created_at: str
@@ -30,7 +31,7 @@ class CopyAssignmentResponse(BaseModel):
 
 @router.get("/{assignment_id}", response_model=CopyAssignmentResponse)
 async def get_copy_assignment(
-    assignment_id: int,
+    assignment_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -48,8 +49,8 @@ async def get_copy_assignment(
 async def list_copy_assignments(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    spot_id: Optional[int] = Query(None),
-    copy_id: Optional[int] = Query(None),
+    spot_id: Optional[UUID] = Query(None),
+    copy_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -72,9 +73,9 @@ async def list_copy_assignments(
 
 @router.post("/", response_model=CopyAssignmentResponse, status_code=status.HTTP_201_CREATED)
 async def create_copy_assignment(
-    spot_id: int,
-    copy_id: int,
-    order_id: Optional[int] = None,
+    spot_id: UUID,
+    copy_id: UUID,
+    order_id: Optional[UUID] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -104,8 +105,8 @@ async def create_copy_assignment(
 
 @router.put("/{assignment_id}", response_model=CopyAssignmentResponse)
 async def update_copy_assignment(
-    assignment_id: int,
-    copy_id: Optional[int] = None,
+    assignment_id: UUID,
+    copy_id: Optional[UUID] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -127,7 +128,7 @@ async def update_copy_assignment(
 
 @router.delete("/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_copy_assignment(
-    assignment_id: int,
+    assignment_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

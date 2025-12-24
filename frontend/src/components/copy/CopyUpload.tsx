@@ -124,10 +124,20 @@ const CopyUpload: React.FC<CopyUploadProps> = ({ onSuccess, onCancel }) => {
         URL.revokeObjectURL(audioPreview)
       }
 
+      // Reset form
+      setFile(null)
+      setTitle('')
+      setOrderId('')
+      setAdvertiserId('')
+      setScriptText('')
+      setExpirationDate('')
+      setAudioPreview(null)
+
       if (onSuccess) {
         onSuccess()
       }
     } catch (err: any) {
+      console.error('Copy upload error:', err)
       setError(err.response?.data?.detail || err.message || 'Failed to upload copy')
     } finally {
       setUploading(false)

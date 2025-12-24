@@ -2,8 +2,8 @@
 Campaign model for ad management
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Date, Text, ForeignKey, Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Date, Text, ForeignKey, Enum as SQLEnum, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -30,7 +30,7 @@ class Campaign(Base):
     """Campaign model for ad management - extended with order/contract fields"""
     __tablename__ = "campaigns"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
     advertiser = Column(String(255), nullable=False, index=True)  # Keep for backward compatibility
     start_date = Column(Date, nullable=False, index=True)
     end_date = Column(Date, nullable=False, index=True)
@@ -49,7 +49,7 @@ class Campaign(Base):
     copy_instructions = Column(Text, nullable=True)
     traffic_restrictions = Column(JSONB)  # Restrictions and requirements
     approval_status = Column(SQLEnum(ApprovalStatus), nullable=True, default=ApprovalStatus.NOT_REQUIRED)
-    approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    approved_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     approved_at = Column(DateTime(timezone=True), nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())

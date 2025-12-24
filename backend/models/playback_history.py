@@ -2,7 +2,8 @@
 Playback history model for reconciliation
 """
 
-from sqlalchemy import Column, Integer, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, DateTime, ForeignKey, text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -12,9 +13,9 @@ class PlaybackHistory(Base):
     """Playback history model for reconciliation"""
     __tablename__ = "playback_history"
 
-    id = Column(Integer, primary_key=True, index=True)
-    track_id = Column(Integer, ForeignKey("tracks.id"), nullable=False)
-    log_id = Column(Integer, ForeignKey("daily_logs.id"), nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
+    track_id = Column(UUID(as_uuid=True), ForeignKey("tracks.id"), nullable=False)
+    log_id = Column(UUID(as_uuid=True), ForeignKey("daily_logs.id"), nullable=False)
     played_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     duration_played = Column(Integer)  # Duration in seconds
 

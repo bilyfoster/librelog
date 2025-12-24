@@ -3,7 +3,9 @@ Revenue router for revenue management
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Optional
 from backend.database import get_db
 from backend.routers.auth import get_current_user
 from backend.models.user import User
@@ -64,7 +66,7 @@ async def get_revenue(
 async def get_revenue_by_station(
     start_date: date = Query(...),
     end_date: date = Query(...),
-    station_id: Optional[int] = Query(None),
+    station_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -77,7 +79,7 @@ async def get_revenue_by_station(
 async def get_revenue_by_advertiser(
     start_date: date = Query(...),
     end_date: date = Query(...),
-    advertiser_id: Optional[int] = Query(None),
+    advertiser_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

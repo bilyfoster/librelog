@@ -3,6 +3,7 @@ Reports router for traffic, billing, and sales reports
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func, or_
 from backend.database import get_db
@@ -19,10 +20,56 @@ from datetime import date, datetime, timedelta
 router = APIRouter()
 
 
+@router.get("/")
+async def list_available_reports(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """List available report types"""
+    return {
+        "reports": {
+            "traffic": [
+                {"name": "reconciliation", "path": "/reports/reconciliation", "description": "Compare scheduled vs. aired spots"},
+                {"name": "compliance", "path": "/reports/compliance", "description": "FCC and contract compliance report"},
+                {"name": "playback", "path": "/reports/playback", "description": "Playback history report"},
+                {"name": "daily-log", "path": "/reports/traffic/daily-log", "description": "Daily log report"},
+                {"name": "missing-copy", "path": "/reports/traffic/missing-copy", "description": "Missing copy report"},
+                {"name": "avails", "path": "/reports/traffic/avails", "description": "Avails report"},
+                {"name": "conflicts", "path": "/reports/traffic/conflicts", "description": "Conflict report"},
+                {"name": "expirations", "path": "/reports/traffic/expirations", "description": "Expiring copy/contracts report"}
+            ],
+            "billing": [
+                {"name": "contract-actualization", "path": "/reports/billing/contract-actualization", "description": "Contract actualization report"},
+                {"name": "revenue-summary", "path": "/reports/billing/revenue-summary", "description": "Revenue summary report"},
+                {"name": "ar-aging", "path": "/reports/billing/ar-aging", "description": "AR aging report"},
+                {"name": "makegoods", "path": "/reports/billing/makegoods", "description": "Makegood report"}
+            ],
+            "sales": [
+                {"name": "revenue-by-rep", "path": "/reports/sales/revenue-by-rep", "description": "Revenue by rep report"},
+                {"name": "revenue-by-advertiser", "path": "/reports/sales/revenue-by-advertiser", "description": "Revenue by advertiser report"},
+                {"name": "pending-orders", "path": "/reports/sales/pending-orders", "description": "Pending orders report"},
+                {"name": "expiring-contracts", "path": "/reports/sales/expiring-contracts", "description": "Expiring contracts report"}
+            ],
+            "audio": [
+                {"name": "activity", "path": "/reports/audio/activity", "description": "Audio activity report"},
+                {"name": "cut-rotation-performance", "path": "/reports/audio/cut-rotation-performance", "description": "Cut rotation performance report"},
+                {"name": "live-read-performance", "path": "/reports/audio/live-read-performance", "description": "Live read performance report"},
+                {"name": "fcc-compliance", "path": "/reports/audio/fcc-compliance", "description": "FCC compliance log for political ads"}
+            ],
+            "production": [
+                {"name": "turnaround", "path": "/reports/production/turnaround", "description": "Production turnaround time report"},
+                {"name": "workload", "path": "/reports/production/workload", "description": "Production workload report by user"},
+                {"name": "missed-deadlines", "path": "/reports/production/missed-deadlines", "description": "Missed production deadlines report"}
+            ]
+        }
+    }
+
+
 @router.get("/reconciliation")
 async def get_reconciliation_report(
     start_date: str,
     end_date: str,
+    station_id: Optional[UUID] = Query(None, description="Filter by station ID"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -41,6 +88,11 @@ async def get_reconciliation_report(
             Spot.status.in_([SpotStatus.SCHEDULED, SpotStatus.AIRED, SpotStatus.MISSED])
         )
     )
+    
+    # Filter by station if provided
+    if station_id is not None:
+        spots_query = spots_query.where(Spot.station_id == station_id)
+    
     spots_result = await db.execute(spots_query)
     scheduled_spots = spots_result.scalars().all()
     
@@ -138,6 +190,7 @@ async def get_reconciliation_report(
 async def get_compliance_report(
     start_date: str,
     end_date: str,
+    station_id: Optional[UUID] = Query(None, description="Filter by station ID"),
     format: str = "csv",
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -156,6 +209,11 @@ async def get_compliance_report(
             Spot.scheduled_date <= end
         )
     )
+    
+    # Filter by station if provided
+    if station_id is not None:
+        spots_query = spots_query.where(Spot.station_id == station_id)
+    
     spots_result = await db.execute(spots_query)
     spots = spots_result.scalars().all()
     
@@ -212,9 +270,10 @@ async def get_compliance_report(
 
 
 @router.get("/playback")
-async def get_playback_history(
+async def get_playback_report(
     start_date: str,
     end_date: str,
+    station_id: Optional[UUID] = Query(None, description="Filter by station ID"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -231,7 +290,13 @@ async def get_playback_history(
             DailyLog.date >= start,
             DailyLog.date <= end
         )
-    ).order_by(PlaybackHistory.played_at)
+    )
+    
+    # Filter by station if provided
+    if station_id is not None:
+        playback_query = playback_query.where(DailyLog.station_id == station_id)
+    
+    playback_query = playback_query.order_by(PlaybackHistory.played_at)
     
     playback_result = await db.execute(playback_query)
     playback_records = playback_result.scalars().all()
@@ -277,47 +342,51 @@ async def get_playback_history(
 @router.get("/traffic/daily-log")
 async def get_daily_log_report(
     log_date: date = Query(...),
+    station_id: Optional[UUID] = Query(None, description="Filter by station ID"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Daily log report"""
     report_service = ReportService(db)
-    return await report_service.generate_daily_log_report(log_date)
+    return await report_service.generate_daily_log_report(log_date, station_id)
 
 
 @router.get("/traffic/missing-copy")
 async def get_missing_copy_report(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
+    station_id: Optional[UUID] = Query(None, description="Filter by station ID"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Missing copy report"""
     report_service = ReportService(db)
-    return await report_service.generate_missing_copy_report(start_date, end_date)
+    return await report_service.generate_missing_copy_report(start_date, end_date, station_id)
 
 
 @router.get("/traffic/avails")
 async def get_avails_report(
     start_date: date = Query(...),
     end_date: date = Query(...),
+    station_id: Optional[UUID] = Query(None, description="Filter by station ID"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Avails report"""
     report_service = ReportService(db)
-    return await report_service.generate_avails_report(start_date, end_date)
+    return await report_service.generate_avails_report(start_date, end_date, station_id)
 
 
 @router.get("/traffic/conflicts")
 async def get_conflicts_report(
     log_date: date = Query(...),
+    station_id: Optional[UUID] = Query(None, description="Filter by station ID"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Conflict report"""
     report_service = ReportService(db)
-    return await report_service.generate_conflicts_report(log_date)
+    return await report_service.generate_conflicts_report(log_date, station_id)
 
 
 @router.get("/traffic/expirations")
@@ -334,7 +403,7 @@ async def get_expirations_report(
 # Billing Reports
 @router.get("/billing/contract-actualization")
 async def get_contract_actualization_report(
-    order_id: int = Query(...),
+    order_id: UUID = Query(...),
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     db: AsyncSession = Depends(get_db),
@@ -359,12 +428,13 @@ async def get_contract_actualization_report(
 async def get_revenue_summary_report(
     start_date: date = Query(...),
     end_date: date = Query(...),
+    station_id: Optional[UUID] = Query(None, description="Filter by station ID"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Revenue summary report"""
     report_service = ReportService(db)
-    return await report_service.generate_revenue_summary(start_date, end_date)
+    return await report_service.generate_revenue_summary(start_date, end_date, station_id)
 
 
 @router.get("/billing/ar-aging")
@@ -383,12 +453,13 @@ async def get_ar_aging_report(
 async def get_makegoods_report(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
+    station_id: Optional[UUID] = Query(None, description="Filter by station ID"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Makegood report"""
     report_service = ReportService(db)
-    return await report_service.generate_makegood_report(start_date, end_date)
+    return await report_service.generate_makegood_report(start_date, end_date, station_id)
 
 
 # Sales Reports
@@ -396,24 +467,26 @@ async def get_makegoods_report(
 async def get_revenue_by_rep_report(
     start_date: date = Query(...),
     end_date: date = Query(...),
+    station_id: Optional[UUID] = Query(None, description="Filter by station ID"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Revenue by rep report"""
     report_service = ReportService(db)
-    return await report_service.generate_revenue_by_rep(start_date, end_date)
+    return await report_service.generate_revenue_by_rep(start_date, end_date, station_id)
 
 
 @router.get("/sales/revenue-by-advertiser")
 async def get_revenue_by_advertiser_report(
     start_date: date = Query(...),
     end_date: date = Query(...),
+    station_id: Optional[UUID] = Query(None, description="Filter by station ID"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Revenue by advertiser report"""
     report_service = ReportService(db)
-    return await report_service.generate_revenue_by_advertiser(start_date, end_date)
+    return await report_service.generate_revenue_by_advertiser(start_date, end_date, station_id)
 
 
 @router.get("/sales/pending-orders")
@@ -451,7 +524,7 @@ async def get_audio_activity_report(
 
 @router.get("/audio/cut-rotation-performance")
 async def get_cut_rotation_performance(
-    copy_id: Optional[int] = Query(None),
+    copy_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -498,7 +571,7 @@ async def get_production_turnaround_report(
 
 @router.get("/production/workload")
 async def get_production_workload_report(
-    user_id: Optional[int] = Query(None),
+    user_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

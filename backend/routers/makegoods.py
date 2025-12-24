@@ -3,6 +3,7 @@ Makegoods router for traffic management
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from backend.database import get_db
@@ -18,17 +19,17 @@ router = APIRouter()
 
 
 class MakegoodCreate(BaseModel):
-    original_spot_id: int
-    makegood_spot_id: int
-    campaign_id: Optional[int] = None
+    original_spot_id: UUID
+    makegood_spot_id: UUID
+    campaign_id: Optional[UUID] = None
     reason: Optional[str] = None
 
 
 class MakegoodResponse(BaseModel):
-    id: int
-    original_spot_id: int
-    makegood_spot_id: int
-    campaign_id: Optional[int]
+    id: UUID
+    original_spot_id: UUID
+    makegood_spot_id: UUID
+    campaign_id: Optional[UUID]
     reason: Optional[str]
     approved_by: Optional[int]
     approved_at: Optional[str]
@@ -42,7 +43,7 @@ class MakegoodResponse(BaseModel):
 async def list_makegoods(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    campaign_id: Optional[int] = Query(None),
+    campaign_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -112,7 +113,7 @@ async def create_makegood(
 
 @router.post("/{makegood_id}/approve", response_model=MakegoodResponse)
 async def approve_makegood(
-    makegood_id: int,
+    makegood_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

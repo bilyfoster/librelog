@@ -2,7 +2,8 @@
 Backup model for tracking backup history and restore points
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Enum as SQLEnum, Float
+from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, Text, Enum as SQLEnum, Float, text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -35,7 +36,7 @@ class Backup(Base):
     """Backup model for tracking backup history"""
     __tablename__ = "backups"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
     backup_type = Column(SQLEnum(BackupType), nullable=False, default=BackupType.FULL)
     status = Column(SQLEnum(BackupStatus), nullable=False, default=BackupStatus.PENDING, index=True)
     storage_provider = Column(SQLEnum(StorageProvider), nullable=False, default=StorageProvider.LOCAL)
@@ -57,7 +58,7 @@ class Backup(Base):
     error_message = Column(Text, nullable=True)
     
     # Metadata
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     
     # Relationships

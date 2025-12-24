@@ -3,6 +3,7 @@ AudioQCService for audio quality control and validation
 """
 
 from typing import Dict, Any, Optional, List
+from uuid import UUID
 from pathlib import Path
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,8 +60,8 @@ class AudioQCService:
     async def run_qc(
         self,
         audio_file_path: str,
-        cut_id: Optional[int] = None,
-        version_id: Optional[int] = None,
+        cut_id: Optional[UUID] = None,
+        version_id: Optional[UUID] = None,
         auto_fix: bool = False
     ) -> AudioQCResult:
         """Run comprehensive QC on an audio file"""
@@ -375,12 +376,12 @@ class AudioQCService:
             logger.error("Failed to normalize audio", input_path=input_path, error=str(e))
             raise
     
-    async def get_qc_result(self, qc_result_id: int) -> Optional[AudioQCResult]:
+    async def get_qc_result(self, qc_result_id: UUID) -> Optional[AudioQCResult]:
         """Get a QC result by ID"""
         result = await self.db.execute(select(AudioQCResult).where(AudioQCResult.id == qc_result_id))
         return result.scalar_one_or_none()
     
-    async def get_qc_results_for_cut(self, cut_id: int) -> List[AudioQCResult]:
+    async def get_qc_results_for_cut(self, cut_id: UUID) -> List[AudioQCResult]:
         """Get all QC results for a cut"""
         result = await self.db.execute(
             select(AudioQCResult)
@@ -391,7 +392,7 @@ class AudioQCService:
     
     async def override_qc(
         self,
-        qc_result_id: int,
+        qc_result_id: UUID,
         overridden_by: int,
         override_reason: str
     ) -> AudioQCResult:

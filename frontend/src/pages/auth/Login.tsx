@@ -25,9 +25,8 @@ const Login: React.FC = () => {
     queryKey: ['branding-public'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/settings/branding/public')
-        if (!response.ok) return null
-        return response.json()
+        const { getBrandingPublicSettings } = await import('../../utils/api')
+        return await getBrandingPublicSettings()
       } catch {
         return null
       }

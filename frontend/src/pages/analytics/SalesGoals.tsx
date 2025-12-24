@@ -42,8 +42,8 @@ import {
 import SalesGoalFormDialog from '../../components/analytics/SalesGoalFormDialog'
 
 interface SalesGoal {
-  id: number
-  sales_rep_id: number
+  id?: string
+  sales_rep_id?: string
   period: string
   target_date: string
   goal_amount: number | string
@@ -76,7 +76,15 @@ const SalesGoals: React.FC = () => {
     queryFn: async () => {
       // Use server-side proxy endpoint - all processing happens on backend
       const data = await getSalesRepsProxy({ limit: 100 })
-      return Array.isArray(data) ? data : []
+      // Handle different response formats
+      if (Array.isArray(data)) {
+        return data
+      } else if (data && Array.isArray(data.reps)) {
+        return data.reps
+      } else if (data && Array.isArray(data.data)) {
+        return data.data
+      }
+      return []
     },
   })
 
@@ -198,9 +206,9 @@ const SalesGoals: React.FC = () => {
               label="Sales Rep"
             >
               <MenuItem value="">All Sales Reps</MenuItem>
-              {salesReps?.map((rep: any) => (
+              {Array.isArray(salesReps) && salesReps.map((rep: any) => (
                 <MenuItem key={rep.id} value={rep.id}>
-                  {rep.first_name} {rep.last_name}
+                  {rep.username || rep.employee_id || `Sales Rep ${rep.id}`}
                 </MenuItem>
               ))}
             </Select>

@@ -4,6 +4,7 @@ Handles intelligent music selection based on BPM, dayparts, and artist separatio
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from uuid import UUID
 from sqlalchemy import select, and_, or_, func
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
@@ -172,7 +173,7 @@ class MusicSelectionService:
     
     async def get_recently_played_artists(
         self,
-        log_id: Optional[int] = None,
+        log_id: Optional[UUID] = None,
         hours_back: int = 2
     ) -> Dict[str, datetime]:
         """

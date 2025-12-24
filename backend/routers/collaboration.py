@@ -3,6 +3,7 @@ WebSocket router for real-time collaboration
 """
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query, HTTPException
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -21,7 +22,7 @@ router = APIRouter(prefix="/collaboration", tags=["collaboration"])
 @router.websocket("/ws/{log_id}")
 async def websocket_endpoint(
     websocket: WebSocket,
-    log_id: int,
+    log_id: UUID,
     token: str = Query(...)
 ):
     """
@@ -151,7 +152,7 @@ async def websocket_endpoint(
 
 @router.get("/users/{log_id}")
 async def get_log_users(
-    log_id: int,
+    log_id: UUID,
     current_user: User = Depends(get_current_user)
 ):
     """Get list of users currently editing a log"""
@@ -161,7 +162,7 @@ async def get_log_users(
 
 @router.get("/comments")
 async def get_comments(
-    log_id: int = Query(...),
+    log_id: UUID = Query(...),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
@@ -198,7 +199,7 @@ async def get_comments(
 
 @router.post("/comments")
 async def create_comment(
-    log_id: int = Query(...),
+    log_id: UUID = Query(...),
     comment: str = Query(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)

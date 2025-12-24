@@ -2,7 +2,8 @@
 Campaign management router
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from backend.database import get_db
@@ -10,6 +11,7 @@ from backend.models.campaign import Campaign
 from backend.services.campaign_service import CampaignService
 from backend.routers.auth import get_current_user
 from backend.models.user import User
+from backend.logging.audit import audit_logger
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import date
@@ -104,10 +106,14 @@ async def list_campaigns(
 @router.post("/")
 async def create_campaign(
     campaign_data: CampaignCreate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Create a new campaign"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     service = CampaignService(db)
     
     try:
@@ -122,6 +128,28 @@ async def create_campaign(
             file_path=campaign_data.file_path,
             user_id=current_user.id
         )
+        
+        # Log audit action (non-blocking)
+        try:
+            client_ip = request.client.host if request.client else None
+            user_agent = request.headers.get("user-agent")
+            await audit_logger.log_action(
+                db_session=db,
+                user_id=current_user.id,
+                action="CREATE_CAMPAIGN",
+                resource_type="Campaign",
+                resource_id=campaign.id,
+                details={
+                    "name": campaign.name,
+                    "advertiser": campaign.advertiser,
+                    "start_date": campaign.start_date.isoformat() if campaign.start_date else None,
+                    "end_date": campaign.end_date.isoformat() if campaign.end_date else None
+                },
+                ip_address=client_ip,
+                user_agent=user_agent
+            )
+        except Exception as e:
+            logger.warning(f"Failed to log audit action for campaign creation: {e}")
         
         return {
             "id": campaign.id,
@@ -142,11 +170,18 @@ async def create_campaign(
         
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error creating campaign: {e}", exc_info=True)
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create campaign: {str(e)}"
+        )
 
 
 @router.get("/{campaign_id}")
 async def get_campaign(
-    campaign_id: int,
+    campaign_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -178,8 +213,9 @@ async def get_campaign(
 
 @router.put("/{campaign_id}")
 async def update_campaign(
-    campaign_id: int,
+    campaign_id: UUID,
     campaign_data: CampaignUpdate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -202,6 +238,24 @@ async def update_campaign(
         
         if not campaign:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+        
+        # Log audit action
+        client_ip = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+        update_fields = {k: v for k, v in campaign_data.model_dump(exclude_unset=True).items() if v is not None}
+        await audit_logger.log_action(
+            db_session=db,
+            user_id=current_user.id,
+            action="UPDATE_CAMPAIGN",
+            resource_type="Campaign",
+            resource_id=campaign_id,
+            details={
+                "name": campaign.name,
+                "updated_fields": list(update_fields.keys())
+            },
+            ip_address=client_ip,
+            user_agent=user_agent
+        )
         
         return {
             "id": campaign.id,
@@ -226,7 +280,7 @@ async def update_campaign(
 
 @router.delete("/{campaign_id}")
 async def delete_campaign(
-    campaign_id: int,
+    campaign_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -242,7 +296,7 @@ async def delete_campaign(
 
 @router.get("/{campaign_id}/stats")
 async def get_campaign_stats(
-    campaign_id: int,
+    campaign_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

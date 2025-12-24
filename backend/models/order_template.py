@@ -2,8 +2,8 @@
 Order Template model for quick order creation
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -13,13 +13,13 @@ class OrderTemplate(Base):
     """Order Template model for quick order entry"""
     __tablename__ = "order_templates"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
     name = Column(String(255), nullable=False, index=True)
     description = Column(Text)
     default_spot_lengths = Column(JSONB)  # Array of default spot lengths
     default_rate_type = Column(String(20))  # ROS, DAYPART, PROGRAM, FIXED_TIME
     default_rates = Column(JSONB)  # Default rate structure
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

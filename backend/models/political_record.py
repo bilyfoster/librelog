@@ -2,7 +2,8 @@
 PoliticalRecord model for FCC compliance tracking and political ad management
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey
+from sqlalchemy import Column, String, DateTime, Boolean, Text, ForeignKey, text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -12,12 +13,12 @@ class PoliticalRecord(Base):
     """PoliticalRecord model for tracking political advertisements and FCC compliance"""
     __tablename__ = "political_records"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
     
     # Association with copy/order
-    copy_id = Column(Integer, ForeignKey("copy.id"), nullable=True, index=True)
-    order_id = Column(Integer, ForeignKey("orders.id"), nullable=True, index=True)
-    advertiser_id = Column(Integer, ForeignKey("advertisers.id"), nullable=True, index=True)
+    copy_id = Column(UUID(as_uuid=True), ForeignKey("copy.id"), nullable=True, index=True)
+    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=True, index=True)
+    advertiser_id = Column(UUID(as_uuid=True), ForeignKey("advertisers.id"), nullable=True, index=True)
     
     # Political advertiser information
     advertiser_category = Column(String(100), nullable=False)  # political, issue_advocacy, etc.
@@ -43,6 +44,13 @@ class PoliticalRecord(Base):
     political_window_end = Column(DateTime(timezone=True), nullable=True)
     no_preemptions = Column(Boolean, default=True)  # Cannot be preempted
     priority_scheduling = Column(Boolean, default=True)  # Priority in scheduling
+    
+    # WideOrbit Political Fields
+    election_cycle = Column(String(100), nullable=True, index=True)
+    lowest_unit_rate_record = Column(Text, nullable=True)  # LUR record
+    class_comparison = Column(Text, nullable=True)  # Class comparison data
+    window_dates = Column(Text, nullable=True)  # Political window dates
+    substantiation_documentation = Column(Text, nullable=True)  # References to substantiation docs
     
     # Metadata
     notes = Column(Text, nullable=True)

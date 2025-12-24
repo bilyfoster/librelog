@@ -18,8 +18,7 @@ import {
   MenuItem,
 } from '@mui/material'
 import { Close as CloseIcon } from '@mui/icons-material'
-import { createSalesGoal } from '../../utils/api'
-import { getSalesReps } from '../../utils/api'
+import { createSalesGoal, getSalesRepsProxy } from '../../utils/api'
 import { useQuery } from '@tanstack/react-query'
 
 interface SalesGoalFormDialogProps {
@@ -47,7 +46,19 @@ const SalesGoalFormDialog: React.FC<SalesGoalFormDialogProps> = ({
 
   const { data: salesReps } = useQuery({
     queryKey: ['sales-reps'],
-    queryFn: () => getSalesReps({ limit: 100 }),
+    queryFn: async () => {
+      // Use server-side proxy endpoint - all processing happens on backend
+      const data = await getSalesRepsProxy({ limit: 100 })
+      // Handle different response formats
+      if (Array.isArray(data)) {
+        return data
+      } else if (data && Array.isArray(data.reps)) {
+        return data.reps
+      } else if (data && Array.isArray(data.data)) {
+        return data.data
+      }
+      return []
+    },
   })
 
   useEffect(() => {
@@ -132,9 +143,9 @@ const SalesGoalFormDialog: React.FC<SalesGoalFormDialogProps> = ({
                 onChange={(e) => setFormData({ ...formData, sales_rep_id: e.target.value })}
                 label="Sales Rep"
               >
-                {salesReps?.map((rep: any) => (
+                {Array.isArray(salesReps) && salesReps.map((rep: any) => (
                   <MenuItem key={rep.id} value={rep.id.toString()}>
-                    {rep.first_name} {rep.last_name}
+                    {rep.username || rep.employee_id || `Sales Rep ${rep.id}`}
                   </MenuItem>
                 ))}
               </Select>

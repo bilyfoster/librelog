@@ -26,6 +26,8 @@ from backend.models import (
 )
 # Import new voice tracking models
 from backend.models import voice_track_slot, voice_track_audit
+# Import new sales admin models
+from backend.models import sales_team, sales_office, sales_region, station, cluster, sales_associations
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

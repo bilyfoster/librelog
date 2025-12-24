@@ -3,6 +3,7 @@ AudioDeliveryService for delivering audio files to playback systems
 """
 
 from typing import List, Optional, Dict, Any
+from uuid import UUID
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
@@ -37,7 +38,7 @@ class AudioDeliveryService:
     
     async def deliver_audio(
         self,
-        cut_id: int,
+        cut_id: UUID,
         delivery_method: str,
         target_server: str,
         target_path: Optional[str] = None,
@@ -195,7 +196,7 @@ class AudioDeliveryService:
         # For now, return None (verification would be implementation-specific)
         return None
     
-    async def retry_delivery(self, delivery_id: int) -> AudioDelivery:
+    async def retry_delivery(self, delivery_id: UUID) -> AudioDelivery:
         """Retry a failed delivery"""
         result = await self.db.execute(select(AudioDelivery).where(AudioDelivery.id == delivery_id))
         delivery = result.scalar_one_or_none()

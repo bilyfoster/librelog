@@ -2,7 +2,8 @@
 Daypart Category model for organizing dayparts
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from backend.database import Base
 
@@ -11,7 +12,7 @@ class DaypartCategory(Base):
     """Daypart Category model for categorizing dayparts"""
     __tablename__ = "daypart_categories"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
     name = Column(String(100), nullable=False, unique=True, index=True)
     description = Column(Text, nullable=True)
     color = Column(String(7), nullable=True)  # Hex color code for UI

@@ -3,6 +3,7 @@ Copy Service for audio asset and script management
 """
 
 from typing import List, Optional
+from uuid import UUID
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
@@ -36,7 +37,7 @@ class CopyService:
         
         return result.scalars().all()
     
-    async def create_version(self, copy_id: int) -> Copy:
+    async def create_version(self, copy_id: UUID) -> Copy:
         """Create a new version of copy"""
         result = await self.db.execute(select(Copy).where(Copy.id == copy_id))
         original = result.scalar_one_or_none()
@@ -65,7 +66,7 @@ class CopyService:
         
         return new_version
     
-    async def link_to_order(self, copy_id: int, order_id: int) -> bool:
+    async def link_to_order(self, copy_id: UUID, order_id: UUID) -> bool:
         """Automatically link copy to order"""
         result = await self.db.execute(select(Copy).where(Copy.id == copy_id))
         copy_item = result.scalar_one_or_none()
@@ -91,7 +92,7 @@ class CopyService:
         
         return result.scalars().all()
     
-    async def set_needs_production(self, copy_id: int, needs_production: bool) -> Copy:
+    async def set_needs_production(self, copy_id: UUID, needs_production: bool) -> Copy:
         """Set the needs_production flag on copy"""
         result = await self.db.execute(select(Copy).where(Copy.id == copy_id))
         copy_item = result.scalar_one_or_none()
@@ -114,7 +115,7 @@ class CopyService:
     
     async def approve_copy(
         self,
-        copy_id: int,
+        copy_id: UUID,
         approved_by: int,
         auto_create_po: bool = True
     ) -> Copy:
@@ -122,7 +123,7 @@ class CopyService:
         approval_service = ProductionApprovalService(self.db)
         return await approval_service.approve_copy(copy_id, approved_by, auto_create_po)
     
-    async def get_production_status(self, copy_id: int) -> Optional[dict]:
+    async def get_production_status(self, copy_id: UUID) -> Optional[dict]:
         """Get production status for a copy item"""
         result = await self.db.execute(
             select(Copy)

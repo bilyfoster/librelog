@@ -170,6 +170,14 @@ const ProductionOrderDetail: React.FC = () => {
           Back
         </Button>
         <Typography variant="h4">{order.po_number}</Typography>
+        {order.order_type === 'spec' && (
+          <Chip
+            label="SPEC SPOT"
+            color="warning"
+            size="medium"
+            sx={{ fontWeight: 'bold' }}
+          />
+        )}
         <Chip
           label={order.status}
           color={getStatusColor(order.status) as any}
@@ -212,8 +220,40 @@ const ProductionOrderDetail: React.FC = () => {
                     <Typography variant="subtitle2" color="text.secondary">
                       Order Type
                     </Typography>
-                    <Typography variant="body1">{order.order_type}</Typography>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Typography variant="body1">{order.order_type}</Typography>
+                      {order.order_type === 'spec' && (
+                        <Chip label="SPEC" color="warning" size="small" />
+                      )}
+                    </Box>
                   </Grid>
+                  {order.order_type === 'spec' && (
+                    <Grid item xs={12}>
+                      <Alert severity="info" sx={{ mt: 1 }}>
+                        <Typography variant="body2">
+                          <strong>Spec Spot:</strong> This production order was created without an associated sales order. 
+                          It can be used for pitches, demos, or speculative work. When the client commits, you can link it to an order later.
+                        </Typography>
+                      </Alert>
+                    </Grid>
+                  )}
+                  {!order.order_id && order.order_type !== 'spec' && (
+                    <Grid item xs={12}>
+                      <Alert severity="warning" sx={{ mt: 1 }}>
+                        <Typography variant="body2">
+                          <strong>No Order:</strong> This production order is not linked to a sales order.
+                        </Typography>
+                      </Alert>
+                    </Grid>
+                  )}
+                  {order.order_id && (
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Sales Order ID
+                      </Typography>
+                      <Typography variant="body1">#{order.order_id}</Typography>
+                    </Grid>
+                  )}
                   <Grid item xs={12} sm={6}>
                     <Typography variant="subtitle2" color="text.secondary">
                       Deadline

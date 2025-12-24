@@ -3,6 +3,7 @@ ProductionDelivery Service for delivering final audio to automation systems
 """
 
 from typing import List, Optional, Dict, Any
+from uuid import UUID
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -24,7 +25,7 @@ class ProductionDeliveryService:
     
     async def deliver_to_traffic(
         self,
-        production_order_id: int,
+        production_order_id: UUID,
         delivery_method: DeliveryMethod = DeliveryMethod.LOCAL,
         target_server: Optional[str] = None,
         target_path: Optional[str] = None
@@ -123,7 +124,7 @@ class ProductionDeliveryService:
     
     async def generate_metadata(
         self,
-        production_order_id: int
+        production_order_id: UUID
     ) -> Dict[str, Any]:
         """Generate metadata for production order (cart number, ISCI code, etc.)"""
         from backend.services.production_order_service import ProductionOrderService

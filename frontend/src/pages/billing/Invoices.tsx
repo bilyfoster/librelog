@@ -44,12 +44,12 @@ import InvoiceFormDialog from '../../components/billing/InvoiceFormDialog'
 import ARAgingDashboard from '../../components/billing/ARAgingDashboard'
 
 interface Invoice {
-  id: number
+  id?: string
   invoice_number: string
-  advertiser_id: number
-  agency_id?: number
-  order_id?: number
-  campaign_id?: number
+  advertiser_id?: string
+  agency_id?: string
+  order_id?: string
+  campaign_id?: string
   invoice_date: string
   due_date: string
   subtotal: number | string

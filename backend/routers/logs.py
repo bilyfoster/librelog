@@ -2,7 +2,8 @@
 Daily log management router
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from backend.database import get_db
@@ -14,9 +15,13 @@ from backend.services.log_editor import LogEditor
 from backend.services.voice_track_slot_service import VoiceTrackSlotService
 from backend.routers.auth import get_current_user
 from backend.models.user import User
+from backend.logging.audit import audit_logger
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import date, datetime, timezone
+import structlog
+
+logger = structlog.get_logger()
 
 router = APIRouter()
 
@@ -41,12 +46,13 @@ async def get_logs_count(
 
 class LogGenerateRequest(BaseModel):
     target_date: date
-    clock_template_id: int
+    clock_template_id: UUID
+    station_id: UUID
 
 
 class LogPreviewRequest(BaseModel):
     target_date: date
-    clock_template_id: int
+    clock_template_id: UUID
     preview_hours: Optional[List[str]] = None
 
 
@@ -56,6 +62,7 @@ async def list_logs(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     published_only: bool = Query(False),
+    station_id: Optional[UUID] = Query(None),
     date_filter: Optional[date] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -65,6 +72,9 @@ async def list_logs(
     
     if published_only:
         query = query.where(DailyLog.published == True)
+    
+    if station_id is not None:
+        query = query.where(DailyLog.station_id == station_id)
     
     if date_filter:
         query = query.where(DailyLog.date == date_filter)
@@ -94,6 +104,7 @@ async def list_logs(
 @router.post("/generate")
 async def generate_log(
     request: LogGenerateRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -104,7 +115,27 @@ async def generate_log(
         result = await generator.generate_daily_log(
             target_date=request.target_date,
             clock_template_id=request.clock_template_id,
+            station_id=request.station_id,
             user_id=current_user.id
+        )
+        
+        # Log audit action
+        client_ip = http_request.client.host if http_request.client else None
+        user_agent = http_request.headers.get("user-agent")
+        log_id = result.get("log_id") if isinstance(result, dict) else None
+        await audit_logger.log_action(
+            db_session=db,
+            user_id=current_user.id,
+            action="GENERATE_LOG",
+            resource_type="DailyLog",
+            resource_id=log_id,
+            details={
+                "target_date": request.target_date.isoformat(),
+                "clock_template_id": request.clock_template_id,
+                "station_id": request.station_id
+            },
+            ip_address=client_ip,
+            user_agent=user_agent
         )
         
         return result
@@ -118,7 +149,7 @@ async def generate_log(
 class BatchLogGenerateRequest(BaseModel):
     start_date: date
     end_date: date
-    clock_template_id: int
+    clock_template_id: UUID
 
 
 @router.post("/generate-batch")
@@ -140,6 +171,7 @@ async def generate_batch_logs(
             result = await generator.generate_daily_log(
                 target_date=current_date,
                 clock_template_id=request.clock_template_id,
+                station_id=request.station_id,
                 user_id=current_user.id
             )
             results.append({
@@ -191,7 +223,7 @@ async def preview_log(
 
 @router.get("/{log_id}")
 async def get_log(
-    log_id: int,
+    log_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -217,54 +249,95 @@ async def get_log(
 
 @router.post("/{log_id}/publish")
 async def publish_log(
-    log_id: int,
+    log_id: UUID,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Publish a daily log to LibreTime"""
-    # Validate log before publishing
-    editor = LogEditor(db)
-    validation = await editor.validate_log(log_id)
+    import logging
+    logger = logging.getLogger(__name__)
     
-    if not validation["valid"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "message": "Log validation failed",
-                "errors": validation["errors"],
-                "warnings": validation["warnings"]
-            }
-        )
-    
-    # Check if log is locked
-    result = await db.execute(select(DailyLog).where(DailyLog.id == log_id))
-    log = result.scalar_one_or_none()
-    
-    if not log:
-        raise HTTPException(status_code=404, detail="Daily log not found")
-    
-    if log.locked:
-        raise HTTPException(status_code=400, detail="Cannot publish locked log")
-    
-    generator = LogGenerator(db)
-    
-    success = await generator.publish_log(log_id)
-    
-    if not success:
+    try:
+        # Validate log before publishing
+        editor = LogEditor(db)
+        validation = await editor.validate_log(log_id)
+        
+        if not validation["valid"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "message": "Log validation failed",
+                    "errors": validation["errors"],
+                    "warnings": validation["warnings"]
+                }
+            )
+        
+        # Check if log is locked
+        result = await db.execute(select(DailyLog).where(DailyLog.id == log_id))
+        log = result.scalar_one_or_none()
+        
+        if not log:
+            raise HTTPException(status_code=404, detail="Daily log not found")
+        
+        if log.locked:
+            raise HTTPException(status_code=400, detail="Cannot publish locked log")
+        
+        generator = LogGenerator(db)
+        
+        try:
+            success = await generator.publish_log(log_id)
+        except Exception as e:
+            logger.error(f"Error publishing log {log_id} to LibreTime: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to publish log to LibreTime: {str(e)}. Please check LibreTime connection and configuration."
+            )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to publish log to LibreTime. Please check LibreTime connection and configuration."
+            )
+        
+        # Log audit action (non-blocking)
+        try:
+            client_ip = request.client.host if request.client else None
+            user_agent = request.headers.get("user-agent")
+            await audit_logger.log_action(
+                db_session=db,
+                user_id=current_user.id,
+                action="PUBLISH_LOG",
+                resource_type="DailyLog",
+                resource_id=log_id,
+                details={
+                    "log_date": log.log_date.isoformat() if log.log_date else None,
+                    "published": True
+                },
+                ip_address=client_ip,
+                user_agent=user_agent
+            )
+        except Exception as e:
+            logger.warning(f"Failed to log audit action for log publish: {e}")
+        
+        return {
+            "message": "Log published to LibreTime successfully",
+            "warnings": validation["warnings"]
+        }
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error publishing log {log_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to publish log to LibreTime"
+            detail=f"Unexpected error publishing log: {str(e)}"
         )
-    
-    return {
-        "message": "Log published to LibreTime successfully",
-        "warnings": validation["warnings"]
-    }
 
 
 @router.post("/{log_id}/publish-hour")
 async def publish_log_hour(
-    log_id: int,
+    log_id: UUID,
     hour_data: Dict[str, Any],
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -315,7 +388,7 @@ async def publish_log_hour(
 
 @router.delete("/{log_id}")
 async def delete_log(
-    log_id: int,
+    log_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -336,7 +409,7 @@ async def delete_log(
 
 @router.get("/{log_id}/timeline")
 async def get_log_timeline(
-    log_id: int,
+    log_id: UUID,
     hour: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -378,7 +451,8 @@ async def get_log_timeline(
 
 @router.post("/{log_id}/lock")
 async def lock_log(
-    log_id: int,
+    log_id: UUID,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -399,12 +473,29 @@ async def lock_log(
     await db.commit()
     await db.refresh(log)
     
+    # Log audit action
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    await audit_logger.log_action(
+        db_session=db,
+        user_id=current_user.id,
+        action="LOCK_LOG",
+        resource_type="DailyLog",
+        resource_id=log_id,
+        details={
+            "log_date": log.log_date.isoformat() if log.log_date else None,
+            "locked": True
+        },
+        ip_address=client_ip,
+        user_agent=user_agent
+    )
+    
     return {"message": "Log locked successfully", "locked": True, "locked_at": log.locked_at.isoformat()}
 
 
 @router.post("/{log_id}/unlock")
 async def unlock_log(
-    log_id: int,
+    log_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -429,7 +520,7 @@ async def unlock_log(
 
 @router.get("/{log_id}/conflicts")
 async def get_log_conflicts(
-    log_id: int,
+    log_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -449,7 +540,7 @@ async def get_log_conflicts(
 
 @router.get("/{log_id}/avails")
 async def get_log_avails(
-    log_id: int,
+    log_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -474,7 +565,7 @@ async def get_log_avails(
 
 @router.post("/{log_id}/spots")
 async def add_spot_to_log(
-    log_id: int,
+    log_id: UUID,
     spot_data: Dict[str, Any],
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -500,8 +591,8 @@ async def add_spot_to_log(
 
 @router.put("/{log_id}/spots/{spot_id}")
 async def update_spot_in_log(
-    log_id: int,
-    spot_id: int,
+    log_id: UUID,
+    spot_id: UUID,
     spot_update: Dict[str, Any],
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -527,8 +618,8 @@ async def update_spot_in_log(
 
 @router.delete("/{log_id}/spots/{spot_id}")
 async def remove_spot_from_log(
-    log_id: int,
-    spot_id: int,
+    log_id: UUID,
+    spot_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -553,7 +644,7 @@ async def remove_spot_from_log(
 
 @router.get("/{log_id}/voice-slots")
 async def get_voice_slots(
-    log_id: int,
+    log_id: UUID,
     hour: Optional[int] = Query(None, ge=0, le=23),
     status: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
@@ -637,10 +728,69 @@ async def get_voice_slots(
     }
 
 
+class LinkVoiceTrackRequest(BaseModel):
+    voice_track_id: UUID
+
+
+@router.put("/{log_id}/voice-slots/{slot_id}/link-voice-track", response_model=dict)
+async def link_voice_track_to_slot(
+    log_id: UUID,
+    slot_id: UUID,
+    request: LinkVoiceTrackRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Link a voice track to a slot in the log.
+    
+    This endpoint:
+    1. Links the voice track to the slot
+    2. Sets standardized_name on the voice track (e.g., "14-00_BreakA")
+    3. Renames the file to match standardized_name format
+    4. Syncs the voice track info to the log's JSON data
+    5. Updates the slot status to "recorded"
+    
+    Returns:
+        Success message with slot and voice track info
+    """
+    from backend.services.voice_track_slot_service import VoiceTrackSlotService
+    
+    # Verify slot belongs to this log
+    slot_result = await db.execute(
+        select(VoiceTrackSlot).where(
+            VoiceTrackSlot.id == slot_id,
+            VoiceTrackSlot.log_id == log_id
+        )
+    )
+    slot = slot_result.scalar_one_or_none()
+    
+    if not slot:
+        raise HTTPException(status_code=404, detail="Voice track slot not found for this log")
+    
+    # Use the service to link the voice track
+    slot_service = VoiceTrackSlotService(db)
+    updated_slot = await slot_service.link_voice_track_to_slot(slot_id, request.voice_track_id)
+    
+    if not updated_slot:
+        raise HTTPException(status_code=400, detail="Failed to link voice track to slot")
+    
+    logger.info("Voice track linked to slot from log view", 
+                log_id=log_id, slot_id=slot_id, voice_track_id=request.voice_track_id)
+    
+    return {
+        "success": True,
+        "message": "Voice track linked successfully",
+        "slot_id": slot_id,
+        "voice_track_id": request.voice_track_id,
+        "standardized_name": updated_slot.standardized_name,
+        "status": updated_slot.status
+    }
+
+
 @router.get("/{log_id}/voice-slots/{slot_id}/context")
 async def get_voice_slot_context(
-    log_id: int,
-    slot_id: int,
+    log_id: UUID,
+    slot_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -776,7 +926,7 @@ async def get_voice_slot_context(
 
 @router.put("/{log_id}/elements/{hour}")
 async def update_element_in_log(
-    log_id: int,
+    log_id: UUID,
     hour: str,
     element_data: Dict[str, Any],
     db: AsyncSession = Depends(get_db),
@@ -800,7 +950,7 @@ async def update_element_in_log(
 
 @router.post("/{log_id}/elements/{hour}")
 async def add_element_to_log(
-    log_id: int,
+    log_id: UUID,
     hour: str,
     element_data: Dict[str, Any],
     db: AsyncSession = Depends(get_db),
@@ -821,7 +971,7 @@ async def add_element_to_log(
 
 @router.delete("/{log_id}/elements/{hour}/{element_index}")
 async def remove_element_from_log(
-    log_id: int,
+    log_id: UUID,
     hour: str,
     element_index: int,
     db: AsyncSession = Depends(get_db),
@@ -840,7 +990,7 @@ async def remove_element_from_log(
 
 @router.post("/{log_id}/add-vot-placeholders")
 async def add_vot_placeholders_to_log(
-    log_id: int,
+    log_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -856,7 +1006,7 @@ async def add_vot_placeholders_to_log(
 
 @router.post("/{log_id}/elements/{hour}/reorder")
 async def reorder_elements_in_log(
-    log_id: int,
+    log_id: UUID,
     hour: str,
     reorder_data: Dict[str, Any],
     db: AsyncSession = Depends(get_db),

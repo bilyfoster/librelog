@@ -3,6 +3,7 @@ Inventory router for inventory management
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from backend.database import get_db
@@ -18,7 +19,7 @@ router = APIRouter()
 
 
 class InventorySlotResponse(BaseModel):
-    id: int
+    id: UUID
     date: date
     hour: int
     break_position: Optional[str]
@@ -74,7 +75,7 @@ async def get_sellout_percentages(
 async def get_avails(
     start_date: date = Query(...),
     end_date: date = Query(...),
-    station_id: Optional[int] = Query(None),
+    station_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -87,7 +88,7 @@ async def get_avails(
 async def get_slots(
     start_date: date = Query(...),
     end_date: date = Query(...),
-    station_id: Optional[int] = Query(None),
+    station_id: Optional[UUID] = Query(None),
     hour: Optional[int] = Query(None, ge=0, le=23),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)

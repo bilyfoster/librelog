@@ -3,6 +3,7 @@ Production Archive Service for searching production history
 """
 
 from typing import List, Optional, Dict, Any
+from uuid import UUID
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func
@@ -70,7 +71,7 @@ class ProductionArchiveService:
     
     async def search_by_voice_talent(
         self,
-        talent_user_id: int,
+        talent_user_id: UUID,
         limit: int = 50
     ) -> List[ProductionOrder]:
         """Search production orders by voice talent"""

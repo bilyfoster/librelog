@@ -2,8 +2,8 @@
 Digital Order model for multi-platform orders (Future Phase)
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Numeric, ForeignKey, Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String, DateTime, Numeric, ForeignKey, Enum as SQLEnum, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -30,8 +30,8 @@ class DigitalOrder(Base):
     """Digital Order model for multi-platform campaign support"""
     __tablename__ = "digital_orders"
 
-    id = Column(Integer, primary_key=True, index=True)
-    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
+    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False, index=True)
     platform = Column(SQLEnum(Platform), nullable=False)
     impression_target = Column(Integer, nullable=True)
     cpm = Column(Numeric(10, 2), nullable=True)

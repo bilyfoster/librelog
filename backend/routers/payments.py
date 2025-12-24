@@ -3,6 +3,7 @@ Payments router for billing
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from backend.database import get_db
@@ -18,7 +19,7 @@ router = APIRouter()
 
 
 class PaymentCreate(BaseModel):
-    invoice_id: int
+    invoice_id: UUID
     amount: Decimal
     payment_date: datetime
     payment_method: Optional[str] = None
@@ -27,8 +28,8 @@ class PaymentCreate(BaseModel):
 
 
 class PaymentResponse(BaseModel):
-    id: int
-    invoice_id: int
+    id: UUID
+    invoice_id: UUID
     amount: Decimal
     payment_date: str
     payment_method: Optional[str]
@@ -44,7 +45,7 @@ class PaymentResponse(BaseModel):
 async def list_payments(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    invoice_id: Optional[int] = Query(None),
+    invoice_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -105,7 +106,7 @@ async def create_payment(
 
 @router.get("/{payment_id}", response_model=PaymentResponse)
 async def get_payment(
-    payment_id: int,
+    payment_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -132,7 +133,7 @@ async def get_payment(
 
 @router.put("/{payment_id}", response_model=PaymentResponse)
 async def update_payment(
-    payment_id: int,
+    payment_id: UUID,
     payment_update: Dict[str, Any],
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -166,7 +167,7 @@ async def update_payment(
 
 @router.delete("/{payment_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_payment(
-    payment_id: int,
+    payment_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

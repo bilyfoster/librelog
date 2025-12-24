@@ -131,7 +131,7 @@ const APIDiagnostics: React.FC = () => {
       results.recommendations.push('Backend should be accessible at: https://log-dev.gayphx.com/api/health')
       results.recommendations.push('Check Traefik dashboard: Verify librelog-api service is registered')
       results.recommendations.push('Verify backend container is on Traefik network: docker network inspect traefik')
-      results.recommendations.push('Test direct backend: curl http://localhost:8000/api/health (if port is exposed)')
+      results.recommendations.push('Test direct backend: curl http://api:8000/api/health (from within container network)')
       results.recommendations.push('Restart backend: docker restart librelog-api-1')
       results.recommendations.push('Restart Traefik to pick up new labels: docker restart traefik (if applicable)')
     }

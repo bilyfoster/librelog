@@ -60,7 +60,7 @@ const VoiceTalentPortal: React.FC = () => {
   })
 
   const uploadMutation = useMutation({
-    mutationFn: async ({ request_id, file }: { request_id: number; file: File }) => {
+    mutationFn: async ({ request_id, file }: { request_id?: string; file: File }) => {
       return await uploadTake(request_id, file)
     },
     onSuccess: () => {
@@ -75,7 +75,7 @@ const VoiceTalentPortal: React.FC = () => {
   })
 
   const approveMutation = useMutation({
-    mutationFn: async ({ request_id, take_number }: { request_id: number; take_number: number }) => {
+    mutationFn: async ({ request_id, take_number }: { request_id?: string; take_number: number }) => {
       return await approveTake(request_id, take_number)
     },
     onSuccess: () => {

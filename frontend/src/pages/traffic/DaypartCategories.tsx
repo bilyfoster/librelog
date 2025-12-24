@@ -38,7 +38,7 @@ import {
 } from '../../utils/api'
 
 interface DaypartCategory {
-  id: number
+  id?: string
   name: string
   description?: string
   color?: string
@@ -83,7 +83,7 @@ const DaypartCategories: React.FC = () => {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) =>
+    mutationFn: ({ id, data }: { id?: string; data: any }) =>
       updateDaypartCategory(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['daypart-categories'] })
@@ -141,7 +141,7 @@ const DaypartCategories: React.FC = () => {
     }
   }
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id?: string) => {
     if (window.confirm('Are you sure you want to delete this category?')) {
       deleteMutation.mutate(id)
     }

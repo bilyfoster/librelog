@@ -3,12 +3,13 @@ Clock template service with validation and LibreTime export
 """
 
 from typing import List, Dict, Any, Optional
+from uuid import UUID
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from sqlalchemy.exc import IntegrityError
 from backend.models.clock_template import ClockTemplate
-from backend.integrations.libretime_client import libretime_client
+from backend.integrations.libretime_client import libretime_client, get_libretime_client_for_station
 import structlog
 import json
 
@@ -26,7 +27,7 @@ class ClockTemplateService:
         name: str, 
         description: Optional[str], 
         json_layout: Dict[str, Any],
-        user_id: int
+        user_id: UUID
     ) -> ClockTemplate:
         """Create a new clock template with validation"""
         # Validate JSON layout
@@ -50,7 +51,7 @@ class ClockTemplateService:
             await self.db.rollback()
             raise ValueError("Template name already exists")
     
-    async def get_template(self, template_id: int) -> Optional[ClockTemplate]:
+    async def get_template(self, template_id: UUID) -> Optional[ClockTemplate]:
         """Get a clock template by ID"""
         result = await self.db.execute(
             select(ClockTemplate).where(ClockTemplate.id == template_id)
@@ -76,7 +77,7 @@ class ClockTemplateService:
     
     async def update_template(
         self, 
-        template_id: int, 
+        template_id: UUID, 
         name: Optional[str] = None,
         description: Optional[str] = None,
         json_layout: Optional[Dict[str, Any]] = None
@@ -105,7 +106,7 @@ class ClockTemplateService:
             await self.db.rollback()
             raise ValueError("Template name already exists")
     
-    async def delete_template(self, template_id: int) -> bool:
+    async def delete_template(self, template_id: UUID) -> bool:
         """Delete a clock template"""
         template = await self.get_template(template_id)
         if not template:
@@ -117,7 +118,7 @@ class ClockTemplateService:
         logger.info("Clock template deleted", template_id=template_id)
         return True
     
-    async def generate_preview(self, template_id: int) -> Dict[str, Any]:
+    async def generate_preview(self, template_id: UUID) -> Dict[str, Any]:
         """Generate a preview of what an hour would look like"""
         template = await self.get_template(template_id)
         if not template:
@@ -160,20 +161,24 @@ class ClockTemplateService:
         preview["timeline"] = timeline
         return preview
     
-    async def export_to_libretime(self, template_id: int) -> bool:
+    async def export_to_libretime(self, template_id: UUID) -> bool:
         """Export clock template to LibreTime as Smart Block"""
         template = await self.get_template(template_id)
         if not template:
             return False
         
+        # Get station-specific LibreTime client
+        station_id = getattr(template, 'station_id', None)
+        client = await get_libretime_client_for_station(station_id, self.db) if station_id else libretime_client
+        
         # Convert to LibreTime Smart Block format
         smart_block_data = self._convert_to_smart_block(template.json_layout)
         
         # Push to LibreTime
-        success = await libretime_client.create_smart_block(smart_block_data)
+        success = await client.create_smart_block(smart_block_data)
         
         if success:
-            logger.info("Clock template exported to LibreTime", template_id=template_id)
+            logger.info("Clock template exported to LibreTime", template_id=template_id, station_id=station_id)
         
         return success
     

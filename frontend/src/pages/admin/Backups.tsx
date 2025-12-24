@@ -51,7 +51,7 @@ import {
 import { formatDistanceToNow } from 'date-fns'
 
 interface Backup {
-  id: number
+  id?: string
   backup_type: 'FULL' | 'DATABASE' | 'FILES'
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED'
   storage_provider: 'LOCAL' | 'S3' | 'BACKBLAZE_B2'
@@ -121,7 +121,7 @@ const Backups: React.FC = () => {
   })
 
   const restoreMutation = useMutation({
-    mutationFn: ({ backup_id, restore }: { backup_id: number; restore: { restore_database?: boolean; restore_files?: boolean } }) =>
+    mutationFn: ({ backup_id, restore }: { backup_id?: string; restore: { restore_database?: boolean; restore_files?: boolean } }) =>
       restoreBackup(backup_id, restore),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['backups'] })
@@ -357,6 +357,7 @@ const Backups: React.FC = () => {
                               <IconButton
                                 size="small"
                                 color="primary"
+                                component="a"
                                 href={`/api/backups/${backup.id}/download`}
                                 download
                               >

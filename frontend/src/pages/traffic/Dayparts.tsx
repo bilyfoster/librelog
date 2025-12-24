@@ -32,23 +32,27 @@ import {
   updateDaypart,
   deleteDaypart,
   getDaypartCategoriesProxy,
+  getStationsProxy,
 } from '../../utils/api'
 import { MenuItem, Select, FormControl, InputLabel } from '@mui/material'
 
 interface Daypart {
-  id: number
+  id?: string
   name: string
   start_time: string
   end_time: string
   description?: string
-  category_id?: number
+  category_id?: string
   category_name?: string
+  station_id?: string
+  station_name?: string
   active: boolean
 }
 
 const Dayparts: React.FC = () => {
   const [dayparts, setDayparts] = useState<Daypart[]>([])
   const [categories, setCategories] = useState<any[]>([])
+  const [stations, setStations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -59,13 +63,15 @@ const Dayparts: React.FC = () => {
     start_time: '06:00:00',
     end_time: '10:00:00',
     description: '',
-    category_id: undefined as number | undefined,
+    category_id: undefined as string | undefined,
+    station_id: undefined as string | undefined,
     active: true,
   })
 
   useEffect(() => {
     loadDayparts()
     loadCategories()
+    loadStations()
   }, [])
 
   const loadDayparts = async () => {
@@ -93,6 +99,16 @@ const Dayparts: React.FC = () => {
     }
   }
 
+  const loadStations = async () => {
+    try {
+      // Load active stations for selection
+      const data = await getStationsProxy({ active_only: true })
+      setStations(Array.isArray(data) ? data : [])
+    } catch (err) {
+      console.error('Failed to load stations:', err)
+    }
+  }
+
   const handleOpenDialog = (daypart?: Daypart) => {
     if (daypart) {
       setEditing(daypart)
@@ -102,6 +118,7 @@ const Dayparts: React.FC = () => {
         end_time: daypart.end_time,
         description: daypart.description || '',
         category_id: daypart.category_id,
+        station_id: daypart.station_id,
         active: daypart.active,
       })
     } else {
@@ -112,6 +129,7 @@ const Dayparts: React.FC = () => {
         end_time: '10:00:00',
         description: '',
         category_id: undefined,
+        station_id: stations.length === 1 ? stations[0].id : undefined,
         active: true,
       })
     }
@@ -147,7 +165,7 @@ const Dayparts: React.FC = () => {
     }
   }
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id?: string) => {
     if (!window.confirm('Are you sure you want to delete this daypart?')) return
 
     try {
@@ -221,6 +239,7 @@ const Dayparts: React.FC = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>Name</TableCell>
+                  <TableCell>Station</TableCell>
                   <TableCell>Start Time</TableCell>
                   <TableCell>End Time</TableCell>
                   <TableCell>Category</TableCell>
@@ -233,6 +252,7 @@ const Dayparts: React.FC = () => {
                 {dayparts.map(daypart => (
                   <TableRow key={daypart.id}>
                     <TableCell>{daypart.name}</TableCell>
+                    <TableCell>{daypart.station_name || '-'}</TableCell>
                     <TableCell>{formatTime(daypart.start_time)}</TableCell>
                     <TableCell>{formatTime(daypart.end_time)}</TableCell>
                     <TableCell>{daypart.category_name || '-'}</TableCell>
@@ -302,6 +322,25 @@ const Dayparts: React.FC = () => {
             InputLabelProps={{ shrink: true }}
             required
           />
+          <FormControl fullWidth margin="normal" required>
+            <InputLabel>Station</InputLabel>
+            <Select
+              value={formData.station_id || ''}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  station_id: e.target.value ? (e.target.value as string) : undefined,
+                })
+              }
+              label="Station"
+            >
+              {stations.map((station) => (
+                <MenuItem key={station.id} value={station.id}>
+                  {station.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <FormControl fullWidth margin="normal">
             <InputLabel>Category</InputLabel>
             <Select
@@ -309,7 +348,7 @@ const Dayparts: React.FC = () => {
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  category_id: e.target.value ? (e.target.value as number) : undefined,
+                  category_id: e.target.value ? (e.target.value as string) : undefined,
                 })
               }
               label="Category"
@@ -347,7 +386,7 @@ const Dayparts: React.FC = () => {
           <Button
             variant="contained"
             onClick={handleSave}
-            disabled={!formData.name || !formData.start_time || !formData.end_time}
+            disabled={!formData.name || !formData.start_time || !formData.end_time || !formData.station_id}
           >
             Save
           </Button>

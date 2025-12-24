@@ -3,6 +3,7 @@ Webhooks router for external integrations
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from typing import List, Optional
@@ -36,7 +37,7 @@ class WebhookUpdate(BaseModel):
 
 
 class WebhookResponse(BaseModel):
-    id: int
+    id: UUID
     name: str
     webhook_type: WebhookType
     url: str
@@ -98,7 +99,7 @@ async def create_webhook(
 
 @router.get("/{webhook_id}", response_model=WebhookResponse)
 async def get_webhook(
-    webhook_id: int,
+    webhook_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -114,7 +115,7 @@ async def get_webhook(
 
 @router.put("/{webhook_id}", response_model=WebhookResponse)
 async def update_webhook(
-    webhook_id: int,
+    webhook_id: UUID,
     webhook_update: WebhookUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -140,7 +141,7 @@ async def update_webhook(
 
 @router.delete("/{webhook_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_webhook(
-    webhook_id: int,
+    webhook_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -157,7 +158,7 @@ async def delete_webhook(
 
 @router.post("/{webhook_id}/test", status_code=status.HTTP_200_OK)
 async def test_webhook(
-    webhook_id: int,
+    webhook_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

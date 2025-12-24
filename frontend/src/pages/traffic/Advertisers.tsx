@@ -27,9 +27,10 @@ import api from '../../utils/api'
 import { getAdvertisersProxy } from '../../utils/api'
 
 interface Advertiser {
-  id: number
+  id?: string
   name: string
-  contact_name?: string
+  contact_first_name?: string
+  contact_last_name?: string
   email?: string
   phone?: string
   address?: string
@@ -51,16 +52,24 @@ const Advertisers: React.FC = () => {
   const { data: advertisers, isLoading, error } = useQuery({
     queryKey: ['advertisers', searchTerm],
     queryFn: async () => {
-      // Use server-side proxy endpoint - all processing happens on backend
-      const data = await getAdvertisersProxy({
-        limit: 100,
-        skip: 0,
-        active_only: false,
-        search: searchTerm || undefined,
-      })
-      return Array.isArray(data) ? data : []
+      try {
+        // Use server-side proxy endpoint - all processing happens on backend
+        const data = await getAdvertisersProxy({
+          limit: 100,
+          skip: 0,
+          active_only: false,
+          search: searchTerm || undefined,
+        })
+        return Array.isArray(data) ? data : []
+      } catch (err: any) {
+        // Re-throw with more context for authentication errors
+        if (err?.response?.status === 401) {
+          throw new Error('Authentication required. Please log in to view advertisers.')
+        }
+        throw err
+      }
     },
-    retry: 1,
+    retry: false, // Don't retry on auth errors
   })
 
   const createMutation = useMutation({
@@ -89,7 +98,7 @@ const Advertisers: React.FC = () => {
   })
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<Advertiser> }) => {
+    mutationFn: async ({ id, data }: { id?: string; data: Partial<Advertiser> }) => {
       const response = await api.put(`/advertisers/${id}`, data)
       return response.data
     },
@@ -114,7 +123,7 @@ const Advertisers: React.FC = () => {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id?: string) => {
       await api.delete(`/advertisers/${id}`)
     },
     onSuccess: () => {
@@ -141,7 +150,7 @@ const Advertisers: React.FC = () => {
     setErrorMessage(null)
   }
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id?: string) => {
     if (window.confirm('Are you sure you want to delete this advertiser?')) {
       deleteMutation.mutate(id)
     }
@@ -152,7 +161,8 @@ const Advertisers: React.FC = () => {
     const formData = new FormData(e.currentTarget)
     const data: Partial<Advertiser> = {
       name: formData.get('name') as string,
-      contact_name: formData.get('contact_name') as string || undefined,
+      contact_first_name: formData.get('contact_first_name') as string || undefined,
+      contact_last_name: formData.get('contact_last_name') as string || undefined,
       email: formData.get('email') as string || undefined,
       phone: formData.get('phone') as string || undefined,
       address: formData.get('address') as string || undefined,
@@ -209,13 +219,36 @@ const Advertisers: React.FC = () => {
               <CircularProgress />
             </Box>
           ) : error ? (
-            <Alert severity="error" action={
-              <Button color="inherit" size="small" onClick={() => queryClient.invalidateQueries({ queryKey: ['advertisers'] })}>
-                Retry
-              </Button>
-            }>
-              Failed to load advertisers: {error instanceof Error ? error.message : 'Unknown error'}
+            <Alert 
+              severity="error" 
+              action={
+                <Button 
+                  color="inherit" 
+                  size="small" 
+                  onClick={() => {
+                    // If it's an auth error, redirect to login
+                    if (error instanceof Error && error.message.includes('Authentication')) {
+                      window.location.href = '/login'
+                    } else {
+                      queryClient.invalidateQueries({ queryKey: ['advertisers'] })
+                    }
+                  }}
+                >
+                  {error instanceof Error && error.message.includes('Authentication') ? 'Log In' : 'Retry'}
+                </Button>
+              }
+            >
+              {error instanceof Error ? error.message : 'Failed to load advertisers. Please check your connection and try again.'}
             </Alert>
+          ) : !advertisers || advertisers.length === 0 ? (
+            <Box sx={{ py: 4, textAlign: 'center' }}>
+              <Typography color="textSecondary" variant="body1" sx={{ mb: 1 }}>
+                No advertisers found
+              </Typography>
+              <Typography color="textSecondary" variant="body2">
+                {searchTerm ? `No advertisers match "${searchTerm}"` : 'Get started by adding your first advertiser'}
+              </Typography>
+            </Box>
           ) : (
             <TableContainer component={Paper}>
               <Table>
@@ -230,33 +263,27 @@ const Advertisers: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {advertisers?.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        <Typography color="textSecondary" sx={{ py: 3 }}>
-                          No advertisers found
-                        </Typography>
+                  {advertisers.map((advertiser: Advertiser) => (
+                    <TableRow key={advertiser.id}>
+                      <TableCell>{advertiser.name}</TableCell>
+                      <TableCell>
+                        {advertiser.contact_first_name || advertiser.contact_last_name
+                          ? `${advertiser.contact_first_name || ''} ${advertiser.contact_last_name || ''}`.trim()
+                          : 'N/A'}
+                      </TableCell>
+                      <TableCell>{advertiser.email || 'N/A'}</TableCell>
+                      <TableCell>{advertiser.phone || 'N/A'}</TableCell>
+                      <TableCell>{advertiser.payment_terms || 'N/A'}</TableCell>
+                      <TableCell>
+                        <IconButton size="small" onClick={() => handleEdit(advertiser)}>
+                          <Edit />
+                        </IconButton>
+                        <IconButton size="small" onClick={() => handleDelete(advertiser.id)}>
+                          <Delete />
+                        </IconButton>
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    advertisers?.map((advertiser: Advertiser) => (
-                      <TableRow key={advertiser.id}>
-                        <TableCell>{advertiser.name}</TableCell>
-                        <TableCell>{advertiser.contact_name || 'N/A'}</TableCell>
-                        <TableCell>{advertiser.email || 'N/A'}</TableCell>
-                        <TableCell>{advertiser.phone || 'N/A'}</TableCell>
-                        <TableCell>{advertiser.payment_terms || 'N/A'}</TableCell>
-                        <TableCell>
-                          <IconButton size="small" onClick={() => handleEdit(advertiser)}>
-                            <Edit />
-                          </IconButton>
-                          <IconButton size="small" onClick={() => handleDelete(advertiser.id)}>
-                            <Delete />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
+                  ))}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -282,10 +309,16 @@ const Advertisers: React.FC = () => {
                 defaultValue={editingAdvertiser?.name || ''}
               />
               <TextField
-                name="contact_name"
-                label="Contact Name"
+                name="contact_first_name"
+                label="Contact First Name"
                 fullWidth
-                defaultValue={editingAdvertiser?.contact_name || ''}
+                defaultValue={editingAdvertiser?.contact_first_name || ''}
+              />
+              <TextField
+                name="contact_last_name"
+                label="Contact Last Name"
+                fullWidth
+                defaultValue={editingAdvertiser?.contact_last_name || ''}
               />
               <TextField
                 name="email"

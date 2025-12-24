@@ -1,0 +1,435 @@
+# Task List: UUID Migration
+
+Based on PRD: `prd-uuid-migration.md`
+
+## Relevant Files
+
+### Backend Scripts
+- `backend/scripts/export_settings.py` - Script to export settings data to JSON
+- `backend/scripts/export_admin_users.py` - Script to export admin user accounts to JSON
+- `backend/scripts/restore_settings.py` - Script to restore settings after migration
+- `backend/scripts/restore_admin_users.py` - Script to restore admin users after migration
+
+### Database Migration
+- `backend/alembic/versions/027_migrate_to_uuid_primary_keys.py` - Main migration to convert all tables to UUIDs
+
+### Models (48 files to update)
+- `backend/models/user.py` - User model with UUID primary key
+- `backend/models/settings.py` - Settings model with UUID primary key
+- `backend/models/order.py` - Order model with UUID primary and foreign keys
+- `backend/models/advertiser.py` - Advertiser model with UUID primary key
+- `backend/models/agency.py` - Agency model with UUID primary key
+- `backend/models/campaign.py` - Campaign model with UUID primary key
+- `backend/models/spot.py` - Spot model with UUID primary and foreign keys
+- `backend/models/copy.py` - Copy model with UUID primary and foreign keys
+- `backend/models/production_order.py` - ProductionOrder model with UUID primary and foreign keys
+- `backend/models/invoice.py` - Invoice model with UUID primary and foreign keys
+- `backend/models/invoice_line.py` - InvoiceLine model with UUID primary and foreign keys
+- `backend/models/order_line.py` - OrderLine model with UUID primary and foreign keys
+- `backend/models/order_attachment.py` - OrderAttachment model with UUID primary and foreign keys
+- `backend/models/order_revision.py` - OrderRevision model with UUID primary and foreign keys
+- `backend/models/order_workflow_state.py` - OrderWorkflowState model with UUID primary and foreign keys
+- `backend/models/order_template.py` - OrderTemplate model with UUID primary and foreign keys
+- `backend/models/copy_assignment.py` - CopyAssignment model with UUID primary and foreign keys
+- `backend/models/station.py` - Station model with UUID primary key
+- `backend/models/cluster.py` - Cluster model with UUID primary key
+- `backend/models/sales_rep.py` - SalesRep model with UUID primary and foreign keys
+- `backend/models/sales_team.py` - SalesTeam model with UUID primary and foreign keys
+- `backend/models/sales_office.py` - SalesOffice model with UUID primary and foreign keys
+- `backend/models/sales_region.py` - SalesRegion model with UUID primary and foreign keys
+- `backend/models/sales_associations.py` - SalesAssociations model with UUID foreign keys
+- `backend/models/sales_goal.py` - SalesGoal model with UUID primary and foreign keys
+- `backend/models/daypart.py` - Daypart model with UUID primary key
+- `backend/models/daypart_category.py` - DaypartCategory model with UUID primary key
+- `backend/models/clock_template.py` - ClockTemplate model with UUID primary key
+- `backend/models/break_structure.py` - BreakStructure model with UUID primary and foreign keys
+- `backend/models/track.py` - Track model with UUID primary key
+- `backend/models/voice_track.py` - VoiceTrack model with UUID primary and foreign keys
+- `backend/models/voice_track_slot.py` - VoiceTrackSlot model with UUID primary and foreign keys
+- `backend/models/voice_track_audit.py` - VoiceTrackAudit model with UUID primary and foreign keys
+- `backend/models/voice_talent_request.py` - VoiceTalentRequest model with UUID primary and foreign keys
+- `backend/models/production_assignment.py` - ProductionAssignment model with UUID primary and foreign keys
+- `backend/models/production_comment.py` - ProductionComment model with UUID primary and foreign keys
+- `backend/models/production_revision.py` - ProductionRevision model with UUID primary and foreign keys
+- `backend/models/daily_log.py` - DailyLog model with UUID primary and foreign keys
+- `backend/models/traffic_log.py` - TrafficLog model with UUID primary and foreign keys
+- `backend/models/log_revision.py` - LogRevision model with UUID primary and foreign keys
+- `backend/models/rotation_rule.py` - RotationRule model with UUID primary and foreign keys
+- `backend/models/inventory_slot.py` - InventorySlot model with UUID primary and foreign keys
+- `backend/models/audio_cut.py` - AudioCut model with UUID primary and foreign keys
+- `backend/models/audio_version.py` - AudioVersion model with UUID primary and foreign keys
+- `backend/models/audio_delivery.py` - AudioDelivery model with UUID primary and foreign keys
+- `backend/models/audio_qc_result.py` - AudioQcResult model with UUID primary and foreign keys
+- `backend/models/live_read.py` - LiveRead model with UUID primary and foreign keys
+- `backend/models/makegood.py` - Makegood model with UUID primary and foreign keys
+- `backend/models/payment.py` - Payment model with UUID primary and foreign keys
+- `backend/models/political_record.py` - PoliticalRecord model with UUID primary and foreign keys
+- `backend/models/notification.py` - Notification model with UUID primary and foreign keys
+- `backend/models/audit_log.py` - AuditLog model with UUID primary and foreign keys
+- `backend/models/webhook.py` - Webhook model with UUID primary key
+- `backend/models/backup.py` - Backup model with UUID primary key
+- `backend/models/playback_history.py` - PlaybackHistory model with UUID primary and foreign keys
+- `backend/models/digital_order.py` - DigitalOrder model with UUID primary and foreign keys
+- `backend/models/user_roles.py` - UserRoles model with UUID foreign keys
+- `backend/models/failed_login_attempt.py` - FailedLoginAttempt model with UUID primary key
+
+### Schemas (10+ files to update)
+- `backend/schemas/order.py` - Order schemas with UUID types
+- `backend/schemas/order_line.py` - OrderLine schemas with UUID types
+- `backend/schemas/order_attachment.py` - OrderAttachment schemas with UUID types
+- `backend/schemas/station.py` - Station schemas with UUID types
+- `backend/schemas/cluster.py` - Cluster schemas with UUID types
+- `backend/schemas/sales_team.py` - SalesTeam schemas with UUID types
+- `backend/schemas/sales_office.py` - SalesOffice schemas with UUID types
+- `backend/schemas/sales_region.py` - SalesRegion schemas with UUID types
+- `backend/schemas/track.py` - Track schemas with UUID types
+- All other schema files that reference entity IDs
+
+### Routers (50+ files to update)
+- `backend/routers/users.py` - User router with UUID path/query parameters
+- `backend/routers/orders.py` - Order router with UUID path/query parameters
+- `backend/routers/advertisers.py` - Advertiser router with UUID path/query parameters
+- `backend/routers/agencies.py` - Agency router with UUID path/query parameters
+- `backend/routers/campaigns.py` - Campaign router with UUID path/query parameters
+- `backend/routers/copy.py` - Copy router with UUID path/query parameters
+- `backend/routers/production_orders.py` - ProductionOrder router with UUID path/query parameters
+- `backend/routers/invoices.py` - Invoice router with UUID path/query parameters
+- `backend/routers/spots.py` - Spot router with UUID path/query parameters
+- `backend/routers/stations.py` - Station router with UUID path/query parameters
+- `backend/routers/voice_tracks.py` - VoiceTrack router with UUID path/query parameters
+- `backend/routers/traffic_logs.py` - TrafficLog router with UUID path/query parameters
+- All other router files that accept or return entity IDs
+
+### Services (40+ files to update)
+- `backend/services/order_service.py` - OrderService with UUID parameters
+- `backend/services/copy_service.py` - CopyService with UUID parameters
+- `backend/services/production_order_service.py` - ProductionOrderService with UUID parameters
+- `backend/services/voice_track_slot_service.py` - VoiceTrackSlotService with UUID parameters
+- All other service files that handle entity IDs
+
+### Frontend Files
+- `frontend/src/pages/traffic/Orders.tsx` - Order interface and API calls with UUID
+- `frontend/src/components/orders/OrderForm.tsx` - Order form with UUID handling
+- `frontend/src/pages/traffic/Advertisers.tsx` - Advertiser interface and API calls with UUID
+- `frontend/src/pages/traffic/Agencies.tsx` - Agency interface and API calls with UUID
+- `frontend/src/pages/production/ProductionOrders.tsx` - ProductionOrder interface and API calls with UUID
+- `frontend/src/pages/billing/Invoices.tsx` - Invoice interface and API calls with UUID
+- `frontend/src/pages/admin/Users.tsx` - User interface and API calls with UUID
+- `frontend/src/utils/api.ts` - API utility functions with UUID handling
+- All other frontend files that reference entity IDs
+
+### Test Files
+- All test files in `tests/` directory that create or reference entities
+- All frontend test files that mock or test API calls with IDs
+
+### Notes
+
+- Unit tests should be placed in the `tests/` directory mirroring the backend structure (e.g., `backend/routers/auth.py` → `tests/routers/test_auth.py`).
+- Frontend tests should be placed alongside components (e.g., `MyComponent.tsx` and `MyComponent.test.tsx` in the same directory).
+- Use `pytest [optional/path/to/test/file]` to run backend tests. Running without a path executes all tests found by pytest.
+- Use `npm test` or `vitest` to run frontend tests.
+- Follow the task completion protocol in `markdown/process-task-list.md`: complete one sub-task at a time, mark as complete, commit after parent task completion.
+- When updating models, ensure all foreign key columns are changed from `Integer` to `UUID` type.
+- When updating routers, use FastAPI's UUID validation: `{entity_id: uuid}` in path parameters.
+- When updating frontend, change all `id: number` to `id: string` in TypeScript interfaces.
+
+## Tasks
+
+- [ ] 1.0 Create Settings and Admin User Preservation Scripts
+  - [ ] 1.1 Create `backend/scripts/export_settings.py` script that connects to database and exports all settings from `settings` table to JSON file (`settings_backup.json`)
+  - [ ] 1.2 Ensure export script includes all fields: `id`, `category`, `key`, `value`, `encrypted`, `description`, `created_at`, `updated_at`
+  - [ ] 1.3 Create `backend/scripts/export_admin_users.py` script that exports all users with `role='admin'` to JSON file (`admin_users_backup.json`)
+  - [ ] 1.4 Ensure admin user export includes: `id`, `username`, `password_hash`, `role`, `permissions`, `created_at`, `last_login`
+  - [ ] 1.5 Add command-line argument support to export scripts for database connection string
+  - [ ] 1.6 Test export scripts to verify they successfully export data before migration
+  - [ ] 1.7 Create `backend/scripts/restore_settings.py` script that reads `settings_backup.json` and restores settings to database
+  - [ ] 1.8 Ensure restore script generates new UUID primary keys for each restored setting
+  - [ ] 1.9 Create `backend/scripts/restore_admin_users.py` script that reads `admin_users_backup.json` and restores admin users
+  - [ ] 1.10 Ensure restore script generates new UUID primary keys for each restored admin user
+  - [ ] 1.11 Verify restored admin users can log in with their original passwords (password hashes are independent of user ID)
+  - [ ] 1.12 Add error handling and logging to all export/restore scripts
+  - [ ] 1.13 Document the export/restore process in script docstrings
+
+- [ ] 2.0 Create Database Migration for UUID Primary Keys
+  - [ ] 2.1 Create new Alembic migration file `027_migrate_to_uuid_primary_keys.py` with proper revision ID and down_revision
+  - [ ] 2.2 Import required modules: `op`, `sa`, `postgresql` from `sqlalchemy.dialects`
+  - [ ] 2.3 In `upgrade()` function, drop all existing tables using `op.drop_all()` or explicit DROP statements
+  - [ ] 2.4 Recreate `users` table with UUID primary key using `postgresql.UUID` type and `server_default=sa.text("gen_random_uuid()")`
+  - [ ] 2.5 Recreate `settings` table with UUID primary key
+  - [ ] 2.6 Recreate `advertisers` table with UUID primary key
+  - [ ] 2.7 Recreate `agencies` table with UUID primary key
+  - [ ] 2.8 Recreate `campaigns` table with UUID primary key and UUID foreign keys
+  - [ ] 2.9 Recreate `orders` table with UUID primary key and all UUID foreign keys (campaign_id, advertiser_id, agency_id, sales_rep_id, etc.)
+  - [ ] 2.10 Recreate `order_lines` table with UUID primary key and UUID foreign keys (order_id, station_id)
+  - [ ] 2.11 Recreate `order_attachments` table with UUID primary key and UUID foreign keys
+  - [ ] 2.12 Recreate `order_revisions` table with UUID primary key and UUID foreign keys
+  - [ ] 2.13 Recreate `order_workflow_states` table with UUID primary key and UUID foreign keys
+  - [ ] 2.14 Recreate `order_templates` table with UUID primary key and UUID foreign keys
+  - [ ] 2.15 Recreate `spots` table with UUID primary key and UUID foreign keys (order_id, copy_id, etc.)
+  - [ ] 2.16 Recreate `copy` table with UUID primary key and UUID foreign keys (order_id, advertiser_id, production_order_id)
+  - [ ] 2.17 Recreate `copy_assignments` table with UUID primary key and UUID foreign keys
+  - [ ] 2.18 Recreate `production_orders` table with UUID primary key and UUID foreign keys
+  - [ ] 2.19 Recreate `production_assignments` table with UUID primary key and UUID foreign keys
+  - [ ] 2.20 Recreate `production_comments` table with UUID primary key and UUID foreign keys
+  - [ ] 2.21 Recreate `production_revisions` table with UUID primary key and UUID foreign keys
+  - [ ] 2.22 Recreate `invoices` table with UUID primary key and UUID foreign keys
+  - [ ] 2.23 Recreate `invoice_lines` table with UUID primary key and UUID foreign keys
+  - [ ] 2.24 Recreate `stations` table with UUID primary key
+  - [ ] 2.25 Recreate `clusters` table with UUID primary key
+  - [ ] 2.26 Recreate `sales_reps` table with UUID primary key and UUID foreign keys
+  - [ ] 2.27 Recreate `sales_teams` table with UUID primary key
+  - [ ] 2.28 Recreate `sales_offices` table with UUID primary key and UUID foreign keys
+  - [ ] 2.29 Recreate `sales_regions` table with UUID primary key
+  - [ ] 2.30 Recreate `sales_associations` table with UUID foreign keys (no primary key, junction table)
+  - [ ] 2.31 Recreate `sales_goals` table with UUID primary key and UUID foreign keys
+  - [ ] 2.32 Recreate `dayparts` table with UUID primary key
+  - [ ] 2.33 Recreate `daypart_categories` table with UUID primary key
+  - [ ] 2.34 Recreate `clock_templates` table with UUID primary key
+  - [ ] 2.35 Recreate `break_structures` table with UUID primary key and UUID foreign keys
+  - [ ] 2.36 Recreate `tracks` table with UUID primary key
+  - [ ] 2.37 Recreate `voice_tracks` table with UUID primary key and UUID foreign keys
+  - [ ] 2.38 Recreate `voice_track_slots` table with UUID primary key and UUID foreign keys
+  - [ ] 2.39 Recreate `voice_track_audits` table with UUID primary key and UUID foreign keys
+  - [ ] 2.40 Recreate `voice_talent_requests` table with UUID primary key and UUID foreign keys
+  - [ ] 2.41 Recreate `daily_logs` table with UUID primary key and UUID foreign keys
+  - [ ] 2.42 Recreate `traffic_logs` table with UUID primary key and UUID foreign keys
+  - [ ] 2.43 Recreate `log_revisions` table with UUID primary key and UUID foreign keys
+  - [ ] 2.44 Recreate `rotation_rules` table with UUID primary key and UUID foreign keys
+  - [ ] 2.45 Recreate `inventory_slots` table with UUID primary key and UUID foreign keys
+  - [ ] 2.46 Recreate `audio_cuts` table with UUID primary key and UUID foreign keys
+  - [ ] 2.47 Recreate `audio_versions` table with UUID primary key and UUID foreign keys
+  - [ ] 2.48 Recreate `audio_deliveries` table with UUID primary key and UUID foreign keys
+  - [ ] 2.49 Recreate `audio_qc_results` table with UUID primary key and UUID foreign keys
+  - [ ] 2.50 Recreate `live_reads` table with UUID primary key and UUID foreign keys
+  - [ ] 2.51 Recreate `makegoods` table with UUID primary key and UUID foreign keys
+  - [ ] 2.52 Recreate `payments` table with UUID primary key and UUID foreign keys
+  - [ ] 2.53 Recreate `political_records` table with UUID primary key and UUID foreign keys
+  - [ ] 2.54 Recreate `notifications` table with UUID primary key and UUID foreign keys
+  - [ ] 2.55 Recreate `audit_logs` table with UUID primary key and UUID foreign keys
+  - [ ] 2.56 Recreate `webhooks` table with UUID primary key
+  - [ ] 2.57 Recreate `backups` table with UUID primary key
+  - [ ] 2.58 Recreate `playback_history` table with UUID primary key and UUID foreign keys
+  - [ ] 2.59 Recreate `digital_orders` table with UUID primary key and UUID foreign keys
+  - [ ] 2.60 Recreate `user_roles` table with UUID foreign keys (junction table)
+  - [ ] 2.61 Recreate `failed_login_attempts` table with UUID primary key
+  - [ ] 2.62 Recreate all junction/association tables with UUID foreign keys
+  - [ ] 2.63 Ensure all foreign key constraints reference UUID columns
+  - [ ] 2.64 Recreate all indexes on UUID columns where appropriate
+  - [ ] 2.65 Implement `downgrade()` function to drop all tables (for rollback capability)
+  - [ ] 2.66 Test migration by running `alembic upgrade head` and verifying all tables are created with UUID primary keys
+
+- [ ] 3.0 Update All SQLAlchemy Models to Use UUIDs
+  - [ ] 3.1 Update `backend/models/user.py`: Change `id = Column(Integer, ...)` to `id = Column(UUID, primary_key=True, server_default=text("gen_random_uuid()"), ...)` and import UUID from `sqlalchemy.dialects.postgresql`
+  - [ ] 3.2 Update `backend/models/settings.py`: Change primary key to UUID type
+  - [ ] 3.3 Update `backend/models/advertiser.py`: Change primary key to UUID type
+  - [ ] 3.4 Update `backend/models/agency.py`: Change primary key to UUID type
+  - [ ] 3.5 Update `backend/models/campaign.py`: Change primary key and all foreign keys to UUID type
+  - [ ] 3.6 Update `backend/models/order.py`: Change primary key and all foreign keys (campaign_id, advertiser_id, agency_id, sales_rep_id, approved_by, created_by) to UUID type
+  - [ ] 3.7 Update `backend/models/order_line.py`: Change primary key and foreign keys (order_id, station_id) to UUID type
+  - [ ] 3.8 Update `backend/models/order_attachment.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.9 Update `backend/models/order_revision.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.10 Update `backend/models/order_workflow_state.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.11 Update `backend/models/order_template.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.12 Update `backend/models/spot.py`: Change primary key and all foreign keys to UUID type
+  - [ ] 3.13 Update `backend/models/copy.py`: Change primary key and all foreign keys (order_id, advertiser_id, production_order_id, script_approved_by) to UUID type
+  - [ ] 3.14 Update `backend/models/copy_assignment.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.15 Update `backend/models/production_order.py`: Change primary key and foreign keys (copy_id, order_id, campaign_id, advertiser_id) to UUID type
+  - [ ] 3.16 Update `backend/models/production_assignment.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.17 Update `backend/models/production_comment.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.18 Update `backend/models/production_revision.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.19 Update `backend/models/invoice.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.20 Update `backend/models/invoice_line.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.21 Update `backend/models/station.py`: Change primary key to UUID type
+  - [ ] 3.22 Update `backend/models/cluster.py`: Change primary key to UUID type
+  - [ ] 3.23 Update `backend/models/sales_rep.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.24 Update `backend/models/sales_team.py`: Change primary key to UUID type
+  - [ ] 3.25 Update `backend/models/sales_office.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.26 Update `backend/models/sales_region.py`: Change primary key to UUID type
+  - [ ] 3.27 Update `backend/models/sales_associations.py`: Change all foreign keys to UUID type
+  - [ ] 3.28 Update `backend/models/sales_goal.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.29 Update `backend/models/daypart.py`: Change primary key to UUID type
+  - [ ] 3.30 Update `backend/models/daypart_category.py`: Change primary key to UUID type
+  - [ ] 3.31 Update `backend/models/clock_template.py`: Change primary key to UUID type
+  - [ ] 3.32 Update `backend/models/break_structure.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.33 Update `backend/models/track.py`: Change primary key to UUID type
+  - [ ] 3.34 Update `backend/models/voice_track.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.35 Update `backend/models/voice_track_slot.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.36 Update `backend/models/voice_track_audit.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.37 Update `backend/models/voice_talent_request.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.38 Update `backend/models/daily_log.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.39 Update `backend/models/traffic_log.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.40 Update `backend/models/log_revision.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.41 Update `backend/models/rotation_rule.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.42 Update `backend/models/inventory_slot.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.43 Update `backend/models/audio_cut.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.44 Update `backend/models/audio_version.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.45 Update `backend/models/audio_delivery.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.46 Update `backend/models/audio_qc_result.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.47 Update `backend/models/live_read.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.48 Update `backend/models/makegood.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.49 Update `backend/models/payment.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.50 Update `backend/models/political_record.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.51 Update `backend/models/notification.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.52 Update `backend/models/audit_log.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.53 Update `backend/models/webhook.py`: Change primary key to UUID type
+  - [ ] 3.54 Update `backend/models/backup.py`: Change primary key to UUID type
+  - [ ] 3.55 Update `backend/models/playback_history.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.56 Update `backend/models/digital_order.py`: Change primary key and foreign keys to UUID type
+  - [ ] 3.57 Update `backend/models/user_roles.py`: Change all foreign keys to UUID type
+  - [ ] 3.58 Update `backend/models/failed_login_attempt.py`: Change primary key to UUID type
+  - [ ] 3.59 Verify all models import UUID from `sqlalchemy.dialects.postgresql` and `text` from `sqlalchemy`
+  - [ ] 3.60 Verify all foreign key columns use `ForeignKey` with UUID type references
+  - [ ] 3.61 Run model validation to ensure no syntax errors
+
+- [ ] 4.0 Update All Pydantic Schemas to Use UUIDs
+  - [ ] 4.1 Update `backend/schemas/order.py`: Change all `id: int` and foreign key `int` types to `UUID` type, import `UUID` from `uuid` package
+  - [ ] 4.2 Update `OrderResponse.id` from `int` to `UUID`
+  - [ ] 4.3 Update `OrderResponse.approved_by` from `Optional[int]` to `Optional[UUID]`
+  - [ ] 4.4 Update `OrderResponse.created_by` from `Optional[int]` to `Optional[UUID]`
+  - [ ] 4.5 Update `OrderCreate.advertiser_id` from `int` to `UUID`
+  - [ ] 4.6 Update `OrderCreate.campaign_id` from `Optional[int]` to `Optional[UUID]`
+  - [ ] 4.7 Update `OrderCreate.agency_id` from `Optional[int]` to `Optional[UUID]`
+  - [ ] 4.8 Update `OrderCreate.sales_rep_id` from `Optional[int]` to `Optional[UUID]`
+  - [ ] 4.9 Update `OrderUpdate` schema with all UUID types for foreign keys
+  - [ ] 4.10 Update `OrderListResponse` schema with UUID types
+  - [ ] 4.11 Update `backend/schemas/order_line.py`: Change all ID fields to UUID type
+  - [ ] 4.12 Update `backend/schemas/order_attachment.py`: Change all ID fields to UUID type
+  - [ ] 4.13 Update `backend/schemas/station.py`: Change `id: int` to `id: UUID`
+  - [ ] 4.14 Update `backend/schemas/cluster.py`: Change `id: int` to `id: UUID`
+  - [ ] 4.15 Update `backend/schemas/sales_team.py`: Change `id: int` to `id: UUID`
+  - [ ] 4.16 Update `backend/schemas/sales_office.py`: Change `id: int` and `region_id` to UUID types
+  - [ ] 4.17 Update `backend/schemas/sales_region.py`: Change `id: int` to `id: UUID`
+  - [ ] 4.18 Update `backend/schemas/track.py`: Change `id: int` to `id: UUID`
+  - [ ] 4.19 Search for all other schema files in `backend/schemas/` and update any `id: int` or foreign key `int` types to `UUID`
+  - [ ] 4.20 Verify all schemas import `UUID` from `uuid` package
+  - [ ] 4.21 Test schema validation with sample UUID values to ensure Pydantic validates UUID format correctly
+
+- [ ] 5.0 Update All Service Layer Methods to Use UUIDs
+  - [ ] 5.1 Update `backend/services/order_service.py`: Change all method parameters that accept IDs from `int` to `UUID` type
+  - [ ] 5.2 Update `OrderService.create_from_template()`: Change `template_id: int` and `advertiser_id: int` to `UUID`
+  - [ ] 5.3 Update `OrderService.get_by_id()`: Change `order_id: int` to `order_id: UUID`
+  - [ ] 5.4 Update all other methods in `OrderService` that use integer IDs
+  - [ ] 5.5 Update `backend/services/copy_service.py`: Change all ID parameters to UUID type
+  - [ ] 5.6 Update `backend/services/production_order_service.py`: Change all ID parameters to UUID type
+  - [ ] 5.7 Update `backend/services/voice_track_slot_service.py`: Change all ID parameters to UUID type
+  - [ ] 5.8 Update `backend/services/campaign_service.py`: Change all ID parameters to UUID type
+  - [ ] 5.9 Update `backend/services/billing_service.py`: Change all ID parameters to UUID type
+  - [ ] 5.10 Update `backend/services/inventory_service.py`: Change all ID parameters to UUID type
+  - [ ] 5.11 Update `backend/services/notification_service.py`: Change all ID parameters to UUID type
+  - [ ] 5.12 Update `backend/services/audit_service.py`: Change all ID parameters to UUID type
+  - [ ] 5.13 Update `backend/services/settings_service.py`: Change all ID parameters to UUID type
+  - [ ] 5.14 Search for all service files in `backend/services/` and update any methods that accept or return entity IDs
+  - [ ] 5.15 Update all database queries in services to use UUID values instead of integers
+  - [ ] 5.16 Verify all service methods import `UUID` from `uuid` package where needed
+  - [ ] 5.17 Update type hints for all service method return types that include entity IDs
+
+- [ ] 6.0 Update All FastAPI Routers to Use UUIDs
+  - [ ] 6.1 Update `backend/routers/users.py`: Change path parameter `{user_id}` to `{user_id: uuid}` and update `UserResponse.id` to UUID
+  - [ ] 6.2 Update `backend/routers/users.py`: Change all query parameters that filter by user_id to UUID type
+  - [ ] 6.3 Update `backend/routers/orders.py`: Change path parameter `{order_id}` to `{order_id: uuid}` in all endpoints
+  - [ ] 6.4 Update `backend/routers/orders.py`: Change all query parameters (advertiser_id, etc.) to UUID type
+  - [ ] 6.5 Update `backend/routers/advertisers.py`: Change path parameter `{advertiser_id}` to `{advertiser_id: uuid}`
+  - [ ] 6.6 Update `backend/routers/agencies.py`: Change path parameter `{agency_id}` to `{agency_id: uuid}`
+  - [ ] 6.7 Update `backend/routers/campaigns.py`: Change path parameter `{campaign_id}` to `{campaign_id: uuid}`
+  - [ ] 6.8 Update `backend/routers/copy.py`: Change path parameter `{copy_id}` to `{copy_id: uuid}` and all query parameters to UUID
+  - [ ] 6.9 Update `backend/routers/production_orders.py`: Change path parameter `{po_id}` to `{po_id: uuid}` and all query parameters to UUID
+  - [ ] 6.10 Update `backend/routers/invoices.py`: Change path parameter `{invoice_id}` to `{invoice_id: uuid}` and all query parameters to UUID
+  - [ ] 6.11 Update `backend/routers/spots.py`: Change path parameter `{spot_id}` to `{spot_id: uuid}` and all query parameters to UUID
+  - [ ] 6.12 Update `backend/routers/stations.py`: Change path parameter `{station_id}` to `{station_id: uuid}`
+  - [ ] 6.13 Update `backend/routers/voice_tracks.py`: Change path parameter `{voice_track_id}` to `{voice_track_id: uuid}` and all query parameters to UUID
+  - [ ] 6.14 Update `backend/routers/traffic_logs.py`: Change path parameter `{log_id}` to `{log_id: uuid}` and all query parameters to UUID
+  - [ ] 6.15 Update `backend/routers/order_lines.py`: Change path parameter `{line_id}` to `{line_id: uuid}` and all query parameters to UUID
+  - [ ] 6.16 Update `backend/routers/order_attachments.py`: Change path parameter `{attachment_id}` to `{attachment_id: uuid}` and all query parameters to UUID
+  - [ ] 6.17 Update `backend/routers/production_assignments.py`: Change path parameter `{assignment_id}` to `{assignment_id: uuid}` and all query parameters to UUID
+  - [ ] 6.18 Update `backend/routers/audio_qc.py`: Change path parameter `{qc_result_id}` to `{qc_result_id: uuid}` and all query parameters to UUID
+  - [ ] 6.19 Update `backend/routers/audit_logs.py`: Change path parameter `{audit_log_id}` to `{audit_log_id: uuid}` and all query parameters to UUID
+  - [ ] 6.20 Update `backend/routers/notifications.py`: Change path parameter `{notification_id}` to `{notification_id: uuid}` and all query parameters to UUID
+  - [ ] 6.21 Update `backend/routers/backups.py`: Change path parameter `{backup_id}` to `{backup_id: uuid}`
+  - [ ] 6.22 Update `backend/routers/log_revisions.py`: Change path parameter `{revision_id}` to `{revision_id: uuid}` and all query parameters to UUID
+  - [ ] 6.23 Update `backend/routers/copy_assignments.py`: Change path parameter `{assignment_id}` to `{assignment_id: uuid}` and all query parameters to UUID
+  - [ ] 6.24 Update `backend/routers/rotation_rules.py`: Change path parameter `{rule_id}` to `{rule_id: uuid}` and all query parameters to UUID
+  - [ ] 6.25 Update `backend/routers/sales_reps.py`: Change path parameter `{sales_rep_id}` to `{sales_rep_id: uuid}`
+  - [ ] 6.26 Update `backend/routers/sales_teams.py`: Change path parameter `{team_id}` to `{team_id: uuid}`
+  - [ ] 6.27 Update `backend/routers/sales_offices.py`: Change path parameter `{office_id}` to `{office_id: uuid}`
+  - [ ] 6.28 Update `backend/routers/sales_regions.py`: Change path parameter `{region_id}` to `{region_id: uuid}`
+  - [ ] 6.29 Update `backend/routers/clusters.py`: Change path parameter `{cluster_id}` to `{cluster_id: uuid}`
+  - [ ] 6.30 Update `backend/routers/dayparts.py`: Change path parameter `{daypart_id}` to `{daypart_id: uuid}`
+  - [ ] 6.31 Update `backend/routers/tracks.py`: Change path parameter `{track_id}` to `{track_id: uuid}`
+  - [ ] 6.32 Update `backend/routers/proxy.py`: Change all query parameters that filter by entity IDs to UUID type
+  - [ ] 6.33 Search for all other router files and update any path parameters or query parameters that use entity IDs
+  - [ ] 6.34 Update all request body schemas in routers to use UUID types for ID fields
+  - [ ] 6.35 Update all response models in routers to use UUID types for ID fields
+  - [ ] 6.36 Verify FastAPI automatically validates UUID format in path parameters (invalid UUIDs return 422)
+  - [ ] 6.37 Test all router endpoints to ensure they accept and return UUIDs correctly
+
+- [ ] 7.0 Update Frontend TypeScript Interfaces and API Calls
+  - [ ] 7.1 Update `frontend/src/pages/traffic/Orders.tsx`: Change `interface Order` to use `id: string` instead of `id: number` for all ID fields
+  - [ ] 7.2 Update all foreign key fields in `Order` interface (advertiser_id, agency_id, etc.) to `string` type
+  - [ ] 7.3 Update all API calls in `Orders.tsx` to send/receive UUID strings
+  - [ ] 7.4 Update `frontend/src/components/orders/OrderForm.tsx`: Change all ID field types to `string` and update form handling
+  - [ ] 7.5 Update `frontend/src/pages/traffic/Advertisers.tsx`: Change advertiser interface IDs to `string` type
+  - [ ] 7.6 Update `frontend/src/pages/traffic/Agencies.tsx`: Change agency interface IDs to `string` type
+  - [ ] 7.7 Update `frontend/src/pages/production/ProductionOrders.tsx`: Change production order interface IDs to `string` type
+  - [ ] 7.8 Update `frontend/src/pages/production/ProductionOrderDetail.tsx`: Change all ID references to `string` type
+  - [ ] 7.9 Update `frontend/src/components/production/ProductionOrderFormDialog.tsx`: Change ID handling to use strings
+  - [ ] 7.10 Update `frontend/src/pages/billing/Invoices.tsx`: Change invoice interface IDs to `string` type
+  - [ ] 7.11 Update `frontend/src/components/billing/InvoiceFormDialog.tsx`: Change ID handling to use strings
+  - [ ] 7.12 Update `frontend/src/components/billing/InvoiceDetailDialog.tsx`: Change ID handling to use strings
+  - [ ] 7.13 Update `frontend/src/pages/admin/Users.tsx`: Change user interface IDs to `string` type
+  - [ ] 7.14 Update `frontend/src/pages/traffic/CopyLibrary.tsx`: Change copy interface IDs to `string` type
+  - [ ] 7.15 Update `frontend/src/components/copy/CopyDetailDialog.tsx`: Change ID handling to use strings
+  - [ ] 7.16 Update `frontend/src/components/copy/CopyUpload.tsx`: Change ID handling to use strings
+  - [ ] 7.17 Update `frontend/src/pages/traffic/TrafficLogs.tsx`: Change traffic log interface IDs to `string` type
+  - [ ] 7.18 Update `frontend/src/pages/voice/VoiceTracksManager.tsx`: Change voice track interface IDs to `string` type
+  - [ ] 7.19 Update `frontend/src/pages/admin/Stations.tsx`: Change station interface IDs to `string` type
+  - [ ] 7.20 Update `frontend/src/pages/admin/Clusters.tsx`: Change cluster interface IDs to `string` type
+  - [ ] 7.21 Update `frontend/src/pages/admin/SalesTeams.tsx`: Change sales team interface IDs to `string` type
+  - [ ] 7.22 Update `frontend/src/pages/admin/SalesOffices.tsx`: Change sales office interface IDs to `string` type
+  - [ ] 7.23 Update `frontend/src/pages/admin/SalesRegions.tsx`: Change sales region interface IDs to `string` type
+  - [ ] 7.24 Update `frontend/src/pages/traffic/SalesReps.tsx`: Change sales rep interface IDs to `string` type
+  - [ ] 7.25 Update `frontend/src/pages/traffic/Dayparts.tsx`: Change daypart interface IDs to `string` type
+  - [ ] 7.26 Update `frontend/src/pages/library/LibraryList.tsx`: Change track/library interface IDs to `string` type
+  - [ ] 7.27 Update `frontend/src/pages/library/MusicManager.tsx`: Change music interface IDs to `string` type
+  - [ ] 7.28 Update `frontend/src/pages/library/SpotsLibrary.tsx`: Change spot interface IDs to `string` type
+  - [ ] 7.29 Update `frontend/src/utils/api.ts`: Update all API utility functions to handle UUID strings correctly
+  - [ ] 7.30 Search for all other frontend files that define interfaces or types with `id: number` and update to `id: string`
+  - [ ] 7.31 Update all URL construction in frontend to use UUID strings (e.g., `/api/orders/${orderId}` where orderId is now a string)
+  - [ ] 7.32 Update all form components that handle entity IDs to work with UUID strings
+  - [ ] 7.33 Update all route parameters in frontend routing to expect UUID strings
+  - [ ] 7.34 Verify frontend can parse and display UUIDs correctly (they are already strings in JSON)
+  - [ ] 7.35 Test all frontend pages to ensure they work correctly with UUID-based APIs
+
+- [ ] 8.0 Update All Tests to Use UUIDs
+  - [ ] 8.1 Update all test fixtures in `tests/conftest.py` to generate UUIDs instead of integers for entity IDs
+  - [ ] 8.2 Update `tests/routers/test_users.py`: Change all test user IDs to UUIDs using `uuid.uuid4()`
+  - [ ] 8.3 Update `tests/routers/test_orders.py`: Change all test order IDs to UUIDs
+  - [ ] 8.4 Update `tests/routers/test_advertisers.py`: Change all test advertiser IDs to UUIDs
+  - [ ] 8.5 Update `tests/routers/test_agencies.py`: Change all test agency IDs to UUIDs
+  - [ ] 8.6 Update `tests/routers/test_campaigns.py`: Change all test campaign IDs to UUIDs
+  - [ ] 8.7 Update `tests/routers/test_copy.py`: Change all test copy IDs to UUIDs
+  - [ ] 8.8 Update `tests/routers/test_production_orders.py`: Change all test production order IDs to UUIDs
+  - [ ] 8.9 Update `tests/routers/test_invoices.py`: Change all test invoice IDs to UUIDs
+  - [ ] 8.10 Update `tests/services/test_order_service.py`: Change all test IDs to UUIDs
+  - [ ] 8.11 Update `tests/services/test_copy_service.py`: Change all test IDs to UUIDs
+  - [ ] 8.12 Search for all other test files in `tests/` directory and update any test data that uses integer IDs
+  - [ ] 8.13 Update all test assertions that check ID values to expect UUID format
+  - [ ] 8.14 Update all test mocks to return UUID strings instead of integers
+  - [ ] 8.15 Update integration tests to generate and use UUIDs for test entities
+  - [ ] 8.16 Update frontend test files to use UUID strings in test data
+  - [ ] 8.17 Update all test utilities and helpers that create test entities to use UUIDs
+  - [ ] 8.18 Run all backend tests with `pytest` and verify they pass
+  - [ ] 8.19 Run all frontend tests with `npm test` or `vitest` and verify they pass
+  - [ ] 8.20 Add tests to verify UUID validation in API endpoints (invalid UUIDs return 422)
+
+- [ ] 9.0 Restore Settings and Admin Users After Migration
+  - [ ] 9.1 Run database migration: `alembic upgrade head` to create all tables with UUID primary keys
+  - [ ] 9.2 Verify migration completed successfully and all tables have UUID primary keys
+  - [ ] 9.3 Run `backend/scripts/restore_settings.py` to restore email settings and other configuration
+  - [ ] 9.4 Verify settings were restored correctly by checking `settings` table
+  - [ ] 9.5 Run `backend/scripts/restore_admin_users.py` to restore admin user accounts
+  - [ ] 9.6 Verify admin users were restored with new UUID primary keys
+  - [ ] 9.7 Test admin user login to ensure password hashes work correctly with new UUIDs
+  - [ ] 9.8 Verify all restored settings are accessible and functional
+  - [ ] 9.9 Document the restoration process and verify no data was lost
+  - [ ] 9.10 Clean up backup JSON files after successful restoration (optional)
+

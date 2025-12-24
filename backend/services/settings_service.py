@@ -3,6 +3,7 @@ Settings service for managing application configuration
 """
 
 import os
+from uuid import UUID
 import base64
 from typing import Dict, Any, Optional
 from cryptography.fernet import Fernet

@@ -3,6 +3,7 @@ Production Notification Service for production workflow notifications
 """
 
 from typing import List, Optional, Dict, Any
+from uuid import UUID
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
@@ -25,8 +26,8 @@ class ProductionNotificationService:
     
     async def notify_production_order_created(
         self,
-        production_order_id: int,
-        production_director_ids: Optional[List[int]] = None
+        production_order_id: UUID,
+        production_director_ids: Optional[List[UUID]] = None
     ):
         """Notify production director when PO is created"""
         from backend.services.production_order_service import ProductionOrderService
@@ -70,7 +71,7 @@ class ProductionNotificationService:
     
     async def notify_assignment(
         self,
-        assignment_id: int
+        assignment_id: UUID
     ):
         """Notify user when assigned to production order"""
         result = await self.db.execute(
@@ -162,7 +163,7 @@ class ProductionNotificationService:
     
     async def notify_copy_approved(
         self,
-        copy_id: int,
+        copy_id: UUID,
         production_order_created: bool = False
     ):
         """Notify when copy is approved and production order is created"""
@@ -197,7 +198,7 @@ class ProductionNotificationService:
     
     async def notify_production_completed(
         self,
-        production_order_id: int
+        production_order_id: UUID
     ):
         """Notify traffic when production is completed and ready for delivery"""
         from backend.services.production_order_service import ProductionOrderService

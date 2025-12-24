@@ -18,13 +18,13 @@ interface PreviewPanelsProps {
 }
 
 interface PreviewData {
-  slot_id: number
-  log_id: number
+  slot_id?: string
+  log_id?: string
   hour: number
   break_position: string
   ramp_time: number | null
   previous_track: {
-    id?: number
+    id?: string
     title: string
     artist?: string
     duration?: number
@@ -32,7 +32,7 @@ interface PreviewData {
     libretime_id?: string
   } | null
   next_track: {
-    id?: number
+    id?: string
     title: string
     artist?: string
     duration?: number

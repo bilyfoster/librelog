@@ -2,8 +2,8 @@
 VoiceTalentRequest model for managing voice talent requests and takes
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey, Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, String, DateTime, Boolean, Text, ForeignKey, Enum as SQLEnum, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -33,11 +33,11 @@ class VoiceTalentRequest(Base):
     """VoiceTalentRequest model for managing voice talent requests"""
     __tablename__ = "voice_talent_requests"
 
-    id = Column(Integer, primary_key=True, index=True)
-    production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
+    production_order_id = Column(UUID(as_uuid=True), ForeignKey("production_orders.id"), nullable=False, index=True)
     
     # Talent assignment
-    talent_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    talent_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
     talent_type = Column(SQLEnum(TalentType), nullable=False)
     
     # Script and instructions

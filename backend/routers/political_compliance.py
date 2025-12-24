@@ -3,6 +3,7 @@ Political Compliance router for FCC compliance tracking
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db
 from backend.routers.auth import get_current_user
@@ -19,9 +20,9 @@ router = APIRouter(prefix="/political-compliance", tags=["political-compliance"]
 
 
 class PoliticalRecordCreate(BaseModel):
-    copy_id: Optional[int] = None
-    order_id: Optional[int] = None
-    advertiser_id: Optional[int] = None
+    copy_id: Optional[UUID] = None
+    order_id: Optional[UUID] = None
+    advertiser_id: Optional[UUID] = None
     advertiser_category: str = "political"
     sponsor_name: str
     sponsor_id: Optional[str] = None
@@ -33,10 +34,10 @@ class PoliticalRecordCreate(BaseModel):
 
 
 class PoliticalRecordResponse(BaseModel):
-    id: int
-    copy_id: Optional[int]
-    order_id: Optional[int]
-    advertiser_id: Optional[int]
+    id: UUID
+    copy_id: Optional[UUID]
+    order_id: Optional[UUID]
+    advertiser_id: Optional[UUID]
     advertiser_category: str
     sponsor_name: str
     sponsor_id: Optional[str]

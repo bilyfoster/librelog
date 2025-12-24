@@ -3,6 +3,7 @@ Spot Scheduler service for traffic scheduling
 """
 
 from typing import List, Dict, Any, Optional
+from uuid import UUID
 from datetime import date, datetime, time, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
@@ -23,7 +24,7 @@ class SpotScheduler:
     def __init__(self, db: AsyncSession):
         self.db = db
     
-    async def schedule_ros_spots(self, order: Order, start_date: date, end_date: date) -> List[Spot]:
+    async def schedule_ros_spots(self, order: Order, start_date: date, end_date: date, station_id: UUID) -> List[Spot]:
         """Schedule spots using Run-of-Schedule logic"""
         spots = []
         current_date = start_date
@@ -48,6 +49,7 @@ class SpotScheduler:
                 spot = Spot(
                     order_id=order.id,
                     campaign_id=order.campaign_id,
+                    station_id=station_id,
                     scheduled_date=current_date,
                     scheduled_time=scheduled_time,
                     spot_length=spot_length,
@@ -65,6 +67,7 @@ class SpotScheduler:
         order: Order,
         start_date: date,
         end_date: date,
+        station_id: UUID,
         daypart_name: Optional[str] = None
     ) -> List[Spot]:
         """Schedule spots based on daypart restrictions"""
@@ -87,7 +90,7 @@ class SpotScheduler:
         
         if not daypart:
             # Fallback to ROS if no daypart found
-            return await self.schedule_ros_spots(order, start_date, end_date)
+            return await self.schedule_ros_spots(order, start_date, end_date, station_id)
         
         # Schedule within daypart time range
         current_date = start_date
@@ -122,6 +125,7 @@ class SpotScheduler:
                 spot = Spot(
                     order_id=order.id,
                     campaign_id=order.campaign_id,
+                    station_id=station_id,
                     scheduled_date=current_date,
                     scheduled_time=scheduled_time,
                     spot_length=spot_length,
@@ -140,6 +144,7 @@ class SpotScheduler:
         order: Order,
         start_date: date,
         end_date: date,
+        station_id: UUID,
         fixed_times: List[str]  # List of HH:MM:SS times
     ) -> List[Spot]:
         """Schedule spots at fixed times"""
@@ -153,6 +158,7 @@ class SpotScheduler:
                 spot = Spot(
                     order_id=order.id,
                     campaign_id=order.campaign_id,
+                    station_id=station_id,
                     scheduled_date=current_date,
                     scheduled_time=fixed_time,
                     spot_length=spot_length,
@@ -169,6 +175,7 @@ class SpotScheduler:
         order: Order,
         start_date: date,
         end_date: date,
+        station_id: UUID,
         week_offset: int = 0  # 0 for first week, 1 for second week
     ) -> List[Spot]:
         """Schedule spots on alternating weeks"""
@@ -184,17 +191,18 @@ class SpotScheduler:
             return spots
         
         # Schedule using ROS logic but only on matching weeks
-        return await self.schedule_ros_spots(order, start_date, end_date)
+        return await self.schedule_ros_spots(order, start_date, end_date, station_id)
     
-    async def detect_conflicts(self, log_date: date) -> List[Dict[str, Any]]:
-        """Detect scheduling conflicts for a date"""
+    async def detect_conflicts(self, log_date: date, station_id: UUID) -> List[Dict[str, Any]]:
+        """Detect scheduling conflicts for a date and station"""
         conflicts = []
         
-        # Get all spots for this date
+        # Get all spots for this date and station
         result = await self.db.execute(
             select(Spot).where(
                 and_(
                     Spot.scheduled_date == log_date,
+                    Spot.station_id == station_id,
                     Spot.status == SpotStatus.SCHEDULED
                 )
             ).order_by(Spot.scheduled_time)
@@ -220,11 +228,16 @@ class SpotScheduler:
         
         return conflicts
     
-    async def calculate_avails(self, log_date: date) -> Dict[str, Any]:
-        """Calculate available inventory for a date"""
-        # Get all spots scheduled for this date
+    async def calculate_avails(self, log_date: date, station_id: UUID) -> Dict[str, Any]:
+        """Calculate available inventory for a date and station"""
+        # Get all spots scheduled for this date and station
         result = await self.db.execute(
-            select(Spot).where(Spot.scheduled_date == log_date)
+            select(Spot).where(
+                and_(
+                    Spot.scheduled_date == log_date,
+                    Spot.station_id == station_id
+                )
+            )
         )
         spots = result.scalars().all()
         
@@ -248,10 +261,10 @@ class SpotScheduler:
             "total_spots": len(spots)
         }
     
-    async def check_oversell(self, log_date: date) -> List[Dict[str, Any]]:
+    async def check_oversell(self, log_date: date, station_id: UUID) -> List[Dict[str, Any]]:
         """Check for oversell warnings"""
         warnings = []
-        avails = await self.calculate_avails(log_date)
+        avails = await self.calculate_avails(log_date, station_id)
         
         for hour, data in avails["hourly_avails"].items():
             if data["booked_percentage"] > 100:

@@ -3,6 +3,7 @@ Copy router for audio asset and script management
 """
 
 import os
+from uuid import UUID
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,12 +49,12 @@ COPY_FILES_DIR = _ensure_directory(
     "COPY_FILES_DIR"
 )
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=False)  # Disable redirect to handle both /copy and /copy/
 
 
 class CopyCreate(BaseModel):
-    order_id: Optional[int] = None
-    advertiser_id: Optional[int] = None
+    order_id: Optional[UUID] = None
+    advertiser_id: Optional[UUID] = None
     title: str
     script_text: Optional[str] = None
     audio_file_path: Optional[str] = None
@@ -71,9 +72,9 @@ class CopyUpdate(BaseModel):
 
 
 class CopyResponse(BaseModel):
-    id: int
-    order_id: Optional[int]
-    advertiser_id: Optional[int]
+    id: UUID
+    order_id: Optional[UUID]
+    advertiser_id: Optional[UUID]
     title: str
     script_text: Optional[str]
     audio_file_path: Optional[str]
@@ -106,12 +107,13 @@ def copy_to_response_dict(copy_item: Copy) -> dict:
     }
 
 
+@router.get("", response_model=list[CopyResponse])
 @router.get("/", response_model=list[CopyResponse])
 async def list_copy(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    order_id: Optional[int] = Query(None),
-    advertiser_id: Optional[int] = Query(None),
+    order_id: Optional[UUID] = Query(None),
+    advertiser_id: Optional[UUID] = Query(None),
     search: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -136,6 +138,7 @@ async def list_copy(
     return [CopyResponse(**copy_to_response_dict(c)) for c in copy_items]
 
 
+@router.post("", response_model=CopyResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=CopyResponse, status_code=status.HTTP_201_CREATED)
 async def create_copy(
     copy: CopyCreate,
@@ -145,7 +148,36 @@ async def create_copy(
 ):
     """Create a new copy item"""
     try:
-        new_copy = Copy(**copy.model_dump())
+        copy_data = copy.model_dump()
+        # Ensure active is set to True by default for new copy
+        if 'active' not in copy_data:
+            copy_data['active'] = True
+        # Ensure enum values are set correctly
+        # The EnumValueType TypeDecorator will handle converting enum instances to their values
+        # But we need to ensure we're passing enum instances, not strings
+        if 'copy_status' not in copy_data:
+            copy_data['copy_status'] = CopyStatus.DRAFT
+        elif isinstance(copy_data.get('copy_status'), str):
+            # If it's a string, convert to enum instance
+            try:
+                copy_data['copy_status'] = CopyStatus(copy_data['copy_status'].lower())
+            except ValueError:
+                copy_data['copy_status'] = CopyStatus.DRAFT
+        # If it's already a CopyStatus enum, leave it as is
+        
+        if 'copy_approval_status' not in copy_data:
+            copy_data['copy_approval_status'] = CopyApprovalStatus.PENDING
+        elif isinstance(copy_data.get('copy_approval_status'), str):
+            # If it's a string, convert to enum instance
+            try:
+                copy_data['copy_approval_status'] = CopyApprovalStatus(copy_data['copy_approval_status'].lower())
+            except ValueError:
+                copy_data['copy_approval_status'] = CopyApprovalStatus.PENDING
+        # If it's already a CopyApprovalStatus enum, leave it as is
+        
+        # Create the Copy object
+        # The EnumValueType will convert enum instances to their values during process_bind_param
+        new_copy = Copy(**copy_data)
         db.add(new_copy)
         await db.flush()  # Get ID without committing
         copy_id = new_copy.id
@@ -198,8 +230,8 @@ async def create_copy(
 async def upload_copy(
     file: UploadFile = File(...),
     title: str = Form(...),
-    order_id: Optional[int] = Form(None),
-    advertiser_id: Optional[int] = Form(None),
+    order_id: Optional[UUID] = Form(None),
+    advertiser_id: Optional[UUID] = Form(None),
     script_text: Optional[str] = Form(None),
     expires_at: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
@@ -311,7 +343,7 @@ async def get_expiring_copy(
 
 @router.get("/{copy_id}", response_model=CopyResponse)
 async def get_copy(
-    copy_id: int,
+    copy_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -327,7 +359,7 @@ async def get_copy(
 
 @router.put("/{copy_id}", response_model=CopyResponse)
 async def update_copy(
-    copy_id: int,
+    copy_id: UUID,
     copy_update: CopyUpdate,
     request: Request,
     db: AsyncSession = Depends(get_db),
@@ -369,7 +401,7 @@ async def update_copy(
 
 @router.delete("/{copy_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_copy(
-    copy_id: int,
+    copy_id: UUID,
     request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -436,8 +468,8 @@ async def serve_copy_file(
 
 @router.post("/{copy_id}/assign")
 async def assign_copy_to_spot(
-    copy_id: int,
-    spot_id: int,
+    copy_id: UUID,
+    spot_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -481,7 +513,7 @@ async def assign_copy_to_spot(
 
 @router.post("/{copy_id}/set-needs-production")
 async def set_needs_production(
-    copy_id: int,
+    copy_id: UUID,
     needs_production: bool = Query(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -498,7 +530,7 @@ async def set_needs_production(
 
 @router.post("/{copy_id}/approve")
 async def approve_copy(
-    copy_id: int,
+    copy_id: UUID,
     auto_create_po: bool = Query(True),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -515,7 +547,7 @@ async def approve_copy(
 
 @router.post("/{copy_id}/reject")
 async def reject_copy(
-    copy_id: int,
+    copy_id: UUID,
     reason: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -532,7 +564,7 @@ async def reject_copy(
 
 @router.get("/{copy_id}/production-status")
 async def get_production_status(
-    copy_id: int,
+    copy_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

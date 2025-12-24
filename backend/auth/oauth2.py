@@ -19,7 +19,7 @@ if not SECRET_KEY or len(SECRET_KEY) < 32:
         "Generate a strong secret key for production use."
     )
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))  # Reduced to 15 minutes for enterprise security
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))  # Default 8 hours (480 minutes) - can be overridden via environment variable
 
 # Password hashing
 # Use pbkdf2_sha256 to avoid bcrypt initialization bug detection issues
@@ -56,8 +56,13 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-def verify_token(token: str) -> Optional[dict]:
-    """Verify and decode a JWT token"""
+def verify_token(token: str, allow_expired: bool = False) -> Optional[dict]:
+    """Verify and decode a JWT token
+    
+    Args:
+        token: JWT token string
+        allow_expired: If True, allow expired tokens (useful for refresh endpoint)
+    """
     try:
         # Check if token is blacklisted (synchronous check for in-memory storage)
         from backend.services.token_blacklist_service import TokenBlacklistService, redis_client, _token_blacklist
@@ -86,7 +91,13 @@ def verify_token(token: str) -> Optional[dict]:
                     # Remove expired token
                     del _token_blacklist[storage_key]
         
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        # Decode token - if allow_expired is True, don't validate expiration
+        if allow_expired:
+            # Decode without expiration validation
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
+        else:
+            # Normal decode with expiration validation
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except JWTError:
         return None

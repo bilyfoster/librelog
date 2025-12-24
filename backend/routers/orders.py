@@ -3,6 +3,7 @@ Orders router for traffic management
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, text
 from sqlalchemy.orm import selectinload
@@ -140,7 +141,7 @@ class OrderTemplateCreate(BaseModel):
 
 
 class OrderTemplateResponse(BaseModel):
-    id: int
+    id: UUID
     name: str
     description: Optional[str]
     default_spot_lengths: Optional[List[int]]
@@ -158,7 +159,7 @@ class OrderTemplateResponse(BaseModel):
 async def list_orders(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    advertiser_id: Optional[int] = Query(None),
+    advertiser_id: Optional[UUID] = Query(None),
     status_filter: Optional[str] = Query(None),
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
@@ -362,7 +363,7 @@ async def create_order(
 
 @router.get("/{order_id}", response_model=OrderResponse)
 async def get_order(
-    order_id: int,
+    order_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -384,7 +385,7 @@ async def get_order(
 
 @router.put("/{order_id}", response_model=OrderResponse)
 async def update_order(
-    order_id: int,
+    order_id: UUID,
     order_update: OrderUpdate,
     request: Request,
     db: AsyncSession = Depends(get_db),
@@ -459,7 +460,7 @@ async def update_order(
 
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_order(
-    order_id: int,
+    order_id: UUID,
     request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -582,7 +583,7 @@ async def delete_order(
 
 @router.post("/{order_id}/approve", response_model=OrderResponse)
 async def approve_order(
-    order_id: int,
+    order_id: UUID,
     request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -635,7 +636,7 @@ async def approve_order(
 
 @router.post("/{order_id}/duplicate", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 async def duplicate_order(
-    order_id: int,
+    order_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -718,7 +719,7 @@ async def autocomplete_sales_teams(
 @router.get("/autocomplete/sales-offices")
 async def autocomplete_sales_offices(
     search: Optional[str] = Query(None),
-    region_id: Optional[int] = Query(None),
+    region_id: Optional[UUID] = Query(None),
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -767,7 +768,7 @@ async def autocomplete_sales_regions(
 @router.get("/autocomplete/stations")
 async def autocomplete_stations(
     search: Optional[str] = Query(None),
-    cluster_id: Optional[int] = Query(None),
+    cluster_id: Optional[UUID] = Query(None),
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)

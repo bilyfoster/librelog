@@ -40,14 +40,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../../utils/api'
 
 interface VoiceTrack {
-  id: number
+  id?: string
   show_name: string
   file_url: string
   scheduled_time?: string
   created_at: string
   status: string
   libretime_id?: string
-  break_id?: number
+  break_id?: string
   track_metadata?: any
 }
 

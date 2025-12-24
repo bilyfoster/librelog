@@ -3,6 +3,7 @@ Voice track slot service for managing break assignments
 """
 
 from typing import List, Optional, Dict, Any
+from uuid import UUID
 from datetime import date, datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
@@ -24,7 +25,7 @@ class VoiceTrackSlotService:
     
     async def create_slots_for_log(
         self,
-        log_id: int,
+        log_id: UUID,
         break_structure: Optional[Dict[int, List[int]]] = None
     ) -> List[VoiceTrackSlot]:
         """
@@ -194,8 +195,19 @@ class VoiceTrackSlotService:
                         )
                         next_track = track_result.scalar_one_or_none()
                         if next_track and next_track.filepath:
-                            ramp_data = self.audio_preview.calculate_ramp_times(next_track.filepath)
-                            ramp_time = ramp_data.get("ramp_in", 5.0)
+                            # Run blocking audio analysis in thread pool to avoid blocking async event loop
+                            import asyncio
+                            try:
+                                loop = asyncio.get_event_loop()
+                                ramp_data = await loop.run_in_executor(
+                                    None,
+                                    self.audio_preview.calculate_ramp_times,
+                                    next_track.filepath
+                                )
+                                ramp_time = ramp_data.get("ramp_in", 5.0)
+                            except Exception as e:
+                                logger.warning("Failed to calculate ramp times", error=str(e), track_path=next_track.filepath)
+                                ramp_time = 5.0  # Default fallback
                     
                     # Create slot
                     slot = VoiceTrackSlot(
@@ -227,8 +239,8 @@ class VoiceTrackSlotService:
     
     async def get_slots_for_log(
         self,
-        log_id: int,
-        hour: Optional[int] = None,
+        log_id: UUID,
+        hour: Optional[UUID] = None,
         status: Optional[str] = None
     ) -> List[VoiceTrackSlot]:
         """
@@ -262,8 +274,8 @@ class VoiceTrackSlotService:
     
     async def assign_dj_to_slot(
         self,
-        slot_id: int,
-        dj_id: int
+        slot_id: UUID,
+        dj_id: UUID
     ) -> Optional[VoiceTrackSlot]:
         """
         Assign DJ to a slot
@@ -299,8 +311,8 @@ class VoiceTrackSlotService:
     
     async def link_voice_track_to_slot(
         self,
-        slot_id: int,
-        voice_track_id: int
+        slot_id: UUID,
+        voice_track_id: UUID
     ) -> Optional[VoiceTrackSlot]:
         """
         Link a voice track to a slot
@@ -333,12 +345,46 @@ class VoiceTrackSlotService:
                 # Update voice track with standardized name and recorded date
                 voice_track.standardized_name = slot.standardized_name
                 voice_track.recorded_date = datetime.now(timezone.utc)
+                voice_track.break_id = slot_id
+                
+                # Rename file to match standardized_name if different
+                import os
+                from pathlib import Path
+                from backend.routers.voice_tracks import VOICE_TRACKS_DIR
+                
+                current_file_path = Path(voice_track.file_url.replace("/api/voice/", "").replace("/file", ""))
+                current_full_path = Path(VOICE_TRACKS_DIR) / current_file_path.name
+                
+                # Generate new filename from standardized_name
+                file_ext = current_file_path.suffix or ".mp3"
+                new_filename = f"{slot.standardized_name}{file_ext}"
+                new_full_path = Path(VOICE_TRACKS_DIR) / new_filename
+                
+                # Rename file if it exists and name is different
+                if current_full_path.exists() and current_full_path != new_full_path:
+                    try:
+                        os.rename(str(current_full_path), str(new_full_path))
+                        voice_track.file_url = f"/api/voice/{new_filename}/file"
+                        logger.info("Renamed voice track file", old_name=current_file_path.name, new_name=new_filename)
+                    except Exception as e:
+                        logger.warning("Failed to rename voice track file", error=str(e), old_path=str(current_full_path), new_path=str(new_full_path))
+                
                 await self.db.flush()
             
             slot.voice_track_id = voice_track_id
             slot.status = "recorded"
             await self.db.commit()
             await self.db.refresh(slot)
+            
+            # Sync voice track to log element
+            if voice_track and slot.log_id:
+                from backend.services.log_editor import LogEditor
+                editor = LogEditor(self.db)
+                await editor.sync_voice_track_to_log_element(
+                    slot.log_id,
+                    voice_track_id,
+                    slot_id
+                )
             
             logger.info("Voice track linked to slot", slot_id=slot_id, voice_track_id=voice_track_id, standardized_name=slot.standardized_name)
             return slot

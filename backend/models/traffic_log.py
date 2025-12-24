@@ -2,8 +2,8 @@
 Traffic Log model for tracking traffic operations
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, Text, Enum as SQLEnum, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -32,16 +32,16 @@ class TrafficLog(Base):
     """Traffic Log model for tracking all traffic operations"""
     __tablename__ = "traffic_logs"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
     log_type = Column(SQLEnum(TrafficLogType), nullable=False, index=True)
     
     # Related entities
-    log_id = Column(Integer, ForeignKey("daily_logs.id"), nullable=True, index=True)
-    spot_id = Column(Integer, ForeignKey("spots.id"), nullable=True, index=True)
-    order_id = Column(Integer, ForeignKey("orders.id"), nullable=True, index=True)
-    campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=True, index=True)
-    copy_id = Column(Integer, ForeignKey("copy.id"), nullable=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    log_id = Column(UUID(as_uuid=True), ForeignKey("daily_logs.id"), nullable=True, index=True)
+    spot_id = Column(UUID(as_uuid=True), ForeignKey("spots.id"), nullable=True, index=True)
+    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=True, index=True)
+    campaign_id = Column(UUID(as_uuid=True), ForeignKey("campaigns.id"), nullable=True, index=True)
+    copy_id = Column(UUID(as_uuid=True), ForeignKey("copy.id"), nullable=True, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     
     # Log details
     message = Column(Text, nullable=False)

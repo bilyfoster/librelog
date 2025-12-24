@@ -3,13 +3,13 @@ import { useAuth } from '../contexts/AuthContext'
 
 interface CollaborationMessage {
   type: string
-  user_id?: number
+  user_id?: string
   username?: string
   cursor?: any
   spot?: any
   locked?: boolean
   field?: string
-  users?: Array<{ user_id: number; username: string }>
+  users?: Array<{ user_id?: string; username: string }>
   timestamp?: string
 }
 
@@ -20,7 +20,7 @@ interface UseCollaborationOptions {
   onLogLock?: (userId: number, username: string, locked: boolean) => void
   onUserJoined?: (userId: number, username: string) => void
   onUserLeft?: (userId: number, username: string) => void
-  onUsersList?: (users: Array<{ user_id: number; username: string }>) => void
+  onUsersList?: (users: Array<{ user_id?: string; username: string }>) => void
 }
 
 export const useCollaboration = (options: UseCollaborationOptions) => {
@@ -28,7 +28,7 @@ export const useCollaboration = (options: UseCollaborationOptions) => {
   const { token } = useAuth()
   const wsRef = useRef<WebSocket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
-  const [users, setUsers] = useState<Array<{ user_id: number; username: string }>>([])
+  const [users, setUsers] = useState<Array<{ user_id?: string; username: string }>>([])
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const reconnectAttempts = useRef(0)
   const maxReconnectAttempts = 5

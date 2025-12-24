@@ -2,8 +2,8 @@
 AudioQCResult model for storing audio quality control test results
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, Text, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, Text, ForeignKey, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -13,11 +13,11 @@ class AudioQCResult(Base):
     """AudioQCResult model for storing QC test results for audio files"""
     __tablename__ = "audio_qc_results"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
     
     # Association with cut
-    cut_id = Column(Integer, ForeignKey("audio_cuts.id"), nullable=False, index=True)
-    version_id = Column(Integer, ForeignKey("audio_versions.id"), nullable=True, index=True)
+    cut_id = Column(UUID(as_uuid=True), ForeignKey("audio_cuts.id"), nullable=False, index=True)
+    version_id = Column(UUID(as_uuid=True), ForeignKey("audio_versions.id"), nullable=True, index=True)
     
     # QC test results stored as JSON
     qc_data = Column(JSONB, nullable=False)  # Comprehensive QC results
@@ -64,7 +64,7 @@ class AudioQCResult(Base):
     
     # Override information
     overridden = Column(Boolean, default=False)
-    overridden_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    overridden_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     override_reason = Column(Text, nullable=True)
     override_timestamp = Column(DateTime(timezone=True), nullable=True)
     

@@ -3,6 +3,7 @@ Production Orders router for production workflow management
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from backend.database import get_db
@@ -17,18 +18,23 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from decimal import Decimal
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
 class ProductionOrderCreate(BaseModel):
-    copy_id: int
+    copy_id: UUID
     client_name: Optional[str] = None
     deadline: Optional[datetime] = None
     instructions: Optional[str] = None
     talent_needs: Optional[Dict[str, Any]] = None
     audio_references: Optional[List[str]] = None
     stations: Optional[List[str]] = None
+    spot_lengths: Optional[List[int]] = None
+    is_spec: bool = False  # If True, create as spec spot (no order required)
 
 
 class ProductionOrderUpdate(BaseModel):
@@ -51,12 +57,12 @@ class ProductionOrderUpdate(BaseModel):
 
 
 class ProductionOrderResponse(BaseModel):
-    id: int
+    id: UUID
     po_number: str
-    copy_id: int
-    order_id: Optional[int]
-    campaign_id: Optional[int]
-    advertiser_id: int
+    copy_id: UUID
+    order_id: Optional[UUID]
+    campaign_id: Optional[UUID]
+    advertiser_id: Optional[UUID]  # Nullable for spec spots
     client_name: str
     campaign_title: Optional[str]
     start_date: Optional[date]
@@ -116,12 +122,13 @@ def production_order_to_response(po: ProductionOrder) -> dict:
     }
 
 
+@router.get("", response_model=List[ProductionOrderResponse])
 @router.get("/", response_model=List[ProductionOrderResponse])
 async def list_production_orders(
-    status: Optional[str] = Query(None),
-    advertiser_id: Optional[int] = Query(None),
-    assigned_to: Optional[int] = Query(None),
-    deadline_before: Optional[datetime] = Query(None),
+    status: Optional[str] = Query(None, description="Filter by status"),
+    advertiser_id: Optional[UUID] = Query(None, description="Filter by advertiser ID"),
+    assigned_to: Optional[int] = Query(None, description="Filter by assigned user ID"),
+    deadline_before: Optional[str] = Query(None, description="Filter by deadline (ISO format datetime string)"),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
@@ -137,21 +144,42 @@ async def list_production_orders(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid status")
     
+    # Parse deadline_before from string if provided
+    deadline_datetime = None
+    if deadline_before:
+        try:
+            deadline_datetime = datetime.fromisoformat(deadline_before.replace('Z', '+00:00'))
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=400, detail="Invalid deadline_before format. Use ISO format datetime string.")
+    
     orders = await po_service.list_orders(
         status=status_enum,
         advertiser_id=advertiser_id,
         assigned_to=assigned_to,
-        deadline_before=deadline_before,
+        deadline_before=deadline_datetime,
         limit=limit,
         offset=offset
     )
     
-    return [production_order_to_response(po) for po in orders]
+    # Convert to response format and validate each one
+    responses = []
+    for po in orders:
+        try:
+            response_dict = production_order_to_response(po)
+            # Validate against the response model
+            response_obj = ProductionOrderResponse(**response_dict)
+            responses.append(response_obj)
+        except Exception as e:
+            logger.error(f"Error serializing production order {po.id}: {e}")
+            # Skip invalid orders rather than failing the entire request
+            continue
+    
+    return responses
 
 
 @router.get("/{po_id}", response_model=ProductionOrderResponse)
 async def get_production_order(
-    po_id: int,
+    po_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -165,34 +193,67 @@ async def get_production_order(
     return production_order_to_response(production_order)
 
 
+@router.post("", response_model=ProductionOrderResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=ProductionOrderResponse, status_code=status.HTTP_201_CREATED)
 async def create_production_order(
     data: ProductionOrderCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Create production order from copy"""
+    """Create production order from copy. Use is_spec=True for spec spots (no order required)."""
     po_service = ProductionOrderService(db)
     
+    # Check if production order already exists for this copy
+    existing_po = await po_service.get_by_copy_id(data.copy_id)
+    if existing_po:
+        logger.info(f"Production order already exists for copy {data.copy_id}, returning existing order {existing_po.id}")
+        return production_order_to_response(existing_po)
+    
     try:
-        production_order = await po_service.create_from_copy(
-            copy_id=data.copy_id,
-            client_name=data.client_name,
-            deadline=data.deadline,
-            instructions=data.instructions,
-            talent_needs=data.talent_needs,
-            audio_references=data.audio_references,
-            stations=data.stations
-        )
+        if data.is_spec:
+            # Create spec production order (no order required)
+            if not data.client_name:
+                raise HTTPException(status_code=400, detail="client_name is required for spec spots")
+            
+            production_order = await po_service.create_spec_production_order(
+                copy_id=data.copy_id,
+                client_name=data.client_name,
+                spot_lengths=data.spot_lengths,
+                deadline=data.deadline,
+                instructions=data.instructions,
+                talent_needs=data.talent_needs,
+                audio_references=data.audio_references,
+                stations=data.stations
+            )
+        else:
+            # Create regular production order (from copy with order)
+            production_order = await po_service.create_from_copy(
+                copy_id=data.copy_id,
+                client_name=data.client_name,
+                deadline=data.deadline,
+                instructions=data.instructions,
+                talent_needs=data.talent_needs,
+                audio_references=data.audio_references,
+                stations=data.stations,
+                spot_lengths=data.spot_lengths
+            )
         
         return production_order_to_response(production_order)
     except ValueError as e:
+        logger.error(f"ValueError creating production order: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
+    except Exception as e:
+        # Log the full exception for debugging
+        import traceback
+        logger.error(f"Unexpected error creating production order: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.put("/{po_id}", response_model=ProductionOrderResponse)
 async def update_production_order(
-    po_id: int,
+    po_id: UUID,
     data: ProductionOrderUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -218,8 +279,8 @@ async def update_production_order(
 
 @router.post("/{po_id}/assign")
 async def assign_production_order(
-    po_id: int,
-    user_id: int = Query(...),
+    po_id: UUID,
+    user_id: UUID = Query(...),
     assignment_type: str = Query(...),
     notes: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
@@ -253,7 +314,7 @@ async def assign_production_order(
 
 @router.post("/{po_id}/request-revision")
 async def request_revision(
-    po_id: int,
+    po_id: UUID,
     reason: str = Query(...),
     notes: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
@@ -302,7 +363,7 @@ async def request_revision(
 
 @router.post("/{po_id}/approve")
 async def approve_production_order(
-    po_id: int,
+    po_id: UUID,
     approval_stage: str = Query("qc"),  # qc, final
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -327,7 +388,7 @@ async def approve_production_order(
 
 @router.post("/{po_id}/deliver")
 async def deliver_production_order(
-    po_id: int,
+    po_id: UUID,
     delivery_method: str = Query("local"),
     target_server: Optional[str] = Query(None),
     target_path: Optional[str] = Query(None),
@@ -358,7 +419,7 @@ async def deliver_production_order(
 
 @router.post("/{po_id}/update-status")
 async def update_production_order_status(
-    po_id: int,
+    po_id: UUID,
     new_status: str = Query(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)

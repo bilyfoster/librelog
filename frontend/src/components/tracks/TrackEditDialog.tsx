@@ -71,10 +71,20 @@ const TrackEditDialog: React.FC<TrackEditDialogProps> = ({
     updateMutation.mutate(updates)
   }
 
-  if (!track) return null
+  if (!track || !open) return null
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="sm" 
+      fullWidth
+      disableEnforceFocus
+      disableAutoFocus
+      disableScrollLock
+      hideBackdrop={false}
+      disablePortal={false}
+    >
       <DialogTitle>Edit Track</DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>

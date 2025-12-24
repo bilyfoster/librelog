@@ -2,22 +2,79 @@
 ProductionOrder model for production workflow management
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, Date, ForeignKey, Enum as SQLEnum, Numeric
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, Date, ForeignKey, Enum as SQLEnum, Numeric, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from sqlalchemy.types import TypeDecorator as BaseTypeDecorator
 from backend.database import Base
 import enum
 
 
 class ProductionOrderType(str, enum.Enum):
     """Production order type enumeration"""
-    NEW_SPOT = "new_spot"
-    REVISION = "revision"
-    RENEWAL = "renewal"
-    TAG_ONLY = "tag_only"
-    UPDATE = "update"
-    RUSH_ORDER = "rush_order"
+    # Values must match database enum exactly (uppercase)
+    NEW_SPOT = "NEW_SPOT"
+    REVISION = "REVISION"
+    RENEWAL = "RENEWAL"
+    TAG_ONLY = "TAG_ONLY"
+    UPDATE = "UPDATE"
+    RUSH_ORDER = "RUSH_ORDER"
+    SPEC = "SPEC"  # Speculative spot (no order yet) - Note: may need to be added to DB enum
+
+
+class EnumValueType(BaseTypeDecorator):
+    """Type decorator to ensure enum values (not names) are used for PostgreSQL native enums"""
+    impl = String
+    cache_ok = True
+    
+    def __init__(self, enum_class, *args, **kwargs):
+        self.enum_class = enum_class
+        # Store the enum name for casting (needed for PostgreSQL native enums)
+        self._enum_name = kwargs.get('name', enum_class.__name__.lower())
+        # Remove enum-specific kwargs since we're using String as impl
+        kwargs.pop('native_enum', None)
+        kwargs.pop('create_constraint', None)
+        kwargs.pop('name', None)
+        # Call super with String as the base type
+        super().__init__(String(50), **kwargs)
+    
+    def bind_expression(self, bindvalue):
+        """Cast the bind value to the enum type for PostgreSQL"""
+        from sqlalchemy import cast
+        from sqlalchemy.dialects.postgresql import ENUM
+        # Create an ENUM type with the same name (don't create the type, it already exists)
+        enum_type = ENUM(name=self._enum_name, create_type=False)
+        # Cast the bind value to the enum type
+        return cast(bindvalue, enum_type)
+    
+    def process_bind_param(self, value, dialect):
+        """Convert enum instance to its value string before binding to database"""
+        if value is None:
+            return None
+        # CRITICAL: Convert enum instance to its value string
+        # SQLAlchemy was using enum.name ("SPEC") instead of enum.value ("SPEC" or "spec")
+        if isinstance(value, enum.Enum):
+            return value.value  # Return the enum value
+        # If it's already a string, return as-is
+        if isinstance(value, str):
+            return value
+        return value
+    
+    def process_result_value(self, value, dialect):
+        """Convert value string back to enum instance when reading from database"""
+        if value is None:
+            return None
+        if isinstance(value, str):
+            try:
+                return self.enum_class(value)
+            except ValueError:
+                # If value doesn't match, try to find by value
+                for enum_member in self.enum_class:
+                    if enum_member.value == value:
+                        return enum_member
+                return None
+        return value
 
 
 class ProductionOrderStatus(str, enum.Enum):
@@ -35,16 +92,16 @@ class ProductionOrder(Base):
     """ProductionOrder model for managing production workflow"""
     __tablename__ = "production_orders"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
     po_number = Column(String(50), unique=True, nullable=False, index=True)  # PRO-YYYYMMDD-XXXX
     
     # One-to-one relationship with Copy
-    copy_id = Column(Integer, ForeignKey("copy.id"), nullable=False, unique=True, index=True)
+    copy_id = Column(UUID(as_uuid=True), ForeignKey("copy.id"), nullable=False, unique=True, index=True)
     
     # Links to Order, Campaign, Advertiser for context
-    order_id = Column(Integer, ForeignKey("orders.id"), nullable=True, index=True)
-    campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=True, index=True)
-    advertiser_id = Column(Integer, ForeignKey("advertisers.id"), nullable=False, index=True)
+    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=True, index=True)
+    campaign_id = Column(UUID(as_uuid=True), ForeignKey("campaigns.id"), nullable=True, index=True)
+    advertiser_id = Column(UUID(as_uuid=True), ForeignKey("advertisers.id"), nullable=True, index=True)  # Nullable for spec spots
     
     # Basic information
     client_name = Column(String(255), nullable=False)
@@ -70,8 +127,9 @@ class ProductionOrder(Base):
     version_count = Column(Integer, default=1)  # How many versions required
     
     # Order type and status
-    order_type = Column(SQLEnum(ProductionOrderType), nullable=False, default=ProductionOrderType.NEW_SPOT)
-    status = Column(SQLEnum(ProductionOrderStatus), nullable=False, default=ProductionOrderStatus.PENDING, index=True)
+    # Use EnumValueType to ensure enum values (not names) are used for PostgreSQL native enums
+    order_type = Column(EnumValueType(ProductionOrderType, native_enum=True, create_constraint=False, name='productionordertype'), nullable=False, default=ProductionOrderType.NEW_SPOT)
+    status = Column(EnumValueType(ProductionOrderStatus, native_enum=True, create_constraint=False, name='productionorderstatus'), nullable=False, default=ProductionOrderStatus.PENDING, index=True)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

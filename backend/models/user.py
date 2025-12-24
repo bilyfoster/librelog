@@ -2,8 +2,8 @@
 User model and authentication
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, CheckConstraint
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, String, DateTime, CheckConstraint, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -13,7 +13,7 @@ class User(Base):
     """User model for authentication and authorization"""
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
     username = Column(String(50), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     role = Column(
@@ -32,6 +32,7 @@ class User(Base):
     uploaded_voice_tracks = relationship("VoiceTrack", back_populates="uploader")
     audit_logs = relationship("AuditLog", back_populates="user")
     sales_rep = relationship("SalesRep", back_populates="user", uselist=False)
+    stations = relationship("Station", secondary="user_stations", back_populates="users")
 
     def __repr__(self):
         return f"<User(username='{self.username}', role='{self.role}')>"

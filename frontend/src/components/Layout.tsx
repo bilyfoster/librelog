@@ -1,120 +1,80 @@
 import React from 'react'
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Drawer,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Box,
-  IconButton,
-  Avatar,
-  Menu,
-  MenuItem,
-  Divider,
-  Collapse,
-  ListSubheader,
-} from '@mui/material'
-import {
-  Dashboard as DashboardIcon,
-  LibraryMusic as LibraryIcon,
-  Schedule as ClockIcon,
-  Traffic as TrafficIcon,
-  Store as AdvertisersIcon,
-  BusinessCenter as AgenciesIcon,
-  ShoppingCart as OrdersIcon,
-  People as SalesRepsIcon,
-  EventNote as SpotSchedulerIcon,
-  AccessTime as DaypartsIcon,
-  Category as DaypartCategoriesIcon,
-  Shuffle as RotationRulesIcon,
-  ListAlt as TrafficLogsIcon,
-  Assignment as LogGeneratorIcon,
-  Mic as VoiceIcon,
-  Assessment as ReportIcon,
-  AccountCircle as AccountIcon,
-  Menu as MenuIcon,
-  Description as CopyIcon,
-  Receipt as InvoiceIcon,
-  Payment as PaymentIcon,
-  SwapHoriz as MakegoodIcon,
-  Security as SecurityIcon,
-  Analytics as AnalyticsIcon,
-  Inventory as InventoryIcon,
-  TrendingUp as RevenueIcon,
-  Flag as GoalsIcon,
-  Webhook as WebhookIcon,
-  Notifications as NotificationsIcon,
-  ExpandLess,
-  ExpandMore,
-  Settings as SettingsIcon,
-  Backup as BackupIcon,
-  Help as HelpIcon,
-  Build as ProductionIcon,
-  Dashboard as ProducerDashboardIcon,
-  Archive as ArchiveIcon,
-  RecordVoiceOver as VoiceTalentIcon,
-} from '@mui/icons-material'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import NotificationBell from './notifications/NotificationBell'
 import { useQuery } from '@tanstack/react-query'
 import { checkApiHealth } from '../utils/api'
-import { Chip, alpha } from '@mui/material'
+import { getModuleColor } from '../theme'
+import {
+  Drawer,
+  AppBar,
+  Toolbar,
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Avatar,
+  Menu,
+  MenuItem,
+  Chip,
+  Box,
+  Typography,
+  Collapse,
+  useTheme,
+  useMediaQuery,
+} from '@mui/material'
+import {
+  Menu as MenuIcon,
+  ChevronRight,
+  ExpandMore,
+  Person,
+  Logout,
+  Dashboard,
+  LibraryMusic,
+  DiscFull,
+  Schedule,
+  Traffic,
+  Store,
+  Business,
+  ShoppingCart,
+  People,
+  CalendarToday,
+  History,
+  LocalOffer,
+  Shuffle,
+  List as ListIcon,
+  Description,
+  Build,
+  Speed,
+  Mic,
+  Archive,
+  NoteAdd,
+  Headphones,
+  Receipt,
+  CreditCard,
+  RotateRight,
+  Warehouse,
+  TrendingUp,
+  Flag,
+  AdminPanelSettings,
+  Groups,
+  Public,
+  Radio,
+  Layers,
+  Settings,
+  Security,
+  Code,
+  Notifications,
+  Storage,
+  Assessment,
+  Help,
+} from '@mui/icons-material'
 
 const drawerWidth = 240
 
-/**
- * Navigation Color Scheme Configuration
- * 
- * Customize the colors for each module/section by modifying the values below.
- * Colors are applied as:
- * - 3px left border accent on active items (full opacity)
- * - 10-15% opacity background tint on hover/active states
- * - 15% opacity icon color tinting on active items
- * 
- * To change a color, simply update the hex value for the desired module.
- * Example: To change Admin color to dark blue, change admin: '#d32f2f' to admin: '#1565c0'
- */
-const moduleColors = {
-  // Core Operations - Rainbow colors
-  dashboard: '#ff0000',       // Red - Main dashboard
-  library: '#ff7f00',         // Orange - Audio library
-  clocks: '#ffff00',          // Yellow - Clock templates
-  
-  // Workflow Sections - Rainbow order
-  // 1. Traffic Management - Red/Orange
-  traffic: '#ff0000',         // Red - Traffic Management (orders, campaigns, scheduling)
-  
-  // 2. Production - Orange/Yellow
-  production: '#ff7f00',      // Orange - Production (orders, voice talent)
-  
-  // 3. Log Management - Yellow/Green
-  logs: '#ffff00',            // Yellow - Log Management (log generator, voice tracking)
-  
-  // 4. Billing - Green
-  billing: '#00ff00',         // Green - Billing (invoices, payments, makegoods)
-  
-  // 5. Analytics - Blue
-  analytics: '#0000ff',       // Blue - Analytics (inventory, revenue, sales goals)
-  
-  // 6. Admin - Indigo/Purple
-  admin: '#4b0082',           // Indigo - Admin (users, settings, audit logs, webhooks, notifications, backups)
-  
-  // Reports (standalone)
-  reports: '#9400d3',         // Violet - Reports hub
-  
-  // Help
-  help: '#616161',            // Grey - Help section
-} as const
-
-// Type for module color keys (for type safety)
-type ModuleColorKey = keyof typeof moduleColors
-
-interface MenuItem {
+interface MenuItemType {
   text: string
   icon: React.ReactNode
   path: string
@@ -122,89 +82,122 @@ interface MenuItem {
   color?: string
 }
 
-// Function to get module color based on path or group
-const getModuleColor = (path: string, group?: string): string => {
-  if (path === '/dashboard') return moduleColors.dashboard
-  if (path === '/library' || path.startsWith('/library')) return moduleColors.library
-  if (path === '/clocks') return moduleColors.clocks
-  if (path === '/reports') return moduleColors.reports
-  if (path === '/help') return moduleColors.help
-  if (group === 'library') return moduleColors.library
-  if (group === 'traffic') return moduleColors.traffic
-  if (group === 'logs') return moduleColors.logs
-  if (group === 'production') return moduleColors.production
-  if (group === 'billing') return moduleColors.billing
-  if (group === 'analytics') return moduleColors.analytics
-  if (group === 'admin') return moduleColors.admin
-  return moduleColors.dashboard // default
+// Icon mapping function
+const getIcon = (iconName: string): React.ReactNode => {
+  const iconMap: { [key: string]: React.ReactNode } = {
+    'fa-solid fa-gauge': <Dashboard />,
+    'fa-solid fa-music': <LibraryMusic />,
+    'fa-solid fa-compact-disc': <DiscFull />,
+    'fa-solid fa-clock': <Schedule />,
+    'fa-solid fa-traffic-light': <Traffic />,
+    'fa-solid fa-store': <Store />,
+    'fa-solid fa-building': <Business />,
+    'fa-solid fa-shopping-cart': <ShoppingCart />,
+    'fa-solid fa-users': <People />,
+    'fa-solid fa-calendar-check': <CalendarToday />,
+    'fa-solid fa-clock-rotate-left': <History />,
+    'fa-solid fa-tags': <LocalOffer />,
+    'fa-solid fa-shuffle': <Shuffle />,
+    'fa-solid fa-list': <ListIcon />,
+    'fa-solid fa-file-lines': <Description />,
+    'fa-solid fa-screwdriver-wrench': <Build />,
+    'fa-solid fa-gauge-high': <Speed />,
+    'fa-solid fa-microphone-lines': <Mic />,
+    'fa-solid fa-box-archive': <Archive />,
+    'fa-solid fa-file-circle-plus': <NoteAdd />,
+    'fa-solid fa-microphone': <Mic />,
+    'fa-solid fa-headphones': <Headphones />,
+    'fa-solid fa-receipt': <Receipt />,
+    'fa-solid fa-credit-card': <CreditCard />,
+    'fa-solid fa-arrows-rotate': <RotateRight />,
+    'fa-solid fa-warehouse': <Warehouse />,
+    'fa-solid fa-chart-line': <TrendingUp />,
+    'fa-solid fa-flag': <Flag />,
+    'fa-solid fa-user': <Person />,
+    'fa-solid fa-people-group': <Groups />,
+    'fa-solid fa-globe': <Public />,
+    'fa-solid fa-radio': <Radio />,
+    'fa-solid fa-layer-group': <Layers />,
+    'fa-solid fa-gear': <Settings />,
+    'fa-solid fa-shield-halved': <Security />,
+    'fa-solid fa-code-branch': <Code />,
+    'fa-solid fa-bell': <Notifications />,
+    'fa-solid fa-database': <Storage />,
+    'fa-solid fa-chart-bar': <Assessment />,
+    'fa-solid fa-circle-question': <Help />,
+  }
+  return iconMap[iconName] || <Box sx={{ width: 24, height: 24 }} />
 }
 
-const menuItems: MenuItem[] = [
+const menuItems: MenuItemType[] = [
   // Core Operations
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard', color: moduleColors.dashboard },
+  { text: 'Dashboard', icon: getIcon('fa-solid fa-gauge'), path: '/dashboard' },
   
-  // Library & Programming (grouped together)
-  { text: 'Audio Library', icon: <LibraryIcon />, path: '/library', group: 'library', color: moduleColors.library },
-  { text: 'Music Manager', icon: <LibraryIcon />, path: '/library/music', group: 'library', color: moduleColors.library },
-  { text: 'Clock Templates', icon: <ClockIcon />, path: '/clocks', group: 'library', color: moduleColors.clocks },
+  // Library & Programming
+  { text: 'Audio Library', icon: getIcon('fa-solid fa-music'), path: '/library', group: 'library' },
+  { text: 'Music Manager', icon: getIcon('fa-solid fa-compact-disc'), path: '/library/music', group: 'library' },
+  { text: 'Clock Templates', icon: getIcon('fa-solid fa-clock'), path: '/clocks', group: 'library' },
   
-  // 1. Traffic Management (Red) - Workflow: Orders, campaigns, scheduling
-  { text: 'Traffic Manager', icon: <TrafficIcon />, path: '/traffic', group: 'traffic', color: moduleColors.traffic },
-  { text: 'Advertisers', icon: <AdvertisersIcon />, path: '/traffic/advertisers', group: 'traffic', color: moduleColors.traffic },
-  { text: 'Agencies', icon: <AgenciesIcon />, path: '/traffic/agencies', group: 'traffic', color: moduleColors.traffic },
-  { text: 'Orders', icon: <OrdersIcon />, path: '/traffic/orders', group: 'traffic', color: moduleColors.traffic },
-  { text: 'Sales Reps', icon: <SalesRepsIcon />, path: '/traffic/sales-reps', group: 'traffic', color: moduleColors.traffic },
-  { text: 'Spot Scheduler', icon: <SpotSchedulerIcon />, path: '/traffic/spot-scheduler', group: 'traffic', color: moduleColors.traffic },
-  { text: 'Dayparts', icon: <DaypartsIcon />, path: '/traffic/dayparts', group: 'traffic', color: moduleColors.traffic },
-  { text: 'Daypart Categories', icon: <DaypartCategoriesIcon />, path: '/traffic/daypart-categories', group: 'traffic', color: moduleColors.traffic },
-  { text: 'Rotation Rules', icon: <RotationRulesIcon />, path: '/traffic/rotation-rules', group: 'traffic', color: moduleColors.traffic },
-  { text: 'Traffic Logs', icon: <TrafficLogsIcon />, path: '/traffic/traffic-logs', group: 'traffic', color: moduleColors.traffic },
-  { text: 'Copy Library', icon: <CopyIcon />, path: '/traffic/copy', group: 'traffic', color: moduleColors.traffic },
+  // Traffic Management
+  { text: 'Traffic Manager', icon: getIcon('fa-solid fa-traffic-light'), path: '/traffic', group: 'traffic' },
+  { text: 'Advertisers', icon: getIcon('fa-solid fa-store'), path: '/traffic/advertisers', group: 'traffic' },
+  { text: 'Agencies', icon: getIcon('fa-solid fa-building'), path: '/traffic/agencies', group: 'traffic' },
+  { text: 'Orders', icon: getIcon('fa-solid fa-shopping-cart'), path: '/traffic/orders', group: 'traffic' },
+  { text: 'Sales Reps', icon: getIcon('fa-solid fa-users'), path: '/traffic/sales-reps', group: 'traffic' },
+  { text: 'Spot Scheduler', icon: getIcon('fa-solid fa-calendar-check'), path: '/traffic/spot-scheduler', group: 'traffic' },
+  { text: 'Dayparts', icon: getIcon('fa-solid fa-clock-rotate-left'), path: '/traffic/dayparts', group: 'traffic' },
+  { text: 'Daypart Categories', icon: getIcon('fa-solid fa-tags'), path: '/traffic/daypart-categories', group: 'traffic' },
+  { text: 'Rotation Rules', icon: getIcon('fa-solid fa-shuffle'), path: '/traffic/rotation-rules', group: 'traffic' },
+  { text: 'Traffic Logs', icon: getIcon('fa-solid fa-list'), path: '/traffic/traffic-logs', group: 'traffic' },
+  { text: 'Copy Library', icon: getIcon('fa-solid fa-file-lines'), path: '/traffic/copy', group: 'traffic' },
   
-  // 2. Production (Orange) - Workflow: Create production orders from copy
-  { text: 'Production Orders', icon: <ProductionIcon />, path: '/production/orders', group: 'production', color: moduleColors.production },
-  { text: 'Producer Dashboard', icon: <ProducerDashboardIcon />, path: '/production/dashboard', group: 'production', color: moduleColors.production },
-  { text: 'Voice Talent Portal', icon: <VoiceTalentIcon />, path: '/production/voice-talent', group: 'production', color: moduleColors.production },
-  { text: 'Production Archive', icon: <ArchiveIcon />, path: '/production/archive', group: 'production', color: moduleColors.production },
+  // Production
+  { text: 'Production Orders', icon: getIcon('fa-solid fa-screwdriver-wrench'), path: '/production/orders', group: 'production' },
+  { text: 'Producer Dashboard', icon: getIcon('fa-solid fa-gauge-high'), path: '/production/dashboard', group: 'production' },
+  { text: 'Voice Talent Portal', icon: getIcon('fa-solid fa-microphone-lines'), path: '/production/voice-talent', group: 'production' },
+  { text: 'Production Archive', icon: getIcon('fa-solid fa-box-archive'), path: '/production/archive', group: 'production' },
   
-  // 3. Log Management (Yellow) - Workflow: Generate logs, voice tracking
-  { text: 'Log Generator', icon: <LogGeneratorIcon />, path: '/logs', group: 'logs', color: moduleColors.logs },
-  { text: 'Voice Tracking', icon: <VoiceIcon />, path: '/voice', group: 'logs', color: moduleColors.logs },
-  { text: 'Voice Tracks Manager', icon: <VoiceIcon />, path: '/voice/tracks', group: 'logs', color: moduleColors.logs },
+  // Log Management
+  { text: 'Log Generator', icon: getIcon('fa-solid fa-file-circle-plus'), path: '/logs', group: 'logs' },
+  { text: 'Voice Tracking', icon: getIcon('fa-solid fa-microphone'), path: '/voice', group: 'logs' },
+  { text: 'Voice Tracks Manager', icon: getIcon('fa-solid fa-headphones'), path: '/voice/tracks', group: 'logs' },
   
-  // 4. Billing (Green) - Workflow: Invoices, payments, makegoods
-  { text: 'Invoices', icon: <InvoiceIcon />, path: '/billing/invoices', group: 'billing', color: moduleColors.billing },
-  { text: 'Payments', icon: <PaymentIcon />, path: '/billing/payments', group: 'billing', color: moduleColors.billing },
-  { text: 'Makegoods', icon: <MakegoodIcon />, path: '/billing/makegoods', group: 'billing', color: moduleColors.billing },
+  // Billing
+  { text: 'Invoices', icon: getIcon('fa-solid fa-receipt'), path: '/billing/invoices', group: 'billing' },
+  { text: 'Payments', icon: getIcon('fa-solid fa-credit-card'), path: '/billing/payments', group: 'billing' },
+  { text: 'Makegoods', icon: getIcon('fa-solid fa-arrows-rotate'), path: '/billing/makegoods', group: 'billing' },
   
-  // 5. Analytics (Blue) - Workflow: Reports, revenue, sales goals
-  { text: 'Inventory', icon: <InventoryIcon />, path: '/analytics/inventory', group: 'analytics', color: moduleColors.analytics },
-  { text: 'Revenue', icon: <RevenueIcon />, path: '/analytics/revenue', group: 'analytics', color: moduleColors.analytics },
-  { text: 'Sales Goals', icon: <GoalsIcon />, path: '/analytics/sales-goals', group: 'analytics', color: moduleColors.analytics },
+  // Analytics
+  { text: 'Inventory', icon: getIcon('fa-solid fa-warehouse'), path: '/analytics/inventory', group: 'analytics' },
+  { text: 'Revenue', icon: getIcon('fa-solid fa-chart-line'), path: '/analytics/revenue', group: 'analytics' },
+  { text: 'Sales Goals', icon: getIcon('fa-solid fa-flag'), path: '/analytics/sales-goals', group: 'analytics' },
   
-  // 6. Admin (Purple) - Workflow: Settings, users, audit logs, webhooks, notifications, backups
-  { text: 'Users', icon: <AccountIcon />, path: '/admin/users', group: 'admin', color: moduleColors.admin },
-  { text: 'Settings', icon: <SettingsIcon />, path: '/admin/settings', group: 'admin', color: moduleColors.admin },
-  { text: 'Audit Logs', icon: <SecurityIcon />, path: '/admin/audit-logs', group: 'admin', color: moduleColors.admin },
-  { text: 'Webhooks', icon: <WebhookIcon />, path: '/admin/webhooks', group: 'admin', color: moduleColors.admin },
-  { text: 'Notifications', icon: <NotificationsIcon />, path: '/admin/notifications', group: 'admin', color: moduleColors.admin },
-  { text: 'Backups', icon: <BackupIcon />, path: '/admin/backups', group: 'admin', color: moduleColors.admin },
+  // Admin
+  { text: 'Users', icon: getIcon('fa-solid fa-user'), path: '/admin/users', group: 'admin' },
+  { text: 'Sales Teams', icon: getIcon('fa-solid fa-people-group'), path: '/admin/sales-teams', group: 'admin' },
+  { text: 'Sales Offices', icon: getIcon('fa-solid fa-building'), path: '/admin/sales-offices', group: 'admin' },
+  { text: 'Sales Regions', icon: getIcon('fa-solid fa-globe'), path: '/admin/sales-regions', group: 'admin' },
+  { text: 'Stations', icon: getIcon('fa-solid fa-radio'), path: '/admin/stations', group: 'admin' },
+  { text: 'Clusters', icon: getIcon('fa-solid fa-layer-group'), path: '/admin/clusters', group: 'admin' },
+  { text: 'Settings', icon: getIcon('fa-solid fa-gear'), path: '/admin/settings', group: 'admin' },
+  { text: 'Audit Logs', icon: getIcon('fa-solid fa-shield-halved'), path: '/admin/audit-logs', group: 'admin' },
+  { text: 'Webhooks', icon: getIcon('fa-solid fa-code-branch'), path: '/admin/webhooks', group: 'admin' },
+  { text: 'Notifications', icon: getIcon('fa-solid fa-bell'), path: '/admin/notifications', group: 'admin' },
+  { text: 'Backups', icon: getIcon('fa-solid fa-database'), path: '/admin/backups', group: 'admin' },
   
-  // Standalone items (below collapsible sections)
-  { text: 'Reports', icon: <ReportIcon />, path: '/reports', color: moduleColors.reports },
-  { text: 'Help', icon: <HelpIcon />, path: '/help', color: moduleColors.help },
+  // Standalone items
+  { text: 'Reports', icon: getIcon('fa-solid fa-chart-bar'), path: '/reports' },
+  { text: 'Help', icon: getIcon('fa-solid fa-circle-question'), path: '/help' },
 ]
 
 const menuGroups = {
-  // Library & Programming (grouped together)
-  library: 'Library & Programming',   // Orange - Audio Library, Music Manager, Clock Templates
-  // Workflow order (ROYGBP)
-  traffic: 'Traffic Management',      // Red - 1. Orders, campaigns, scheduling
-  production: 'Production',            // Orange - 2. Create production orders
-  logs: 'Log Management',             // Yellow - 3. Generate logs, voice tracking
-  billing: 'Billing',                 // Green - 4. Invoices, payments, makegoods
-  analytics: 'Analytics',             // Blue - 5. Reports, revenue, sales goals
-  admin: 'Admin',                     // Purple - 6. Settings, users, audit logs (stays at end)
+  library: 'Library & Programming',
+  traffic: 'Traffic Management',
+  production: 'Production',
+  logs: 'Log Management',
+  billing: 'Billing',
+  analytics: 'Analytics',
+  admin: 'Admin',
 }
 
 const Layout: React.FC = () => {
@@ -213,20 +206,21 @@ const Layout: React.FC = () => {
   const { user, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   
   // Fetch branding settings
   const { data: settingsData } = useQuery({
     queryKey: ['settings'],
     queryFn: async () => {
-      const response = await fetch('/api/settings/', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
-      if (!response.ok) return null
-      return response.json()
+      try {
+        const { getAllSettings } = await import('../utils/api')
+        return await getAllSettings()
+      } catch {
+        return null
+      }
     },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
   })
   
   const systemName = settingsData?.branding?.system_name?.value || 'GayPHX Radio Traffic System'
@@ -238,11 +232,11 @@ const Layout: React.FC = () => {
     queryKey: ['api-health-global'],
     queryFn: () => checkApiHealth(),
     retry: false,
-    refetchInterval: 60000, // Check every minute
+    refetchInterval: 60000,
     staleTime: 30000,
   })
   
-  // Collapsible menu state - load from localStorage or default to all expanded
+  // Collapsible menu state
   const [expandedGroups, setExpandedGroups] = React.useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem('menuExpandedGroups')
     if (saved) {
@@ -259,17 +253,17 @@ const Layout: React.FC = () => {
     setMobileOpen(!mobileOpen)
   }
 
+  const handleLogout = () => {
+    logout()
+    setAnchorEl(null)
+  }
+
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
   }
 
   const handleMenuClose = () => {
     setAnchorEl(null)
-  }
-
-  const handleLogout = () => {
-    logout()
-    handleMenuClose()
   }
 
   const handleGroupToggle = (group: string) => {
@@ -280,19 +274,12 @@ const Layout: React.FC = () => {
 
   const isPathActive = (path: string) => {
     if (location.pathname === path) return true
-    // Check if path is a parent of current location
     if (location.pathname.startsWith(path) && path !== '/') return true
     return false
   }
 
-  const isGroupActive = (group: string) => {
-    return menuItems.some(item => item.group === group && isPathActive(item.path))
-  }
-
   // Group menu items
-  // Core items are Dashboard only (at the top)
   const coreItems = menuItems.filter(item => !item.group && item.path === '/dashboard')
-  // Standalone items (Reports, Help) go at the bottom
   const standaloneItems = menuItems.filter(item => !item.group && item.path !== '/dashboard')
   const groupedItems = Object.keys(menuGroups).map(group => ({
     group,
@@ -301,45 +288,49 @@ const Layout: React.FC = () => {
   }))
 
   const drawer = (
-    <Box
-      sx={{
-        backgroundColor: '#fafafa', // Neutral light background
-        height: '100%',
-      }}
-    >
+    <Box>
       <Toolbar
         sx={{
-          backgroundColor: '#f5f5f5', // Slightly darker header to stand out
-          borderBottom: '2px solid #e0e0e0',
+          backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5',
+          borderBottom: `2px solid ${theme.palette.divider}`,
+          minHeight: '64px !important',
         }}
       >
-        <Typography variant="h6" noWrap component="div">
+        <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.25rem' }}>
           LibreLog
         </Typography>
       </Toolbar>
-      <Divider />
-      <List>
+      
+      <List sx={{ padding: '8px 0' }}>
         {/* Core Operations */}
         {coreItems.map((item) => {
           const isActive = isPathActive(item.path)
-          const itemColor = item.color || getModuleColor(item.path, item.group)
+          const moduleColor = getModuleColor(item.path, item.group)
           return (
             <ListItem key={item.text} disablePadding>
               <ListItemButton
-                selected={isActive}
                 onClick={() => navigate(item.path)}
                 sx={{
-                  borderLeft: isActive ? `3px solid ${itemColor}` : '3px solid transparent',
-                  backgroundColor: isActive ? alpha(itemColor, 0.12) : 'transparent',
+                  borderLeft: isActive ? `3px solid ${moduleColor}` : '3px solid transparent',
+                  backgroundColor: isActive 
+                    ? theme.palette.mode === 'dark' 
+                      ? 'rgba(25, 118, 210, 0.16)' 
+                      : 'rgba(25, 118, 210, 0.08)'
+                    : 'transparent',
                   '&:hover': {
-                    backgroundColor: alpha(itemColor, 0.08),
-                  },
-                  '& .MuiListItemIcon-root': {
-                    color: isActive ? alpha(itemColor, 0.15) : 'inherit',
+                    backgroundColor: isActive
+                      ? theme.palette.mode === 'dark'
+                        ? 'rgba(25, 118, 210, 0.24)'
+                        : 'rgba(25, 118, 210, 0.12)'
+                      : theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.05)'
+                        : 'rgba(0, 0, 0, 0.04)',
                   },
                 }}
               >
-                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemIcon sx={{ color: isActive ? moduleColor : 'inherit', minWidth: 40 }}>
+                  {item.icon}
+                </ListItemIcon>
                 <ListItemText primary={item.text} />
               </ListItemButton>
             </ListItem>
@@ -348,73 +339,90 @@ const Layout: React.FC = () => {
         
         {/* Grouped Items */}
         {groupedItems.map(({ group, label, items }) => {
-          const groupColor = getModuleColor('', group)
-          const groupIsActive = isGroupActive(group)
+          const isExpanded = expandedGroups[group]
+          const groupIsActive = items.some(item => isPathActive(item.path))
+          const moduleColor = getModuleColor('', group)
           return (
             <React.Fragment key={group}>
-              <ListItemButton 
-                onClick={() => handleGroupToggle(group)}
-                sx={{
-                  borderLeft: `3px solid ${groupColor}`, // Always show section color
-                  backgroundColor: alpha(groupColor, 0.15), // Darker for header
-                  '&:hover': {
-                    backgroundColor: alpha(groupColor, 0.2),
-                  },
-                  '& .MuiListItemText-primary': {
+              <ListItem disablePadding>
+                <ListItemButton
+                  onClick={() => handleGroupToggle(group)}
+                  sx={{
+                    borderLeft: groupIsActive ? `3px solid ${moduleColor}` : '3px solid transparent',
+                    backgroundColor: groupIsActive
+                      ? theme.palette.mode === 'dark'
+                        ? 'rgba(25, 118, 210, 0.16)'
+                        : 'rgba(25, 118, 210, 0.08)'
+                      : theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.05)'
+                        : '#f5f5f5',
                     fontWeight: 'bold',
-                    color: groupColor,
-                  },
-                  // For light colors (yellow), use darker text for better contrast
-                  ...(group === 'logs' ? {
-                    '& .MuiListItemText-primary': {
-                      color: '#424242', // Dark text for light backgrounds
+                    '&:hover': {
+                      backgroundColor: groupIsActive
+                        ? theme.palette.mode === 'dark'
+                          ? 'rgba(25, 118, 210, 0.24)'
+                          : 'rgba(25, 118, 210, 0.12)'
+                        : theme.palette.mode === 'dark'
+                          ? 'rgba(255, 255, 255, 0.08)'
+                          : '#eeeeee',
                     },
-                    '& .MuiListItemIcon-root': {
-                      color: '#424242',
-                    },
-                  } : {}),
-                }}
-              >
-                <ListItemIcon sx={{ 
-                  color: group === 'logs' ? '#424242' : groupColor 
-                }}>
-                  {expandedGroups[group] ? <ExpandLess /> : <ExpandMore />}
-                </ListItemIcon>
-                <ListItemText primary={label} />
-              </ListItemButton>
-              <Collapse in={expandedGroups[group]} timeout="auto" unmountOnExit>
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 36 }}>
+                    {isExpanded ? <ExpandMore fontSize="small" /> : <ChevronRight fontSize="small" />}
+                  </ListItemIcon>
+                  <ListItemText primary={label} />
+                  {!isExpanded && items.length > 0 && (
+                    <Chip 
+                      label={items.length} 
+                      size="small" 
+                      sx={{ 
+                        height: 20, 
+                        fontSize: '0.75rem',
+                        ml: 1,
+                      }} 
+                    />
+                  )}
+                </ListItemButton>
+              </ListItem>
+              <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding>
                   {items.map((item) => {
                     const isActive = isPathActive(item.path)
-                    const itemColor = item.color || groupColor
+                    const moduleColor = getModuleColor(item.path, item.group)
                     return (
                       <ListItem key={item.text} disablePadding>
                         <ListItemButton
-                          selected={isActive}
                           onClick={() => navigate(item.path)}
                           sx={{
-                            pl: 4,
-                            borderLeft: isActive ? `3px solid ${itemColor}` : `1px solid ${alpha(itemColor, 0.2)}`,
-                            backgroundColor: isActive ? alpha(itemColor, 0.08) : alpha(itemColor, 0.03), // Lighter for sub-items
+                            pl: 6,
+                            borderLeft: isActive ? `3px solid ${moduleColor}` : '1px solid transparent',
+                            backgroundColor: isActive
+                              ? theme.palette.mode === 'dark'
+                                ? 'rgba(25, 118, 210, 0.16)'
+                                : 'rgba(25, 118, 210, 0.08)'
+                              : 'transparent',
                             '&:hover': {
-                              backgroundColor: alpha(itemColor, 0.1),
+                              backgroundColor: isActive
+                                ? theme.palette.mode === 'dark'
+                                  ? 'rgba(25, 118, 210, 0.24)'
+                                  : 'rgba(25, 118, 210, 0.12)'
+                                : theme.palette.mode === 'dark'
+                                  ? 'rgba(255, 255, 255, 0.05)'
+                                  : 'rgba(0, 0, 0, 0.04)',
                             },
-                            '& .MuiListItemIcon-root': {
-                              color: isActive ? itemColor : alpha(itemColor, 0.6),
-                            },
-                            // For light colors (yellow), use darker text for better contrast
-                            ...(group === 'logs' ? {
-                              '& .MuiListItemText-primary': {
-                                color: isActive ? '#424242' : '#616161',
-                              },
-                              '& .MuiListItemIcon-root': {
-                                color: isActive ? '#424242' : alpha('#424242', 0.7),
-                              },
-                            } : {}),
                           }}
                         >
-                          <ListItemIcon>{item.icon}</ListItemIcon>
-                          <ListItemText primary={item.text} />
+                          <ListItemIcon sx={{ color: isActive ? moduleColor : 'inherit', minWidth: 40, opacity: isActive ? 1 : 0.7 }}>
+                            {item.icon}
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary={item.text}
+                            primaryTypographyProps={{
+                              fontSize: '0.95em',
+                              fontWeight: isActive ? 500 : 400,
+                            }}
+                          />
                         </ListItemButton>
                       </ListItem>
                     )
@@ -425,27 +433,35 @@ const Layout: React.FC = () => {
           )
         })}
         
-        {/* Standalone items (Clock Templates, Reports, Help) - after all collapsible sections */}
+        {/* Standalone items */}
         {standaloneItems.map((item) => {
           const isActive = isPathActive(item.path)
-          const itemColor = item.color || getModuleColor(item.path, item.group)
+          const moduleColor = getModuleColor(item.path, item.group)
           return (
             <ListItem key={item.text} disablePadding>
               <ListItemButton
-                selected={isActive}
                 onClick={() => navigate(item.path)}
                 sx={{
-                  borderLeft: isActive ? `3px solid ${itemColor}` : '3px solid transparent',
-                  backgroundColor: isActive ? alpha(itemColor, 0.12) : 'transparent',
+                  borderLeft: isActive ? `3px solid ${moduleColor}` : '3px solid transparent',
+                  backgroundColor: isActive
+                    ? theme.palette.mode === 'dark'
+                      ? 'rgba(25, 118, 210, 0.16)'
+                      : 'rgba(25, 118, 210, 0.08)'
+                    : 'transparent',
                   '&:hover': {
-                    backgroundColor: alpha(itemColor, 0.08),
-                  },
-                  '& .MuiListItemIcon-root': {
-                    color: isActive ? alpha(itemColor, 0.15) : 'inherit',
+                    backgroundColor: isActive
+                      ? theme.palette.mode === 'dark'
+                        ? 'rgba(25, 118, 210, 0.24)'
+                        : 'rgba(25, 118, 210, 0.12)'
+                      : theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.05)'
+                        : 'rgba(0, 0, 0, 0.04)',
                   },
                 }}
               >
-                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemIcon sx={{ color: isActive ? moduleColor : 'inherit', minWidth: 40 }}>
+                  {item.icon}
+                </ListItemIcon>
                 <ListItemText primary={item.text} />
               </ListItemButton>
             </ListItem>
@@ -456,103 +472,106 @@ const Layout: React.FC = () => {
   )
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', height: '100vh' }}>
+      {/* AppBar */}
       <AppBar
         position="fixed"
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
           backgroundColor: headerColor,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          zIndex: theme.zIndex.drawer + 1,
         }}
       >
         <Toolbar>
           <IconButton
             color="inherit"
-            aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
             sx={{ mr: 2, display: { sm: 'none' } }}
           >
             <MenuIcon />
           </IconButton>
+          
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
             {logoUrl && (
-              <img 
-                src={logoUrl} 
-                alt="Logo" 
-                style={{ maxHeight: 40, maxWidth: 200 }}
+              <Box
+                component="img"
+                src={logoUrl}
+                alt="Logo"
+                sx={{ maxHeight: 40, maxWidth: 200 }}
                 onError={(e) => {
                   console.error('Failed to load logo:', logoUrl)
                   e.currentTarget.style.display = 'none'
                 }}
               />
             )}
-            <Typography variant="h6" noWrap component="div">
+            <Typography variant="h6" component="h1" sx={{ fontWeight: 500 }}>
               {systemName}
             </Typography>
           </Box>
+          
           {healthError ? (
             <Chip 
               label="API Offline" 
-              size="small" 
-              sx={{ 
-                mr: 1,
-                backgroundColor: '#d32f2f !important',
-                color: '#fff !important',
-                fontWeight: 'bold',
-              }}
+              color="error" 
+              size="small"
+              sx={{ mr: 1 }}
             />
           ) : healthData ? (
             <Chip 
               label="API Online" 
-              size="small" 
+              size="small"
               sx={{ 
                 mr: 1,
-                backgroundColor: '#2e7d32 !important',
-                color: '#fff !important',
-                fontWeight: 'bold',
+                bgcolor: 'success.main',
+                color: 'success.contrastText',
               }}
             />
           ) : null}
+          
           <NotificationBell />
+          
           <IconButton
-            size="large"
-            aria-label="account of current user"
-            aria-controls="menu-appbar"
-            aria-haspopup="true"
             onClick={handleMenuOpen}
-            color="inherit"
+            sx={{ ml: 1 }}
+            size="small"
           >
-            <Avatar sx={{ width: 32, height: 32 }}>
-              {user?.username?.charAt(0).toUpperCase()}
+            <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
+              {user?.username?.charAt(0).toUpperCase() || 'U'}
             </Avatar>
           </IconButton>
+          
           <Menu
-            id="menu-appbar"
             anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleMenuClose}
             anchorOrigin={{
-              vertical: 'top',
+              vertical: 'bottom',
               horizontal: 'right',
             }}
-            keepMounted
             transformOrigin={{
               vertical: 'top',
               horizontal: 'right',
             }}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
           >
-            <MenuItem onClick={handleMenuClose}>
+            <MenuItem onClick={() => { navigate('/profile'); handleMenuClose(); }}>
               <ListItemIcon>
-                <AccountIcon fontSize="small" />
+                <Person fontSize="small" />
               </ListItemIcon>
-              Profile
+              <ListItemText>Profile</ListItemText>
             </MenuItem>
-            <MenuItem onClick={handleLogout}>Logout</MenuItem>
+            <MenuItem onClick={handleLogout}>
+              <ListItemIcon>
+                <Logout fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Logout</ListItemText>
+            </MenuItem>
           </Menu>
         </Toolbar>
       </AppBar>
+
+      {/* Drawer */}
       <Box
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
@@ -562,16 +581,11 @@ const Layout: React.FC = () => {
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true,
+            keepMounted: true, // Better open performance on mobile.
           }}
           sx={{
             display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { 
-              boxSizing: 'border-box', 
-              width: drawerWidth,
-              backgroundColor: '#fafafa', // Neutral light background
-              borderRight: '1px solid #e0e0e0',
-            },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
           }}
         >
           {drawer}
@@ -580,27 +594,25 @@ const Layout: React.FC = () => {
           variant="permanent"
           sx={{
             display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { 
-              boxSizing: 'border-box', 
-              width: drawerWidth,
-              backgroundColor: '#fafafa', // Neutral light background
-              borderRight: '1px solid #e0e0e0',
-            },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
           }}
           open
         >
           {drawer}
         </Drawer>
       </Box>
+
+      {/* Main Content */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
           p: 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
+          mt: '64px',
+          overflow: 'auto',
         }}
       >
-        <Toolbar />
         <Outlet />
       </Box>
     </Box>

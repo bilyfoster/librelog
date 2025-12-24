@@ -39,7 +39,7 @@ import {
 import api from '../../utils/api'
 
 interface AudioCut {
-  id: number
+  id?: string
   cut_id: string
   cut_name?: string
   version: number

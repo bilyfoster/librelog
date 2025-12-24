@@ -2,8 +2,8 @@
 Log Revision model for tracking log changes
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -13,11 +13,11 @@ class LogRevision(Base):
     """Log Revision model for tracking log version history"""
     __tablename__ = "log_revisions"
 
-    id = Column(Integer, primary_key=True, index=True)
-    log_id = Column(Integer, ForeignKey("daily_logs.id"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
+    log_id = Column(UUID(as_uuid=True), ForeignKey("daily_logs.id"), nullable=False, index=True)
     revision_number = Column(Integer, nullable=False, index=True)
     json_data = Column(JSONB, nullable=False)  # Snapshot of log data at this revision
-    changed_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    changed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     change_summary = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
 

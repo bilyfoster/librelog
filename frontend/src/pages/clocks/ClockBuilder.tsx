@@ -1,637 +1,410 @@
 import React, { useState, useEffect } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import api from '../../utils/api'
+import HourlyTemplateBuilder, { HourlyTemplate } from '../../components/clocks/HourlyTemplateBuilder'
+import DailyTemplateBuilder, { DailyTemplate } from '../../components/clocks/DailyTemplateBuilder'
 import {
   Box,
+  Typography,
+  Alert,
+  Tabs,
+  Tab,
+  Button,
   Card,
   CardContent,
-  Typography,
-  Button,
-  TextField,
-  Grid,
-  Chip,
-  IconButton,
+  CircularProgress,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  Divider,
-  Alert,
-  CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  Grid,
+  IconButton,
+  Stack,
 } from '@mui/material'
 import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Preview as PreviewIcon,
-  Publish as PublishIcon,
-  Save as SaveIcon,
-  ArrowUpward as ArrowUpIcon,
-  ArrowDownward as ArrowDownIcon,
+  Add,
+  Edit,
+  Delete,
 } from '@mui/icons-material'
-import api from '../../utils/api'
-import { TRACK_TYPES, getTrackType, getTrackTypeChipColor } from '../../utils/trackTypes'
-
-interface ClockElement {
-  id: string
-  type: string
-  title: string
-  count: number
-  duration: number
-  fallback?: string
-}
-
-interface ClockTemplate {
-  id?: number
-  name: string
-  description?: string
-  json_layout: {
-    hour: string
-    elements: ClockElement[]
-  }
-}
 
 const ClockBuilder: React.FC = () => {
-  const [templates, setTemplates] = useState<ClockTemplate[]>([])
-  const [currentTemplate, setCurrentTemplate] = useState<ClockTemplate>({
-    name: '',
-    description: '',
-    json_layout: {
-      hour: '00:00',
-      elements: []
-    }
-  })
+  const [activeTab, setActiveTab] = useState<'hourly' | 'daily' | 'templates'>(0)
+  const [hourlyTemplates, setHourlyTemplates] = useState<HourlyTemplate[]>([])
+  const [dailyTemplates, setDailyTemplates] = useState<DailyTemplate[]>([])
   const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [previewOpen, setPreviewOpen] = useState(false)
-  const [previewData, setPreviewData] = useState<any>(null)
-  const [elementDialogOpen, setElementDialogOpen] = useState(false)
-  const [editingElement, setEditingElement] = useState<ClockElement | null>(null)
+  const [editingHourlyTemplate, setEditingHourlyTemplate] = useState<HourlyTemplate | null>(null)
+  const [editingDailyTemplate, setEditingDailyTemplate] = useState<DailyTemplate | null>(null)
+  const [hourlyBuilderOpen, setHourlyBuilderOpen] = useState(false)
+  const [dailyBuilderOpen, setDailyBuilderOpen] = useState(false)
+  const queryClient = useQueryClient()
 
-  const elementTypes = TRACK_TYPES
+  // Load templates
+  const { data: templatesData, isLoading } = useQuery({
+    queryKey: ['clock-templates'],
+    queryFn: async () => {
+      const response = await api.get('/clocks/')
+      return response.data
+    },
+  })
 
   useEffect(() => {
-    loadTemplates()
-  }, [])
-
-  const loadTemplates = async () => {
-    try {
-      const response = await api.get('/clocks/')
-      setTemplates(response.data.templates)
-      setError('')
-    } catch (err: any) {
-      let message = 'Failed to load templates'
-      if (err?.response?.data?.detail) {
-        message = err.response.data.detail
-      } else if (err?.response?.data?.message) {
-        message = err.response.data.message
-      } else if (err?.message) {
-        message = err.message
-      }
-      setError(message)
-      console.error('Failed to load templates:', err)
+    if (templatesData) {
+      // Separate hourly and daily templates
+      // For now, we'll treat all templates as hourly until backend supports daily
+      const hourly = (templatesData.templates || []).map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        hour: t.json_layout?.hour || '00:00',
+        elements: t.json_layout?.elements || [],
+      }))
+      setHourlyTemplates(hourly)
     }
-  }
+  }, [templatesData])
 
-  const handleSaveTemplate = async () => {
-    if (!currentTemplate.name.trim()) {
-      setError('Template name is required')
-      return
-    }
-
-    setSaving(true)
+  const saveHourlyTemplate = async (template: HourlyTemplate) => {
+    setLoading(true)
     setError('')
     setSuccess('')
 
     try {
-      if (currentTemplate.id) {
-        await api.put(`/clocks/${currentTemplate.id}`, currentTemplate)
-        setSuccess('Template updated successfully')
-      } else {
-        await api.post('/clocks/', currentTemplate)
-        setSuccess('Template created successfully')
-      }
-      
-      await loadTemplates()
-      setCurrentTemplate({
-        name: '',
-        description: '',
+      const payload = {
+        name: template.name,
+        description: template.description,
         json_layout: {
-          hour: '00:00',
-          elements: []
-        }
-      })
-    } catch (err: any) {
-      let message = 'Failed to save template'
-      if (err?.response?.data?.detail) {
-        message = err.response.data.detail
-      } else if (err?.response?.data?.message) {
-        message = err.response.data.message
-      } else if (err?.message) {
-        message = err.message
+          hour: template.hour,
+          elements: template.elements,
+        },
       }
+
+      if (template.id) {
+        await api.put(`/clocks/${template.id}`, payload)
+        setSuccess('Hourly template updated successfully')
+      } else {
+        await api.post('/clocks/', payload)
+        setSuccess('Hourly template created successfully')
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['clock-templates'] })
+      setHourlyBuilderOpen(false)
+      setEditingHourlyTemplate(null)
+    } catch (err: any) {
+      const message = err?.response?.data?.detail || err?.message || 'Failed to save template'
       setError(message)
-      console.error('Save template error:', err)
+      throw new Error(message)
     } finally {
-      setSaving(false)
+      setLoading(false)
     }
   }
 
-  const handleLoadTemplate = (template: ClockTemplate) => {
-    setCurrentTemplate(template)
+  const saveDailyTemplate = async (template: DailyTemplate) => {
+    setLoading(true)
     setError('')
     setSuccess('')
-  }
-
-  const handleAddElement = () => {
-    setEditingElement({
-      id: Date.now().toString(),
-      type: 'MUS',
-      title: '',
-      count: 1,
-      duration: 180
-    })
-    setElementDialogOpen(true)
-  }
-
-  const handleEditElement = (element: ClockElement) => {
-    setEditingElement(element)
-    setElementDialogOpen(true)
-  }
-
-  const handleSaveElement = () => {
-    if (!editingElement) return
-
-    const newElements = [...currentTemplate.json_layout.elements]
-    const existingIndex = newElements.findIndex(e => e.id === editingElement.id)
-
-    if (existingIndex >= 0) {
-      newElements[existingIndex] = editingElement
-    } else {
-      newElements.push(editingElement)
-    }
-
-    setCurrentTemplate({
-      ...currentTemplate,
-      json_layout: {
-        ...currentTemplate.json_layout,
-        elements: newElements
-      }
-    })
-
-    setElementDialogOpen(false)
-    setEditingElement(null)
-  }
-
-  const handleDeleteElement = (elementId: string) => {
-    const newElements = currentTemplate.json_layout.elements.filter(e => e.id !== elementId)
-    setCurrentTemplate({
-      ...currentTemplate,
-      json_layout: {
-        ...currentTemplate.json_layout,
-        elements: newElements
-      }
-    })
-  }
-
-  const handleMoveElement = (elementId: string, direction: 'up' | 'down') => {
-    const elements = [...currentTemplate.json_layout.elements]
-    const currentIndex = elements.findIndex(e => e.id === elementId)
-    
-    if (currentIndex === -1) return
-    
-    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
-    
-    // Check bounds
-    if (newIndex < 0 || newIndex >= elements.length) return
-    
-    // Swap elements
-    [elements[currentIndex], elements[newIndex]] = [elements[newIndex], elements[currentIndex]]
-    
-    setCurrentTemplate({
-      ...currentTemplate,
-      json_layout: {
-        ...currentTemplate.json_layout,
-        elements: elements
-      }
-    })
-  }
-
-  const handlePreview = async () => {
-    if (!currentTemplate.id) {
-      setError('Please save the template before previewing')
-      return
-    }
 
     try {
-      const response = await api.get(`/clocks/${currentTemplate.id}/preview`)
-      setPreviewData(response.data)
-      setPreviewOpen(true)
+      // For now, save as a special template type
+      // Backend will need to support daily templates
+      const payload = {
+        name: template.name,
+        description: template.description,
+        template_type: 'daily',
+        json_layout: {
+          hourly_templates: template.hourlyTemplates,
+        },
+      }
+
+      if (template.id) {
+        await api.put(`/clocks/${template.id}`, payload)
+        setSuccess('Daily template updated successfully')
+      } else {
+        await api.post('/clocks/', payload)
+        setSuccess('Daily template created successfully')
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['clock-templates'] })
+      setDailyBuilderOpen(false)
+      setEditingDailyTemplate(null)
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to generate preview')
+      const message = err?.response?.data?.detail || err?.message || 'Failed to save template'
+      setError(message)
+      throw new Error(message)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleExport = async () => {
-    if (!currentTemplate.id) {
-      setError('Please save the template before exporting')
-      return
-    }
+  const handleDeleteTemplate = async (id?: string, type: 'hourly' | 'daily') => {
+    if (!confirm('Are you sure you want to delete this template?')) return
 
     try {
-      await api.post(`/clocks/${currentTemplate.id}/export`)
-      setSuccess('Template exported to LibreTime successfully')
+      await api.delete(`/clocks/${id}`)
+      queryClient.invalidateQueries({ queryKey: ['clock-templates'] })
+      setSuccess(`${type === 'hourly' ? 'Hourly' : 'Daily'} template deleted successfully`)
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to export template')
+      setError(err?.response?.data?.detail || 'Failed to delete template')
     }
   }
 
-  const getTotalDuration = () => {
-    return currentTemplate.json_layout.elements.reduce((total, element) => {
-      return total + (element.duration * element.count)
-    }, 0)
+  const handleNewHourlyTemplate = () => {
+    setEditingHourlyTemplate(null)
+    setHourlyBuilderOpen(true)
   }
 
-  const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+  const handleEditHourlyTemplate = (template: HourlyTemplate) => {
+    setEditingHourlyTemplate(template)
+    setHourlyBuilderOpen(true)
+  }
+
+  const handleNewDailyTemplate = () => {
+    setEditingDailyTemplate(null)
+    setDailyBuilderOpen(true)
+  }
+
+  const handleEditDailyTemplate = (template: DailyTemplate) => {
+    setEditingDailyTemplate(template)
+    setDailyBuilderOpen(true)
+  }
+
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue)
   }
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
+      <Typography variant="h4" component="h1" sx={{ mb: 3, fontWeight: 500 }}>
         Clock Template Builder
       </Typography>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
           {error}
         </Alert>
       )}
 
       {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>
           {success}
         </Alert>
       )}
 
-      <Grid container spacing={3}>
-        {/* Template List */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Saved Templates
-              </Typography>
-              <List>
-                {templates.map((template) => (
-                  <ListItem
-                    key={template.id}
-                    button
-                    onClick={() => handleLoadTemplate(template)}
-                    selected={currentTemplate.id === template.id}
-                  >
-                    <ListItemText
-                      primary={template.name}
-                      secondary={`${template.json_layout.elements.length} elements`}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </CardContent>
-          </Card>
-        </Grid>
+      <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
+        <Tab label="Hourly Templates" />
+        <Tab label="Daily Templates" />
+        <Tab label="All Templates" />
+      </Tabs>
 
-        {/* Template Editor */}
-        <Grid item xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Template Editor
-              </Typography>
+      {activeTab === 0 && (
+        <Box>
+          <Box sx={{ mb: 2 }}>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleNewHourlyTemplate}
+            >
+              New Hourly Template
+            </Button>
+          </Box>
 
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Template Name"
-                    value={currentTemplate.name}
-                    onChange={(e) => setCurrentTemplate({
-                      ...currentTemplate,
-                      name: e.target.value
-                    })}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Hour (HH:MM)"
-                    value={currentTemplate.json_layout.hour}
-                    onChange={(e) => setCurrentTemplate({
-                      ...currentTemplate,
-                      json_layout: {
-                        ...currentTemplate.json_layout,
-                        hour: e.target.value
-                      }
-                    })}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Description"
-                    multiline
-                    rows={2}
-                    value={currentTemplate.description || ''}
-                    onChange={(e) => setCurrentTemplate({
-                      ...currentTemplate,
-                      description: e.target.value
-                    })}
-                  />
-                </Grid>
-              </Grid>
-
-              <Divider sx={{ my: 2 }} />
-
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">
-                  Clock Elements ({currentTemplate.json_layout.elements.length})
+          {isLoading ? (
+            <Box sx={{ textAlign: 'center', py: 6 }}>
+              <CircularProgress />
+            </Box>
+          ) : hourlyTemplates.length === 0 ? (
+            <Card>
+              <CardContent sx={{ py: 6, textAlign: 'center' }}>
+                <Typography color="text.secondary">
+                  No hourly templates yet. Create one to get started.
                 </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={handleAddElement}
-                >
-                  Add Element
-                </Button>
-              </Box>
-
-              <List>
-                {currentTemplate.json_layout.elements.map((element, index) => {
-                  const typeInfo = getTrackType(element.type)
-                  const canMoveUp = index > 0
-                  const canMoveDown = index < currentTemplate.json_layout.elements.length - 1
-                  return (
-                    <ListItem 
-                      key={element.id}
-                      sx={{
-                        backgroundColor: typeInfo?.backgroundColor || 'transparent',
-                        borderRadius: 1,
-                        mb: 1,
-                        '&:hover': {
-                          backgroundColor: typeInfo ? `${typeInfo.backgroundColor}dd` : undefined,
-                        }
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
-                        <Box
-                          sx={{
-                            width: 4,
-                            height: 40,
-                            backgroundColor: typeInfo?.color || '#757575',
-                            borderRadius: 1,
-                          }}
-                        />
-                      </Box>
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Chip
-                              label={element.type}
-                              sx={{
-                                backgroundColor: typeInfo?.color || '#757575',
-                                color: '#fff',
-                                fontWeight: 'bold',
-                              }}
-                              size="small"
-                            />
-                            <Typography variant="body1">
-                              {element.title || `${element.type} ${index + 1}`}
-                            </Typography>
-                            <Typography variant="body2" color="textSecondary">
-                              ({element.count}x {formatDuration(element.duration)})
-                            </Typography>
-                          </Box>
-                        }
-                        secondary={element.fallback ? `Fallback: ${element.fallback}` : undefined}
-                      />
-                      <ListItemSecondaryAction>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleMoveElement(element.id, 'up')}
-                            disabled={!canMoveUp}
-                            title="Move up"
-                            sx={{ 
-                              opacity: canMoveUp ? 1 : 0.3
-                            }}
-                          >
-                            <ArrowUpIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleMoveElement(element.id, 'down')}
-                            disabled={!canMoveDown}
-                            title="Move down"
-                            sx={{ 
-                              opacity: canMoveDown ? 1 : 0.3
-                            }}
-                          >
-                            <ArrowDownIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton onClick={() => handleEditElement(element)} title="Edit">
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton onClick={() => handleDeleteElement(element.id)} title="Delete">
-                            <DeleteIcon />
-                          </IconButton>
+              </CardContent>
+            </Card>
+          ) : (
+            <Grid container spacing={2}>
+              {hourlyTemplates.map((template) => (
+                <Grid item xs={12} sm={6} md={4} key={template.id}>
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 1.5 }}>
+                        <Box>
+                          <Typography variant="h6" sx={{ mb: 0.5 }}>
+                            {template.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {template.hour} • {template.elements.length} elements
+                          </Typography>
                         </Box>
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                  )
-                })}
-              </List>
-
-              {currentTemplate.json_layout.elements.length === 0 && (
-                <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', py: 4 }}>
-                  No elements added yet. Click "Add Element" to get started.
-                </Typography>
-              )}
-
-              <Divider sx={{ my: 2 }} />
-
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="body1">
-                  Total Duration: {formatDuration(getTotalDuration())}
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<PreviewIcon />}
-                    onClick={handlePreview}
-                    disabled={!currentTemplate.id}
-                  >
-                    Preview
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<PublishIcon />}
-                    onClick={handleExport}
-                    disabled={!currentTemplate.id}
-                  >
-                    Export to LibreTime
-                  </Button>
-                  <Button
-                    variant="contained"
-                    startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
-                    onClick={handleSaveTemplate}
-                    disabled={saving}
-                  >
-                    {saving ? 'Saving...' : 'Save Template'}
-                  </Button>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Element Editor Dialog */}
-      <Dialog open={elementDialogOpen} onClose={() => setElementDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingElement?.id ? 'Edit Element' : 'Add Element'}
-        </DialogTitle>
-        <DialogContent>
-          {editingElement && (
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel>Element Type</InputLabel>
-                  <Select
-                    value={editingElement.type}
-                    onChange={(e) => setEditingElement({
-                      ...editingElement,
-                      type: e.target.value
-                    })}
-                  >
-                    {elementTypes.map((type) => (
-                      <MenuItem key={type.value} value={type.value}>
-                        {type.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Title"
-                  value={editingElement.title}
-                  onChange={(e) => setEditingElement({
-                    ...editingElement,
-                    title: e.target.value
-                  })}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Count"
-                  type="number"
-                  value={editingElement.count}
-                  onChange={(e) => setEditingElement({
-                    ...editingElement,
-                    count: parseInt(e.target.value) || 1
-                  })}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Duration (seconds)"
-                  type="number"
-                  value={editingElement.duration}
-                  onChange={(e) => setEditingElement({
-                    ...editingElement,
-                    duration: parseInt(e.target.value) || 30
-                  })}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Fallback"
-                  value={editingElement.fallback || ''}
-                  onChange={(e) => setEditingElement({
-                    ...editingElement,
-                    fallback: e.target.value
-                  })}
-                />
-              </Grid>
+                      </Box>
+                      {template.description && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          {template.description}
+                        </Typography>
+                      )}
+                      <Stack direction="row" spacing={1}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<Edit />}
+                          onClick={() => handleEditHourlyTemplate(template)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size="small"
+                          startIcon={<Delete />}
+                          onClick={() => template.id && handleDeleteTemplate(template.id, 'hourly')}
+                        >
+                          Delete
+                        </Button>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
             </Grid>
           )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setElementDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSaveElement} variant="contained">Save</Button>
-        </DialogActions>
-      </Dialog>
+        </Box>
+      )}
 
-      {/* Preview Dialog */}
-      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Clock Template Preview</DialogTitle>
-        <DialogContent>
-          {previewData && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                {previewData.template_name} - {previewData.hour}
-              </Typography>
-              <Typography variant="body2" color="textSecondary" gutterBottom>
-                Total Duration: {formatDuration(previewData.total_duration)}
-              </Typography>
-              <List>
-                {previewData.timeline.map((item: any, index: number) => (
-                  <ListItem key={index}>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="body2" sx={{ minWidth: 60 }}>
-                            {item.time}
+      {activeTab === 1 && (
+        <Box>
+          <Box sx={{ mb: 2 }}>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleNewDailyTemplate}
+            >
+              New Daily Template
+            </Button>
+          </Box>
+
+          {dailyTemplates.length === 0 ? (
+            <Card>
+              <CardContent sx={{ py: 6, textAlign: 'center' }}>
+                <Typography color="text.secondary">
+                  No daily templates yet. Create one by selecting hourly templates for each hour of the day.
+                </Typography>
+              </CardContent>
+            </Card>
+          ) : (
+            <Grid container spacing={2}>
+              {dailyTemplates.map((template) => (
+                <Grid item xs={12} sm={6} md={4} key={template.id}>
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 1.5 }}>
+                        <Box>
+                          <Typography variant="h6" sx={{ mb: 0.5 }}>
+                            {template.name}
                           </Typography>
-                          <Chip
-                            label={item.element.type}
-                            sx={{
-                              backgroundColor: getTrackType(item.element.type)?.color || '#757575',
-                              color: '#fff',
-                              fontWeight: 'bold',
-                            }}
-                            size="small"
-                          />
-                          <Typography variant="body1">
-                            {item.element.title}
+                          <Typography variant="body2" color="text.secondary">
+                            {template.hourlyTemplates.length} hours assigned
                           </Typography>
                         </Box>
-                      }
-                      secondary={`${item.element.count}x ${formatDuration(item.element.duration)}`}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
+                      </Box>
+                      {template.description && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          {template.description}
+                        </Typography>
+                      )}
+                      <Stack direction="row" spacing={1}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<Edit />}
+                          onClick={() => handleEditDailyTemplate(template)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size="small"
+                          startIcon={<Delete />}
+                          onClick={() => template.id && handleDeleteTemplate(template.id, 'daily')}
+                        >
+                          Delete
+                        </Button>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
           )}
+        </Box>
+      )}
+
+      {activeTab === 2 && (
+        <Grid container spacing={2}>
+          {[...hourlyTemplates, ...dailyTemplates].map((template) => (
+            <Grid item xs={12} sm={6} md={4} key={template.id}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" sx={{ mb: 1 }}>
+                    {template.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {('hour' in template ? 'Hourly' : 'Daily')} Template
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+
+      {/* Hourly Template Builder Dialog */}
+      <Dialog
+        open={hourlyBuilderOpen}
+        onClose={() => {
+          setHourlyBuilderOpen(false)
+          setEditingHourlyTemplate(null)
+        }}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          {editingHourlyTemplate ? 'Edit Hourly Template' : 'New Hourly Template'}
+        </DialogTitle>
+        <DialogContent>
+          <HourlyTemplateBuilder
+            template={editingHourlyTemplate || undefined}
+            onSave={saveHourlyTemplate}
+            onCancel={() => {
+              setHourlyBuilderOpen(false)
+              setEditingHourlyTemplate(null)
+            }}
+          />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPreviewOpen(false)}>Close</Button>
-        </DialogActions>
+      </Dialog>
+
+      {/* Daily Template Builder Dialog */}
+      <Dialog
+        open={dailyBuilderOpen}
+        onClose={() => {
+          setDailyBuilderOpen(false)
+          setEditingDailyTemplate(null)
+        }}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          {editingDailyTemplate ? 'Edit Daily Template' : 'New Daily Template'}
+        </DialogTitle>
+        <DialogContent>
+          <DailyTemplateBuilder
+            hourlyTemplates={hourlyTemplates}
+            template={editingDailyTemplate || undefined}
+            onSave={saveDailyTemplate}
+            onCancel={() => {
+              setDailyBuilderOpen(false)
+              setEditingDailyTemplate(null)
+            }}
+          />
+        </DialogContent>
       </Dialog>
     </Box>
   )

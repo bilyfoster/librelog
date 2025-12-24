@@ -3,6 +3,7 @@ Sales Goals router
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from backend.database import get_db
@@ -18,7 +19,7 @@ router = APIRouter()
 
 
 class SalesGoalCreate(BaseModel):
-    sales_rep_id: int
+    sales_rep_id: UUID
     period: str
     target_date: date
     goal_amount: Decimal
@@ -30,8 +31,8 @@ class SalesGoalUpdate(BaseModel):
 
 
 class SalesGoalResponse(BaseModel):
-    id: int
-    sales_rep_id: int
+    id: UUID
+    sales_rep_id: UUID
     period: str
     target_date: date
     goal_amount: Decimal
@@ -47,7 +48,7 @@ class SalesGoalResponse(BaseModel):
 async def list_sales_goals(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    sales_rep_id: Optional[int] = Query(None),
+    sales_rep_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -85,7 +86,7 @@ async def create_sales_goal(
 
 @router.get("/progress")
 async def get_sales_goals_progress(
-    sales_rep_id: Optional[int] = Query(None),
+    sales_rep_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

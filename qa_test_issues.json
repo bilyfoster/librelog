@@ -1,0 +1,62 @@
+[
+  {
+    "phase": "Phase 3",
+    "step": "Create Client",
+    "description": "Agency relationship not saved",
+    "expected": "Agency ID 1",
+    "actual": "Got None",
+    "error": null,
+    "details": {},
+    "timestamp": "2025-11-23T06:13:45.509862"
+  },
+  {
+    "phase": "Phase 4",
+    "step": "Create Order",
+    "description": "Total value incorrect",
+    "expected": "100.0",
+    "actual": "100.00",
+    "error": null,
+    "details": {},
+    "timestamp": "2025-11-23T06:13:45.626208"
+  },
+  {
+    "phase": "Phase 6",
+    "step": "Approve Order",
+    "description": "Failed to approve order",
+    "expected": "Status 200 with APPROVED status",
+    "actual": "Status 500: {\"detail\":\"Internal server error\"}",
+    "error": null,
+    "details": {},
+    "timestamp": "2025-11-23T06:13:45.669874"
+  },
+  {
+    "phase": "Phase 7",
+    "step": "Schedule Spots",
+    "description": "Exception scheduling spots",
+    "expected": "Spots scheduled successfully",
+    "actual": "Exception: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))",
+    "error": null,
+    "details": {},
+    "timestamp": "2025-11-23T06:13:45.670905"
+  },
+  {
+    "phase": "Phase 8",
+    "step": "Verify Workflow",
+    "description": "Client not linked to agency",
+    "expected": "Agency ID 1",
+    "actual": "None",
+    "error": null,
+    "details": {},
+    "timestamp": "2025-11-23T06:13:45.690467"
+  },
+  {
+    "phase": "Phase 8",
+    "step": "Verify Workflow",
+    "description": "Failed to get spots",
+    "expected": "List of spots",
+    "actual": "Status 500",
+    "error": null,
+    "details": {},
+    "timestamp": "2025-11-23T06:13:45.734696"
+  }
+]

@@ -3,6 +3,7 @@ Voice Talent router for managing voice talent requests and takes
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db
 from backend.models.voice_talent_request import VoiceTalentRequest, TalentRequestStatus, TalentType
@@ -19,19 +20,19 @@ router = APIRouter()
 
 
 class VoiceTalentRequestCreate(BaseModel):
-    production_order_id: int
+    production_order_id: UUID
     script: str
     talent_type: str
-    talent_user_id: Optional[int] = None
+    talent_user_id: Optional[UUID] = None
     pronunciation_guides: Optional[str] = None
     talent_instructions: Optional[str] = None
     deadline: Optional[datetime] = None
 
 
 class VoiceTalentRequestResponse(BaseModel):
-    id: int
-    production_order_id: int
-    talent_user_id: Optional[int]
+    id: UUID
+    production_order_id: UUID
+    talent_user_id: Optional[UUID]
     talent_type: str
     script: str
     pronunciation_guides: Optional[str]
@@ -66,6 +67,30 @@ def voice_talent_request_to_response(vtr: VoiceTalentRequest) -> dict:
         "created_at": vtr.created_at.isoformat() if vtr.created_at else None,
         "updated_at": vtr.updated_at.isoformat() if vtr.updated_at else None,
     }
+
+
+@router.get("/", response_model=List[VoiceTalentRequestResponse])
+async def list_voice_talent_requests_root(
+    status: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """List voice talent requests assigned to current user (root endpoint)"""
+    talent_service = VoiceTalentService(db)
+    
+    status_enum = None
+    if status:
+        try:
+            status_enum = TalentRequestStatus(status)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid status")
+    
+    requests = await talent_service.get_requests_for_talent(
+        talent_user_id=current_user.id,
+        status=status_enum
+    )
+    
+    return [voice_talent_request_to_response(req) for req in requests]
 
 
 @router.get("/requests", response_model=List[VoiceTalentRequestResponse])
@@ -124,7 +149,7 @@ async def create_voice_talent_request(
 
 @router.post("/requests/{request_id}/upload-take")
 async def upload_take(
-    request_id: int,
+    request_id: UUID,
     file: UploadFile = File(...),
     take_number: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
@@ -163,7 +188,7 @@ async def upload_take(
 
 @router.get("/requests/{request_id}/takes")
 async def list_takes(
-    request_id: int,
+    request_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -191,7 +216,7 @@ async def list_takes(
 
 @router.post("/requests/{request_id}/approve-take")
 async def approve_take(
-    request_id: int,
+    request_id: UUID,
     take_number: int = Query(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -208,8 +233,8 @@ async def approve_take(
 
 @router.post("/requests/{request_id}/assign")
 async def assign_talent(
-    request_id: int,
-    talent_user_id: int = Query(...),
+    request_id: UUID,
+    talent_user_id: UUID = Query(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

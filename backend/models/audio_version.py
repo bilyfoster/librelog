@@ -2,7 +2,8 @@
 AudioVersion model for version history and rollback capability
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -12,8 +13,8 @@ class AudioVersion(Base):
     """AudioVersion model for tracking version history of audio cuts"""
     __tablename__ = "audio_versions"
 
-    id = Column(Integer, primary_key=True, index=True)
-    cut_id = Column(Integer, ForeignKey("audio_cuts.id"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
+    cut_id = Column(UUID(as_uuid=True), ForeignKey("audio_cuts.id"), nullable=False, index=True)
     
     # Version information
     version_number = Column(Integer, nullable=False)
@@ -25,7 +26,7 @@ class AudioVersion(Base):
     
     # Version metadata
     version_notes = Column(Text, nullable=True)  # Notes about this version
-    changed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    changed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

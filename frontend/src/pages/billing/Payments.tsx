@@ -34,8 +34,8 @@ import {
 import PaymentFormDialog from '../../components/billing/PaymentFormDialog'
 
 interface Payment {
-  id: number
-  invoice_id: number
+  id?: string
+  invoice_id?: string
   amount: number | string
   payment_date: string
   payment_method?: string

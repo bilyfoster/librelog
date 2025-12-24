@@ -3,6 +3,7 @@ Clock templates router
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from backend.database import get_db
@@ -42,7 +43,6 @@ class ClockTemplateUpdate(BaseModel):
 
 
 @router.get("/")
-@router.get("")  # Handle both with and without trailing slash
 async def list_clock_templates(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
@@ -102,7 +102,7 @@ async def create_clock_template(
 
 @router.get("/{template_id}")
 async def get_clock_template(
-    template_id: int,
+    template_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -125,7 +125,7 @@ async def get_clock_template(
 
 @router.put("/{template_id}")
 async def update_clock_template(
-    template_id: int,
+    template_id: UUID,
     template_data: ClockTemplateUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -159,7 +159,7 @@ async def update_clock_template(
 
 @router.delete("/{template_id}")
 async def delete_clock_template(
-    template_id: int,
+    template_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -175,7 +175,7 @@ async def delete_clock_template(
 
 @router.get("/{template_id}/preview")
 async def preview_clock_template(
-    template_id: int,
+    template_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -191,7 +191,7 @@ async def preview_clock_template(
 
 @router.post("/{template_id}/export")
 async def export_clock_template(
-    template_id: int,
+    template_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

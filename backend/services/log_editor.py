@@ -3,6 +3,7 @@ Log Editor service for manual log editing
 """
 
 from typing import Dict, Any, Optional
+from uuid import UUID
 from datetime import datetime, timezone, date
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -21,7 +22,7 @@ class LogEditor:
     def __init__(self, db: AsyncSession):
         self.db = db
     
-    async def add_spot_to_log(self, log_id: int, spot_data: Dict[str, Any]) -> bool:
+    async def add_spot_to_log(self, log_id: UUID, spot_data: Dict[str, Any]) -> bool:
         """Add a spot to a log manually"""
         result = await self.db.execute(select(DailyLog).where(DailyLog.id == log_id))
         log = result.scalar_one_or_none()
@@ -69,7 +70,7 @@ class LogEditor:
         
         return True
     
-    async def move_spot(self, log_id: int, spot_id: int, new_data: Dict[str, Any]) -> bool:
+    async def move_spot(self, log_id: UUID, spot_id: UUID, new_data: Dict[str, Any]) -> bool:
         """Move a spot within a log (drag-drop functionality)"""
         result = await self.db.execute(select(DailyLog).where(DailyLog.id == log_id))
         log = result.scalar_one_or_none()
@@ -108,7 +109,7 @@ class LogEditor:
         
         return True
     
-    async def remove_spot(self, log_id: int, spot_id: int) -> bool:
+    async def remove_spot(self, log_id: UUID, spot_id: UUID) -> bool:
         """Remove a spot from a log"""
         result = await self.db.execute(select(DailyLog).where(DailyLog.id == log_id))
         log = result.scalar_one_or_none()
@@ -140,7 +141,7 @@ class LogEditor:
         
         return True
     
-    async def lock_log(self, log_id: int, user_id: int) -> bool:
+    async def lock_log(self, log_id: UUID, user_id: UUID) -> bool:
         """Lock a log to prevent further edits"""
         result = await self.db.execute(select(DailyLog).where(DailyLog.id == log_id))
         log = result.scalar_one_or_none()
@@ -159,7 +160,7 @@ class LogEditor:
         
         return True
     
-    async def validate_log(self, log_id: int) -> Dict[str, Any]:
+    async def validate_log(self, log_id: UUID) -> Dict[str, Any]:
         """Validate a log before export"""
         result = await self.db.execute(select(DailyLog).where(DailyLog.id == log_id))
         log = result.scalar_one_or_none()
@@ -190,7 +191,7 @@ class LogEditor:
     
     async def update_element(
         self,
-        log_id: int,
+        log_id: UUID,
         hour: str,
         element_index: int,
         updates: Dict[str, Any]
@@ -237,10 +238,10 @@ class LogEditor:
     
     async def add_element(
         self,
-        log_id: int,
+        log_id: UUID,
         hour: str,
         element: Dict[str, Any],
-        position: Optional[int] = None
+        position: Optional[UUID] = None
     ) -> bool:
         """Add an element to a log"""
         result = await self.db.execute(select(DailyLog).where(DailyLog.id == log_id))
@@ -302,7 +303,7 @@ class LogEditor:
     
     async def remove_element(
         self,
-        log_id: int,
+        log_id: UUID,
         hour: str,
         element_index: int
     ) -> bool:
@@ -354,7 +355,7 @@ class LogEditor:
     
     async def reorder_elements(
         self,
-        log_id: int,
+        log_id: UUID,
         hour: str,
         from_index: int,
         to_index: int
@@ -401,9 +402,9 @@ class LogEditor:
     
     async def sync_voice_track_to_log_element(
         self,
-        log_id: int,
-        voice_track_id: int,
-        slot_id: int
+        log_id: UUID,
+        voice_track_id: UUID,
+        slot_id: UUID
     ) -> bool:
         """
         Sync a recorded voice track back to the corresponding log element
@@ -492,7 +493,7 @@ class LogEditor:
     
     async def update_vot_elements_with_fallback(
         self,
-        log_id: int
+        log_id: UUID
     ) -> bool:
         """
         Update all VOT elements in a log with fallback lookup
@@ -581,7 +582,7 @@ class LogEditor:
     
     async def add_missing_vot_placeholders(
         self,
-        log_id: int
+        log_id: UUID
     ) -> bool:
         """
         Add VOT placeholder elements to a log if they're missing

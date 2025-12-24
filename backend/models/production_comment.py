@@ -2,8 +2,8 @@
 ProductionComment model for comments and notes on production orders
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, String, DateTime, Text, ForeignKey, Boolean, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -13,15 +13,15 @@ class ProductionComment(Base):
     """ProductionComment model for threaded comments on production orders"""
     __tablename__ = "production_comments"
 
-    id = Column(Integer, primary_key=True, index=True)
-    production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
+    production_order_id = Column(UUID(as_uuid=True), ForeignKey("production_orders.id"), nullable=False, index=True)
     
     # Comment content
     comment_text = Column(Text, nullable=False)
-    author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    author_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     
     # Threading support
-    parent_comment_id = Column(Integer, ForeignKey("production_comments.id"), nullable=True)
+    parent_comment_id = Column(UUID(as_uuid=True), ForeignKey("production_comments.id"), nullable=True)
     
     # Attachments (stored as JSONB array)
     attachments = Column(JSONB, nullable=True)  # [{type: "file", path: "...", name: "..."}, ...]

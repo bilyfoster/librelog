@@ -3,6 +3,7 @@ VoiceTalent Service for managing voice talent requests and takes
 """
 
 from typing import List, Optional, Dict, Any
+from uuid import UUID
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
@@ -22,10 +23,10 @@ class VoiceTalentService:
     
     async def create_request(
         self,
-        production_order_id: int,
+        production_order_id: UUID,
         script: str,
         talent_type: TalentType,
-        talent_user_id: Optional[int] = None,
+        talent_user_id: Optional[UUID] = None,
         pronunciation_guides: Optional[str] = None,
         talent_instructions: Optional[str] = None,
         deadline: Optional[datetime] = None
@@ -69,8 +70,8 @@ class VoiceTalentService:
     
     async def assign_talent(
         self,
-        request_id: int,
-        talent_user_id: int
+        request_id: UUID,
+        talent_user_id: UUID
     ) -> VoiceTalentRequest:
         """Assign talent to a request"""
         result = await self.db.execute(
@@ -98,10 +99,10 @@ class VoiceTalentService:
     
     async def upload_take(
         self,
-        request_id: int,
+        request_id: UUID,
         file_path: str,
         file_url: Optional[str] = None,
-        take_number: Optional[int] = None
+        take_number: Optional[UUID] = None
     ) -> VoiceTalentRequest:
         """Upload a take for a voice talent request"""
         result = await self.db.execute(
@@ -145,7 +146,7 @@ class VoiceTalentService:
     
     async def approve_take(
         self,
-        request_id: int,
+        request_id: UUID,
         take_number: int
     ) -> VoiceTalentRequest:
         """Approve a specific take"""
@@ -183,7 +184,7 @@ class VoiceTalentService:
     
     async def get_requests_for_talent(
         self,
-        talent_user_id: int,
+        talent_user_id: UUID,
         status: Optional[TalentRequestStatus] = None
     ) -> List[VoiceTalentRequest]:
         """Get all requests assigned to a talent"""
@@ -201,7 +202,7 @@ class VoiceTalentService:
     
     async def get_by_production_order(
         self,
-        production_order_id: int
+        production_order_id: UUID
     ) -> Optional[VoiceTalentRequest]:
         """Get voice talent request for a production order"""
         result = await self.db.execute(

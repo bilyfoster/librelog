@@ -3,11 +3,15 @@ Sales Reps router for traffic management
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from backend.database import get_db
 from backend.models.sales_rep import SalesRep
+from backend.models.sales_team import SalesTeam
+from backend.models.sales_office import SalesOffice
+from backend.models.sales_region import SalesRegion
 from backend.models.user import User
 from backend.routers.auth import get_current_user
 from pydantic import BaseModel
@@ -18,7 +22,7 @@ router = APIRouter()
 
 
 class SalesRepCreate(BaseModel):
-    user_id: int
+    user_id: UUID
     employee_id: Optional[str] = None
     commission_rate: Optional[Decimal] = None
     sales_goal: Optional[Decimal] = None
@@ -32,8 +36,8 @@ class SalesRepUpdate(BaseModel):
 
 
 class SalesRepResponse(BaseModel):
-    id: int
-    user_id: int
+    id: UUID
+    user_id: UUID
     employee_id: Optional[str]
     commission_rate: Optional[Decimal]
     sales_goal: Optional[Decimal]
@@ -166,7 +170,7 @@ async def create_sales_rep(
 
 @router.get("/{sales_rep_id}", response_model=SalesRepResponse)
 async def get_sales_rep(
-    sales_rep_id: int,
+    sales_rep_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -188,7 +192,7 @@ async def get_sales_rep(
 
 @router.put("/{sales_rep_id}", response_model=SalesRepResponse)
 async def update_sales_rep(
-    sales_rep_id: int,
+    sales_rep_id: UUID,
     sales_rep_update: SalesRepUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -231,7 +235,7 @@ async def update_sales_rep(
 
 @router.delete("/{sales_rep_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_sales_rep(
-    sales_rep_id: int,
+    sales_rep_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -246,4 +250,64 @@ async def delete_sales_rep(
     await db.commit()
     
     return None
+
+
+@router.get("/{sales_rep_id}/teams")
+async def get_sales_rep_teams(
+    sales_rep_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get teams for a sales rep"""
+    result = await db.execute(
+        select(SalesRep)
+        .where(SalesRep.id == sales_rep_id)
+        .options(selectinload(SalesRep.teams))
+    )
+    sales_rep = result.scalar_one_or_none()
+    
+    if not sales_rep:
+        raise HTTPException(status_code=404, detail="Sales rep not found")
+    
+    return [{"id": team.id, "name": team.name} for team in sales_rep.teams]
+
+
+@router.get("/{sales_rep_id}/offices")
+async def get_sales_rep_offices(
+    sales_rep_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get offices for a sales rep"""
+    result = await db.execute(
+        select(SalesRep)
+        .where(SalesRep.id == sales_rep_id)
+        .options(selectinload(SalesRep.offices))
+    )
+    sales_rep = result.scalar_one_or_none()
+    
+    if not sales_rep:
+        raise HTTPException(status_code=404, detail="Sales rep not found")
+    
+    return [{"id": office.id, "name": office.name} for office in sales_rep.offices]
+
+
+@router.get("/{sales_rep_id}/regions")
+async def get_sales_rep_regions(
+    sales_rep_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get regions for a sales rep"""
+    result = await db.execute(
+        select(SalesRep)
+        .where(SalesRep.id == sales_rep_id)
+        .options(selectinload(SalesRep.regions))
+    )
+    sales_rep = result.scalar_one_or_none()
+    
+    if not sales_rep:
+        raise HTTPException(status_code=404, detail="Sales rep not found")
+    
+    return [{"id": region.id, "name": region.name} for region in sales_rep.regions]
 

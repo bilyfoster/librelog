@@ -3,6 +3,7 @@ Production Assignments router for managing production assignments
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from backend.database import get_db
@@ -17,8 +18,8 @@ router = APIRouter()
 
 
 class ProductionAssignmentCreate(BaseModel):
-    production_order_id: int
-    user_id: int
+    production_order_id: UUID
+    user_id: UUID
     assignment_type: str
     notes: Optional[str] = None
 
@@ -29,9 +30,9 @@ class ProductionAssignmentUpdate(BaseModel):
 
 
 class ProductionAssignmentResponse(BaseModel):
-    id: int
-    production_order_id: int
-    user_id: int
+    id: UUID
+    production_order_id: UUID
+    user_id: UUID
     assignment_type: str
     status: str
     notes: Optional[str]
@@ -64,8 +65,8 @@ def assignment_to_response(assignment: ProductionAssignment) -> dict:
 
 @router.get("/", response_model=List[ProductionAssignmentResponse])
 async def list_assignments(
-    production_order_id: Optional[int] = Query(None),
-    user_id: Optional[int] = Query(None),
+    production_order_id: Optional[UUID] = Query(None),
+    user_id: Optional[UUID] = Query(None),
     assignment_type: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
@@ -149,7 +150,7 @@ async def create_assignment(
 
 @router.put("/{assignment_id}", response_model=ProductionAssignmentResponse)
 async def update_assignment(
-    assignment_id: int,
+    assignment_id: UUID,
     data: ProductionAssignmentUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -191,7 +192,7 @@ async def update_assignment(
 
 @router.get("/{assignment_id}", response_model=ProductionAssignmentResponse)
 async def get_assignment(
-    assignment_id: int,
+    assignment_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -213,7 +214,7 @@ async def get_assignment(
 
 @router.delete("/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_assignment(
-    assignment_id: int,
+    assignment_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

@@ -3,6 +3,7 @@ ProductionRouting Service for smart routing of production orders
 """
 
 from typing import List, Optional, Dict, Any
+from uuid import UUID
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
@@ -24,8 +25,8 @@ class ProductionRoutingService:
     
     async def find_available_producers(
         self,
-        station_id: Optional[int] = None,
-        exclude_user_ids: Optional[List[int]] = None
+        station_id: Optional[UUID] = None,
+        exclude_user_ids: Optional[List[UUID]] = None
     ) -> List[User]:
         """Find available producers based on station and workload"""
         query = select(User).where(User.role == Role.PRODUCER.value)
@@ -44,7 +45,7 @@ class ProductionRoutingService:
     async def find_available_voice_talent(
         self,
         talent_type: str,
-        exclude_user_ids: Optional[List[int]] = None
+        exclude_user_ids: Optional[List[UUID]] = None
     ) -> List[User]:
         """Find available voice talent based on type"""
         query = select(User).where(User.role == Role.VOICE_TALENT.value)
@@ -62,8 +63,8 @@ class ProductionRoutingService:
     
     async def assign_producer(
         self,
-        production_order_id: int,
-        producer_id: int,
+        production_order_id: UUID,
+        producer_id: UUID,
         notes: Optional[str] = None
     ) -> ProductionAssignment:
         """Assign a producer to a production order"""
@@ -129,8 +130,8 @@ class ProductionRoutingService:
     
     async def assign_voice_talent(
         self,
-        production_order_id: int,
-        talent_id: int,
+        production_order_id: UUID,
+        talent_id: UUID,
         notes: Optional[str] = None
     ) -> ProductionAssignment:
         """Assign voice talent to a production order"""
@@ -176,8 +177,8 @@ class ProductionRoutingService:
     
     async def auto_route(
         self,
-        production_order_id: int,
-        station_id: Optional[int] = None
+        production_order_id: UUID,
+        station_id: Optional[UUID] = None
     ) -> Dict[str, Any]:
         """Auto-route production order to appropriate users"""
         result = await self.db.execute(

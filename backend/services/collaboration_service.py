@@ -3,6 +3,7 @@ Collaboration service for real-time multi-user editing
 """
 
 from typing import Dict, Set, Optional
+from uuid import UUID
 from datetime import datetime
 import json
 import structlog
@@ -21,7 +22,7 @@ class ConnectionManager:
         # Map of WebSocket -> (user_id, username, log_id)
         self.connection_info: Dict[WebSocket, tuple] = {}
 
-    async def connect(self, websocket: WebSocket, log_id: int, user_id: int, username: str):
+    async def connect(self, websocket: WebSocket, log_id: UUID, user_id: UUID, username: str):
         """Connect a user to a log editing session"""
         await websocket.accept()
         
@@ -97,7 +98,7 @@ class ConnectionManager:
 
     async def broadcast_to_log(
         self,
-        log_id: int,
+        log_id: UUID,
         message: dict,
         exclude: Optional[WebSocket] = None
     ):
@@ -127,7 +128,7 @@ class ConnectionManager:
 
     def broadcast_to_log_sync(
         self,
-        log_id: int,
+        log_id: UUID,
         message: dict,
         exclude: Optional[WebSocket] = None
     ):
@@ -144,7 +145,7 @@ class ConnectionManager:
             logger.warning("personal_message_failed", error=str(e))
             self.disconnect(websocket)
 
-    def get_log_users(self, log_id: int) -> list:
+    def get_log_users(self, log_id: UUID) -> list:
         """Get list of users currently editing a log"""
         return [
             {"user_id": uid, "username": uname}
@@ -162,8 +163,8 @@ class CollaborationService:
 
     @staticmethod
     async def handle_cursor_update(
-        log_id: int,
-        user_id: int,
+        log_id: UUID,
+        user_id: UUID,
         username: str,
         cursor_data: dict
     ):
@@ -181,8 +182,8 @@ class CollaborationService:
 
     @staticmethod
     async def handle_spot_update(
-        log_id: int,
-        user_id: int,
+        log_id: UUID,
+        user_id: UUID,
         username: str,
         spot_data: dict
     ):
@@ -200,8 +201,8 @@ class CollaborationService:
 
     @staticmethod
     async def handle_log_lock(
-        log_id: int,
-        user_id: int,
+        log_id: UUID,
+        user_id: UUID,
         username: str,
         locked: bool
     ):
@@ -219,8 +220,8 @@ class CollaborationService:
 
     @staticmethod
     async def handle_typing(
-        log_id: int,
-        user_id: int,
+        log_id: UUID,
+        user_id: UUID,
         username: str,
         field: str
     ):

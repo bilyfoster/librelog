@@ -4,6 +4,7 @@ ProductionOrder Service for production workflow management
 
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import selectinload
@@ -25,38 +26,35 @@ class ProductionOrderService:
         self.db = db
     
     async def generate_po_number(self) -> str:
-        """Generate the next auto-incrementing PO number in format PRO-YYYYMMDD-XXXX"""
-        current_date = datetime.now()
-        date_prefix = current_date.strftime("%Y%m%d")
-        prefix = f"PRO-{date_prefix}-"
+        """Generate a non-sequential, non-guessable PO number using UUID"""
+        import uuid
         
-        # Find the highest PO number for the current date
+        # Generate a UUID and use it for the PO number
+        # Format: PRO-{UUID} (e.g., PRO-550e8400-e29b-41d4-a716-446655440000)
+        # This makes it impossible to guess or walk through production orders
+        po_uuid = str(uuid.uuid4())
+        po_number = f"PRO-{po_uuid}"
+        
+        # UUIDs are globally unique, but check for collision anyway (extremely rare)
         result = await self.db.execute(
             select(ProductionOrder.po_number)
-            .where(ProductionOrder.po_number.like(f"{prefix}%"))
-            .order_by(ProductionOrder.po_number.desc())
+            .where(ProductionOrder.po_number == po_number)
         )
         
-        highest_po = result.scalar_one_or_none()
+        existing = result.scalar_one_or_none()
+        if existing:
+            # If collision (virtually impossible with UUIDs), generate a new one
+            return await self.generate_po_number()
         
-        if highest_po:
-            # Extract the number part after the prefix
-            match = re.search(rf"{re.escape(prefix)}(\d+)", highest_po)
-            if match:
-                next_number = int(match.group(1)) + 1
-            else:
-                next_number = 1
-        else:
-            next_number = 1
-        
-        return f"{prefix}{next_number:04d}"
+        return po_number
     
     async def create_from_copy(
         self,
-        copy_id: int,
+        copy_id: UUID,
         client_name: Optional[str] = None,
         deadline: Optional[datetime] = None,
         instructions: Optional[str] = None,
+        spot_lengths: Optional[List[int]] = None,
         **kwargs
     ) -> ProductionOrder:
         """Create a production order from a copy item (auto-created when copy approved with needs_production=true)"""
@@ -81,10 +79,13 @@ class ProductionOrderService:
         # Generate PO number
         po_number = await self.generate_po_number()
         
-        # Extract spot lengths from order if available
-        spot_lengths = None
-        if order and order.spot_lengths:
+        # Extract spot lengths from parameter, order, or keep None
+        if spot_lengths is None and order and order.spot_lengths:
             spot_lengths = order.spot_lengths
+        
+        # Determine if this is a spec spot (no order)
+        is_spec = order is None
+        order_type = kwargs.get('order_type', ProductionOrderType.SPEC if is_spec else ProductionOrderType.NEW_SPOT)
         
         # Create production order
         production_order = ProductionOrder(
@@ -92,8 +93,8 @@ class ProductionOrderService:
             copy_id=copy_id,
             order_id=order.id if order else None,
             campaign_id=order.campaign_id if order else None,
-            advertiser_id=copy_item.advertiser_id,
-            client_name=client_name or (advertiser.name if advertiser else "Unknown"),
+            advertiser_id=copy_item.advertiser_id,  # Can be None for spec spots
+            client_name=client_name or (advertiser.name if advertiser else "Spec Spot"),
             campaign_title=order.campaign.name if order and order.campaign else None,
             start_date=order.start_date if order else None,
             end_date=order.end_date if order else None,
@@ -101,8 +102,8 @@ class ProductionOrderService:
             instructions=instructions or copy_item.copy_instructions,
             deadline=deadline,
             status=ProductionOrderStatus.PENDING,
-            order_type=ProductionOrderType.NEW_SPOT,
-            **kwargs
+            order_type=order_type,
+            **{k: v for k, v in kwargs.items() if k != 'order_type'}
         )
         
         self.db.add(production_order)
@@ -131,7 +132,91 @@ class ProductionOrderService:
         
         return production_order
     
-    async def get_by_id(self, po_id: int) -> Optional[ProductionOrder]:
+    async def create_spec_production_order(
+        self,
+        copy_id: UUID,
+        client_name: str,
+        spot_lengths: Optional[List[int]] = None,
+        deadline: Optional[datetime] = None,
+        instructions: Optional[str] = None,
+        talent_needs: Optional[Dict[str, Any]] = None,
+        audio_references: Optional[List[str]] = None,
+        stations: Optional[List[str]] = None,
+        **kwargs
+    ) -> ProductionOrder:
+        """
+        Create a spec production order (no order required).
+        Used for speculative spots created before a client commits to an order.
+        """
+        # Get copy item
+        result = await self.db.execute(
+            select(Copy)
+            .options(selectinload(Copy.advertiser))
+            .where(Copy.id == copy_id)
+        )
+        copy_item = result.scalar_one_or_none()
+        
+        if not copy_item:
+            raise ValueError("Copy not found")
+        
+        if copy_item.production_order_id:
+            raise ValueError("Production order already exists for this copy")
+        
+        # Generate PO number
+        po_number = await self.generate_po_number()
+        
+        # Create spec production order (no order_id, advertiser_id optional)
+        production_order = ProductionOrder(
+            po_number=po_number,
+            copy_id=copy_id,
+            order_id=None,  # No order for spec spots
+            campaign_id=None,
+            advertiser_id=copy_item.advertiser_id,  # Optional - can be None
+            client_name=client_name,
+            campaign_title=None,
+            start_date=None,
+            end_date=None,
+            spot_lengths=spot_lengths,
+            deliverables=kwargs.get('deliverables'),
+            copy_requirements=kwargs.get('copy_requirements'),
+            talent_needs=talent_needs,
+            audio_references=audio_references,
+            instructions=instructions or copy_item.copy_instructions,
+            deadline=deadline,
+            stations=stations,
+            version_count=kwargs.get('version_count', 1),
+            status=ProductionOrderStatus.PENDING,
+            order_type=ProductionOrderType.SPEC,
+            **{k: v for k, v in kwargs.items() if k not in ['deliverables', 'copy_requirements', 'version_count']}
+        )
+        
+        self.db.add(production_order)
+        await self.db.flush()  # Flush to get the ID
+        
+        # Update copy to link to production order
+        copy_item.production_order_id = production_order.id
+        copy_item.copy_status = CopyStatus.IN_PRODUCTION
+        
+        await self.db.commit()
+        await self.db.refresh(production_order)
+        
+        # Send notification
+        try:
+            notification_service = ProductionNotificationService(self.db)
+            await notification_service.notify_production_order_created(production_order.id)
+        except Exception as e:
+            logger.warning("Failed to send production order notification", error=str(e))
+        
+        logger.info(
+            "Spec production order created",
+            po_number=po_number,
+            copy_id=copy_id,
+            production_order_id=production_order.id
+        )
+        
+        return production_order
+    
+    async def get_by_id(self, po_id: UUID) -> Optional[ProductionOrder]:
         """Get production order by ID with all relationships"""
         result = await self.db.execute(
             select(ProductionOrder)
@@ -149,7 +234,7 @@ class ProductionOrderService:
         )
         return result.scalar_one_or_none()
     
-    async def get_by_copy_id(self, copy_id: int) -> Optional[ProductionOrder]:
+    async def get_by_copy_id(self, copy_id: UUID) -> Optional[ProductionOrder]:
         """Get production order by copy ID"""
         result = await self.db.execute(
             select(ProductionOrder)
@@ -160,8 +245,8 @@ class ProductionOrderService:
     async def list_orders(
         self,
         status: Optional[ProductionOrderStatus] = None,
-        advertiser_id: Optional[int] = None,
-        assigned_to: Optional[int] = None,
+        advertiser_id: Optional[UUID] = None,
+        assigned_to: Optional[UUID] = None,
         deadline_before: Optional[datetime] = None,
         limit: int = 100,
         offset: int = 0
@@ -193,7 +278,7 @@ class ProductionOrderService:
     
     async def update_status(
         self,
-        po_id: int,
+        po_id: UUID,
         new_status: ProductionOrderStatus,
         completed_at: Optional[datetime] = None
     ) -> ProductionOrder:
@@ -252,7 +337,7 @@ class ProductionOrderService:
         
         return production_order
     
-    async def update(self, po_id: int, **kwargs) -> ProductionOrder:
+    async def update(self, po_id: UUID, **kwargs) -> ProductionOrder:
         """Update production order fields"""
         production_order = await self.get_by_id(po_id)
         

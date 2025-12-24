@@ -3,6 +3,7 @@ Billing Service for invoice generation and management
 """
 
 from typing import Dict, Any, List, Optional
+from uuid import UUID
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,8 +25,8 @@ class BillingService:
     
     async def generate_invoice(
         self,
-        advertiser_id: int,
-        order_id: Optional[int] = None,
+        advertiser_id: UUID,
+        order_id: Optional[UUID] = None,
         invoice_date: Optional[date] = None,
         invoice_number: Optional[str] = None
     ) -> Invoice:
@@ -69,18 +70,46 @@ class BillingService:
         await self.db.commit()
         await self.db.refresh(invoice)
         
-        # Create invoice lines from spots
+        # Create invoice lines from spots, grouped by station
         if spots:
-            spot_ids = [s.id for s in spots]
-            line = InvoiceLine(
-                invoice_id=invoice.id,
-                description=f"Advertising spots for order {order.order_number if order else 'N/A'}",
-                quantity=len(spots),
-                unit_price=order.total_value / len(spots) if order and len(spots) > 0 else Decimal("0.00"),
-                total=order.total_value if order else Decimal("0.00"),
-                spot_ids=spot_ids
-            )
-            self.db.add(line)
+            # Group spots by station
+            from collections import defaultdict
+            spots_by_station = defaultdict(list)
+            for spot in spots:
+                if hasattr(spot, 'station_id') and spot.station_id:
+                    spots_by_station[spot.station_id].append(spot)
+                else:
+                    # Fallback: use default station or first available
+                    spots_by_station[None].append(spot)
+            
+            # Create invoice line for each station
+            for station_id, station_spots in spots_by_station.items():
+                spot_ids = [s.id for s in station_spots]
+                # Calculate price per spot
+                total_value = order.total_value if order else Decimal("0.00")
+                price_per_spot = total_value / len(spots) if len(spots) > 0 else Decimal("0.00")
+                station_total = price_per_spot * len(station_spots)
+                
+                # Get station name for description
+                station_name = "Unknown Station"
+                if station_id:
+                    from backend.models.station import Station
+                    station_result = await self.db.execute(select(Station).where(Station.id == station_id))
+                    station = station_result.scalar_one_or_none()
+                    if station:
+                        station_name = station.call_letters
+                
+                line = InvoiceLine(
+                    invoice_id=invoice.id,
+                    station_id=station_id if station_id else 1,  # Use default station if None
+                    description=f"Advertising spots for order {order.order_number if order else 'N/A'} - {station_name}",
+                    quantity=len(station_spots),
+                    unit_price=price_per_spot,
+                    total=station_total,
+                    spot_ids=spot_ids
+                )
+                self.db.add(line)
+            
             await self.db.commit()
         
         # Calculate totals
@@ -90,7 +119,7 @@ class BillingService:
         
         return invoice
     
-    async def calculate_invoice_totals(self, invoice_id: int) -> Invoice:
+    async def calculate_invoice_totals(self, invoice_id: UUID) -> Invoice:
         """Calculate invoice subtotal, tax, and total"""
         result = await self.db.execute(select(Invoice).where(Invoice.id == invoice_id))
         invoice = result.scalar_one_or_none()
@@ -119,7 +148,7 @@ class BillingService:
     
     async def calculate_contract_actualization(
         self,
-        order_id: int,
+        order_id: UUID,
         start_date: date,
         end_date: date
     ) -> Dict[str, Any]:
@@ -161,7 +190,7 @@ class BillingService:
     
     async def create_makegood_invoice(
         self,
-        makegood_id: int,
+        makegood_id: UUID,
         invoice_date: Optional[date] = None
     ) -> Invoice:
         """Create invoice for makegood"""
@@ -249,7 +278,7 @@ class BillingService:
             "total_outstanding": sum(aging_buckets.values())
         }
     
-    async def export_to_quickbooks(self, invoice_id: int) -> Dict[str, Any]:
+    async def export_to_quickbooks(self, invoice_id: UUID) -> Dict[str, Any]:
         """Export invoice to QuickBooks format"""
         result = await self.db.execute(select(Invoice).where(Invoice.id == invoice_id))
         invoice = result.scalar_one_or_none()

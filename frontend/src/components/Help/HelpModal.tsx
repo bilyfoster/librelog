@@ -100,7 +100,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ open, onClose, articleId, termId 
                 component="div"
                 sx={{ whiteSpace: 'pre-wrap' }}
               >
-                {article.content.split('\n').map((line, idx) => {
+                {article.content ? article.content.split('\n').map((line, idx) => {
                   // Handle headers
                   if (line.startsWith('### ')) {
                     return <Typography key={idx} variant="h3" component="h3" sx={{ mt: 2, mb: 1 }}>{line.substring(4)}</Typography>
@@ -129,7 +129,11 @@ const HelpModal: React.FC<HelpModalProps> = ({ open, onClose, articleId, termId 
                     return <Typography key={idx} component="p" dangerouslySetInnerHTML={{ __html: processedLine }} />
                   }
                   return <br key={idx} />
-                })}
+                }) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No content available for this article.
+                  </Typography>
+                )}
               </Typography>
             </Paper>
             {article.steps && article.steps.length > 0 && (

@@ -3,6 +3,7 @@ LiveReadService for managing live read scripts and performance tracking
 """
 
 from typing import List, Optional, Dict, Any
+from uuid import UUID
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
@@ -25,9 +26,9 @@ class LiveReadService:
     async def create_live_read(
         self,
         script_text: str,
-        copy_id: Optional[int] = None,
-        order_id: Optional[int] = None,
-        advertiser_id: Optional[int] = None,
+        copy_id: Optional[UUID] = None,
+        order_id: Optional[UUID] = None,
+        advertiser_id: Optional[UUID] = None,
         script_title: Optional[str] = None,
         scheduled_time: Optional[datetime] = None,
         scheduled_date: Optional[datetime] = None,
@@ -53,16 +54,16 @@ class LiveReadService:
         logger.info("Live read created", live_read_id=live_read.id)
         return live_read
     
-    async def get_live_read(self, live_read_id: int) -> Optional[LiveRead]:
+    async def get_live_read(self, live_read_id: UUID) -> Optional[LiveRead]:
         """Get a live read by ID"""
         result = await self.db.execute(select(LiveRead).where(LiveRead.id == live_read_id))
         return result.scalar_one_or_none()
     
     async def get_live_reads(
         self,
-        copy_id: Optional[int] = None,
-        order_id: Optional[int] = None,
-        advertiser_id: Optional[int] = None,
+        copy_id: Optional[UUID] = None,
+        order_id: Optional[UUID] = None,
+        advertiser_id: Optional[UUID] = None,
         status: Optional[str] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
@@ -89,7 +90,7 @@ class LiveReadService:
     
     async def confirm_performance(
         self,
-        live_read_id: int,
+        live_read_id: UUID,
         performed_by: int,
         performed_time: Optional[datetime] = None,
         proof_data: Optional[Dict[str, Any]] = None
@@ -123,7 +124,7 @@ class LiveReadService:
     
     async def mark_missed(
         self,
-        live_read_id: int,
+        live_read_id: UUID,
         create_makegood: bool = True
     ) -> LiveRead:
         """Mark a live read as missed"""
@@ -206,7 +207,7 @@ class LiveReadService:
     
     async def update_live_read(
         self,
-        live_read_id: int,
+        live_read_id: UUID,
         script_text: Optional[str] = None,
         script_title: Optional[str] = None,
         scheduled_time: Optional[datetime] = None,
@@ -235,7 +236,7 @@ class LiveReadService:
         logger.info("Live read updated", live_read_id=live_read_id)
         return live_read
     
-    async def delete_live_read(self, live_read_id: int) -> bool:
+    async def delete_live_read(self, live_read_id: UUID) -> bool:
         """Delete a live read"""
         live_read = await self.get_live_read(live_read_id)
         if not live_read:

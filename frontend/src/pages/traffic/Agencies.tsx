@@ -21,18 +21,25 @@ import {
   DialogActions,
   CircularProgress,
   Alert,
+  MenuItem,
 } from '@mui/material'
 import { Add, Edit, Delete, Search } from '@mui/icons-material'
 import api from '../../utils/api'
-import { getAgenciesProxy } from '../../utils/api'
+import { getAgenciesProxy, getUsersProxy } from '../../utils/api'
 
 interface Agency {
-  id: number
+  id?: string
   name: string
-  contact_name?: string
+  contact_first_name?: string
+  contact_last_name?: string
   email?: string
   phone?: string
   address?: string
+  website?: string
+  tax_id?: string
+  notes?: string
+  account_manager_id?: string
+  account_manager_name?: string
   commission_rate?: number
   active: boolean
   created_at: string
@@ -45,6 +52,14 @@ const Agencies: React.FC = () => {
   const [editingAgency, setEditingAgency] = useState<Agency | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const queryClient = useQueryClient()
+
+  const { data: users } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const data = await getUsersProxy({ limit: 1000 })
+      return Array.isArray(data) ? data : []
+    },
+  })
 
   const { data: agencies, isLoading, error } = useQuery({
     queryKey: ['agencies', searchTerm],
@@ -87,7 +102,7 @@ const Agencies: React.FC = () => {
   })
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<Agency> }) => {
+    mutationFn: async ({ id, data }: { id?: string; data: Partial<Agency> }) => {
       const response = await api.put(`/agencies/${id}`, data)
       return response.data
     },
@@ -112,7 +127,7 @@ const Agencies: React.FC = () => {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id?: string) => {
       await api.delete(`/agencies/${id}`)
     },
     onSuccess: () => {
@@ -139,7 +154,7 @@ const Agencies: React.FC = () => {
     setErrorMessage(null)
   }
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id?: string) => {
     if (window.confirm('Are you sure you want to delete this agency?')) {
       deleteMutation.mutate(id)
     }
@@ -150,10 +165,15 @@ const Agencies: React.FC = () => {
     const formData = new FormData(e.currentTarget)
     const data: Partial<Agency> = {
       name: formData.get('name') as string,
-      contact_name: formData.get('contact_name') as string || undefined,
+      contact_first_name: formData.get('contact_first_name') as string || undefined,
+      contact_last_name: formData.get('contact_last_name') as string || undefined,
       email: formData.get('email') as string || undefined,
       phone: formData.get('phone') as string || undefined,
       address: formData.get('address') as string || undefined,
+      website: formData.get('website') as string || undefined,
+      tax_id: formData.get('tax_id') as string || undefined,
+      notes: formData.get('notes') as string || undefined,
+      account_manager_id: formData.get('account_manager_id') ? parseInt(formData.get('account_manager_id') as string) : undefined,
       commission_rate: formData.get('commission_rate') ? parseFloat(formData.get('commission_rate') as string) : undefined,
     }
 
@@ -238,7 +258,11 @@ const Agencies: React.FC = () => {
                     agencies?.map((agency: Agency) => (
                       <TableRow key={agency.id}>
                         <TableCell>{agency.name}</TableCell>
-                        <TableCell>{agency.contact_name || 'N/A'}</TableCell>
+                        <TableCell>
+                          {agency.contact_first_name || agency.contact_last_name
+                            ? `${agency.contact_first_name || ''} ${agency.contact_last_name || ''}`.trim()
+                            : 'N/A'}
+                        </TableCell>
                         <TableCell>{agency.email || 'N/A'}</TableCell>
                         <TableCell>{agency.phone || 'N/A'}</TableCell>
                         <TableCell>{agency.commission_rate ? `${agency.commission_rate}%` : 'N/A'}</TableCell>
@@ -278,10 +302,16 @@ const Agencies: React.FC = () => {
                 defaultValue={editingAgency?.name || ''}
               />
               <TextField
-                name="contact_name"
-                label="Contact Name"
+                name="contact_first_name"
+                label="Contact First Name"
                 fullWidth
-                defaultValue={editingAgency?.contact_name || ''}
+                defaultValue={editingAgency?.contact_first_name || ''}
+              />
+              <TextField
+                name="contact_last_name"
+                label="Contact Last Name"
+                fullWidth
+                defaultValue={editingAgency?.contact_last_name || ''}
               />
               <TextField
                 name="email"
@@ -304,6 +334,42 @@ const Agencies: React.FC = () => {
                 fullWidth
                 defaultValue={editingAgency?.address || ''}
               />
+              <TextField
+                name="website"
+                label="Website"
+                type="url"
+                fullWidth
+                defaultValue={editingAgency?.website || ''}
+                placeholder="https://example.com"
+              />
+              <TextField
+                name="tax_id"
+                label="Tax ID"
+                fullWidth
+                defaultValue={editingAgency?.tax_id || ''}
+              />
+              <TextField
+                name="notes"
+                label="Notes"
+                fullWidth
+                multiline
+                rows={3}
+                defaultValue={editingAgency?.notes || ''}
+              />
+              <TextField
+                name="account_manager_id"
+                label="Account Manager"
+                select
+                fullWidth
+                defaultValue={editingAgency?.account_manager_id || ''}
+              >
+                <MenuItem value="">None</MenuItem>
+                {users?.map((user: any) => (
+                  <MenuItem key={user.id} value={user.id}>
+                    {user.username} ({user.role})
+                  </MenuItem>
+                ))}
+              </TextField>
               <TextField
                 name="commission_rate"
                 label="Commission Rate (%)"

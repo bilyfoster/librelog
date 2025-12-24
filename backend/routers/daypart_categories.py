@@ -3,6 +3,7 @@ Daypart Categories router for organizing dayparts
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from typing import Optional, List
@@ -34,7 +35,7 @@ class DaypartCategoryUpdate(BaseModel):
 
 
 class DaypartCategoryResponse(BaseModel):
-    id: int
+    id: UUID
     name: str
     description: Optional[str]
     color: Optional[str]
@@ -88,7 +89,7 @@ async def list_daypart_categories(
 
 @router.get("/{category_id}", response_model=DaypartCategoryResponse)
 async def get_daypart_category(
-    category_id: int,
+    category_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -149,7 +150,7 @@ async def create_daypart_category(
 
 @router.put("/{category_id}", response_model=DaypartCategoryResponse)
 async def update_daypart_category(
-    category_id: int,
+    category_id: UUID,
     category_update: DaypartCategoryUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -193,7 +194,7 @@ async def update_daypart_category(
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_daypart_category(
-    category_id: int,
+    category_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

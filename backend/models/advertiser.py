@@ -2,7 +2,8 @@
 Advertiser model for traffic management
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, Numeric
+from sqlalchemy import Column, String, DateTime, Boolean, Text, Numeric, text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -12,9 +13,10 @@ class Advertiser(Base):
     """Advertiser model for managing advertising clients"""
     __tablename__ = "advertisers"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
     name = Column(String(255), nullable=False, index=True)
-    contact_name = Column(String(255))
+    contact_first_name = Column(String(100))
+    contact_last_name = Column(String(100))
     email = Column(String(255), index=True)
     phone = Column(String(50))
     address = Column(Text)

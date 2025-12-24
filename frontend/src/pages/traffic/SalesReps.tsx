@@ -22,14 +22,18 @@ import {
   CircularProgress,
   Alert,
   MenuItem,
+  Tabs,
+  Tab,
+  Chip,
+  Autocomplete,
 } from '@mui/material'
 import { Add, Edit, Delete } from '@mui/icons-material'
 import api from '../../utils/api'
-import { getSalesRepsProxy, getUsersProxy } from '../../utils/api'
+import { getSalesRepsProxy, getUsersProxy, getSalesTeamsProxy, getSalesOfficesProxy, getSalesRegionsProxy } from '../../utils/api'
 
 interface SalesRep {
-  id: number
-  user_id: number
+  id?: string
+  user_id?: string
   employee_id?: string
   commission_rate?: number
   sales_goal?: number
@@ -40,13 +44,16 @@ interface SalesRep {
 }
 
 interface User {
-  id: number
+  id?: string
   username: string
 }
 
 const SalesReps: React.FC = () => {
   const [openDialog, setOpenDialog] = useState(false)
+  const [membershipDialog, setMembershipDialog] = useState(false)
   const [editingRep, setEditingRep] = useState<SalesRep | null>(null)
+  const [selectedRep, setSelectedRep] = useState<SalesRep | null>(null)
+  const [membershipTab, setMembershipTab] = useState(0)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
@@ -71,6 +78,60 @@ const SalesReps: React.FC = () => {
       const data = await getUsersProxy({ limit: 1000 })
       return Array.isArray(data) ? data : []
     },
+  })
+
+  const { data: salesTeams } = useQuery({
+    queryKey: ['sales-teams'],
+    queryFn: async () => {
+      const data = await getSalesTeamsProxy({ limit: 1000, active_only: true })
+      return Array.isArray(data) ? data : []
+    },
+  })
+
+  const { data: salesOffices } = useQuery({
+    queryKey: ['sales-offices'],
+    queryFn: async () => {
+      const data = await getSalesOfficesProxy({ limit: 1000, active_only: true })
+      return Array.isArray(data) ? data : []
+    },
+  })
+
+  const { data: salesRegions } = useQuery({
+    queryKey: ['sales-regions'],
+    queryFn: async () => {
+      const data = await getSalesRegionsProxy({ limit: 1000, active_only: true })
+      return Array.isArray(data) ? data : []
+    },
+  })
+
+  const { data: repTeams } = useQuery({
+    queryKey: ['sales-rep-teams', selectedRep?.id],
+    queryFn: async () => {
+      if (!selectedRep?.id) return []
+      const response = await api.get(`/sales-reps/${selectedRep.id}/teams`)
+      return response.data || []
+    },
+    enabled: !!selectedRep?.id && membershipDialog && membershipTab === 0,
+  })
+
+  const { data: repOffices } = useQuery({
+    queryKey: ['sales-rep-offices', selectedRep?.id],
+    queryFn: async () => {
+      if (!selectedRep?.id) return []
+      const response = await api.get(`/sales-reps/${selectedRep.id}/offices`)
+      return response.data || []
+    },
+    enabled: !!selectedRep?.id && membershipDialog && membershipTab === 1,
+  })
+
+  const { data: repRegions } = useQuery({
+    queryKey: ['sales-rep-regions', selectedRep?.id],
+    queryFn: async () => {
+      if (!selectedRep?.id) return []
+      const response = await api.get(`/sales-reps/${selectedRep.id}/regions`)
+      return response.data || []
+    },
+    enabled: !!selectedRep?.id && membershipDialog && membershipTab === 2,
   })
 
   const createMutation = useMutation({
@@ -101,7 +162,7 @@ const SalesReps: React.FC = () => {
   })
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<SalesRep> }) => {
+    mutationFn: async ({ id, data }: { id?: string; data: Partial<SalesRep> }) => {
       const response = await api.put(`/sales-reps/${id}`, data)
       return response.data
     },
@@ -126,7 +187,7 @@ const SalesReps: React.FC = () => {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id?: string) => {
       await api.delete(`/sales-reps/${id}`)
     },
     onSuccess: () => {
@@ -328,6 +389,175 @@ const SalesReps: React.FC = () => {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Membership Management Dialog */}
+      <Dialog open={membershipDialog} onClose={() => {
+        setMembershipDialog(false)
+        setSelectedRep(null)
+        setMembershipTab(0)
+      }} maxWidth="md" fullWidth>
+        <DialogTitle>Manage Memberships - {selectedRep?.username}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+            <Tabs value={membershipTab} onChange={(e, newValue) => setMembershipTab(newValue)}>
+              <Tab label="Teams" />
+              <Tab label="Offices" />
+              <Tab label="Regions" />
+            </Tabs>
+          </Box>
+
+          {membershipTab === 0 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>Sales Teams</Typography>
+              <Autocomplete
+                multiple
+                options={salesTeams || []}
+                getOptionLabel={(option) => option.name}
+                value={repTeams || []}
+                onChange={async (e, newValue) => {
+                  if (!selectedRep?.id) return
+                  // Get current teams
+                  const currentTeamIds = (repTeams || []).map((t: any) => t.id)
+                  const newTeamIds = newValue.map(t => t.id)
+                  
+                  // Add new teams
+                  for (const teamId of newTeamIds) {
+                    if (!currentTeamIds.includes(teamId)) {
+                      try {
+                        await api.post(`/sales-teams/${teamId}/sales-reps/${selectedRep.id}`)
+                      } catch (err) {
+                        console.error('Failed to add team:', err)
+                      }
+                    }
+                  }
+                  
+                  // Remove teams
+                  for (const teamId of currentTeamIds) {
+                    if (!newTeamIds.includes(teamId)) {
+                      try {
+                        await api.delete(`/sales-teams/${teamId}/sales-reps/${selectedRep.id}`)
+                      } catch (err) {
+                        console.error('Failed to remove team:', err)
+                      }
+                    }
+                  }
+                  
+                  queryClient.invalidateQueries({ queryKey: ['sales-rep-teams', selectedRep.id] })
+                }}
+                renderInput={(params) => (
+                  <TextField {...params} label="Select Teams" placeholder="Choose teams" />
+                )}
+                renderTags={(value, getTagProps) =>
+                  value.map((option: any, index: number) => (
+                    <Chip label={option.name} {...getTagProps({ index })} key={option.id} />
+                  ))
+                }
+              />
+            </Box>
+          )}
+
+          {membershipTab === 1 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>Sales Offices</Typography>
+              <Autocomplete
+                multiple
+                options={salesOffices || []}
+                getOptionLabel={(option) => option.name}
+                value={repOffices || []}
+                onChange={async (e, newValue) => {
+                  if (!selectedRep?.id) return
+                  const currentOfficeIds = (repOffices || []).map((o: any) => o.id)
+                  const newOfficeIds = newValue.map(o => o.id)
+                  
+                  for (const officeId of newOfficeIds) {
+                    if (!currentOfficeIds.includes(officeId)) {
+                      try {
+                        await api.post(`/sales-offices/${officeId}/sales-reps/${selectedRep.id}`)
+                      } catch (err) {
+                        console.error('Failed to add office:', err)
+                      }
+                    }
+                  }
+                  
+                  for (const officeId of currentOfficeIds) {
+                    if (!newOfficeIds.includes(officeId)) {
+                      try {
+                        await api.delete(`/sales-offices/${officeId}/sales-reps/${selectedRep.id}`)
+                      } catch (err) {
+                        console.error('Failed to remove office:', err)
+                      }
+                    }
+                  }
+                  
+                  queryClient.invalidateQueries({ queryKey: ['sales-rep-offices', selectedRep.id] })
+                }}
+                renderInput={(params) => (
+                  <TextField {...params} label="Select Offices" placeholder="Choose offices" />
+                )}
+                renderTags={(value, getTagProps) =>
+                  value.map((option: any, index: number) => (
+                    <Chip label={option.name} {...getTagProps({ index })} key={option.id} />
+                  ))
+                }
+              />
+            </Box>
+          )}
+
+          {membershipTab === 2 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>Sales Regions</Typography>
+              <Autocomplete
+                multiple
+                options={salesRegions || []}
+                getOptionLabel={(option) => option.name}
+                value={repRegions || []}
+                onChange={async (e, newValue) => {
+                  if (!selectedRep?.id) return
+                  const currentRegionIds = (repRegions || []).map((r: any) => r.id)
+                  const newRegionIds = newValue.map(r => r.id)
+                  
+                  for (const regionId of newRegionIds) {
+                    if (!currentRegionIds.includes(regionId)) {
+                      try {
+                        await api.post(`/sales-regions/${regionId}/sales-reps/${selectedRep.id}`)
+                      } catch (err) {
+                        console.error('Failed to add region:', err)
+                      }
+                    }
+                  }
+                  
+                  for (const regionId of currentRegionIds) {
+                    if (!newRegionIds.includes(regionId)) {
+                      try {
+                        await api.delete(`/sales-regions/${regionId}/sales-reps/${selectedRep.id}`)
+                      } catch (err) {
+                        console.error('Failed to remove region:', err)
+                      }
+                    }
+                  }
+                  
+                  queryClient.invalidateQueries({ queryKey: ['sales-rep-regions', selectedRep.id] })
+                }}
+                renderInput={(params) => (
+                  <TextField {...params} label="Select Regions" placeholder="Choose regions" />
+                )}
+                renderTags={(value, getTagProps) =>
+                  value.map((option: any, index: number) => (
+                    <Chip label={option.name} {...getTagProps({ index })} key={option.id} />
+                  ))
+                }
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setMembershipDialog(false)
+            setSelectedRep(null)
+            setMembershipTab(0)
+          }}>Close</Button>
+        </DialogActions>
       </Dialog>
     </Box>
   )

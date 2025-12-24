@@ -34,10 +34,10 @@ import {
 import MakegoodFormDialog from '../../components/billing/MakegoodFormDialog'
 
 interface Makegood {
-  id: number
-  original_spot_id: number
-  makegood_spot_id: number
-  campaign_id?: number
+  id?: string
+  original_spot_id?: string
+  makegood_spot_id?: string
+  campaign_id?: string
   reason?: string
   approved_by?: number
   approved_at?: string

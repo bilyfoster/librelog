@@ -3,6 +3,7 @@ Audio preview service for generating waveforms and track metadata
 """
 
 import os
+from uuid import UUID
 import subprocess
 from pathlib import Path
 from typing import Optional, Dict, Any, List

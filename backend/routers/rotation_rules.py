@@ -3,6 +3,7 @@ Rotation Rules router for managing spot rotation
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
@@ -21,8 +22,8 @@ class RotationRuleCreate(BaseModel):
     name: str
     description: Optional[str] = None
     rotation_type: str = RotationType.SEQUENTIAL.value
-    daypart_id: Optional[int] = None
-    campaign_id: Optional[int] = None
+    daypart_id: Optional[UUID] = None
+    campaign_id: Optional[UUID] = None
     min_separation: int = 0
     max_per_hour: Optional[int] = None
     max_per_day: Optional[int] = None
@@ -36,8 +37,8 @@ class RotationRuleUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     rotation_type: Optional[str] = None
-    daypart_id: Optional[int] = None
-    campaign_id: Optional[int] = None
+    daypart_id: Optional[UUID] = None
+    campaign_id: Optional[UUID] = None
     min_separation: Optional[int] = None
     max_per_hour: Optional[int] = None
     max_per_day: Optional[int] = None
@@ -49,12 +50,12 @@ class RotationRuleUpdate(BaseModel):
 
 
 class RotationRuleResponse(BaseModel):
-    id: int
+    id: UUID
     name: str
     description: Optional[str]
     rotation_type: str
-    daypart_id: Optional[int]
-    campaign_id: Optional[int]
+    daypart_id: Optional[UUID]
+    campaign_id: Optional[UUID]
     min_separation: int
     max_per_hour: Optional[int]
     max_per_day: Optional[int]
@@ -77,8 +78,8 @@ async def list_rotation_rules(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     active_only: bool = Query(False),
-    daypart_id: Optional[int] = None,
-    campaign_id: Optional[int] = None,
+    daypart_id: Optional[UUID] = None,
+    campaign_id: Optional[UUID] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -117,7 +118,7 @@ async def list_rotation_rules(
 
 @router.get("/{rule_id}", response_model=RotationRuleResponse)
 async def get_rotation_rule(
-    rule_id: int,
+    rule_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -218,7 +219,7 @@ async def create_rotation_rule(
 
 @router.put("/{rule_id}", response_model=RotationRuleResponse)
 async def update_rotation_rule(
-    rule_id: int,
+    rule_id: UUID,
     rule_update: RotationRuleUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -294,7 +295,7 @@ async def update_rotation_rule(
 
 @router.delete("/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_rotation_rule(
-    rule_id: int,
+    rule_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

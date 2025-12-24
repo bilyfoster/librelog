@@ -2,8 +2,8 @@
 Rotation Rule model for traffic scheduling
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, CheckConstraint
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, CheckConstraint, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -22,14 +22,14 @@ class RotationRule(Base):
     """Rotation Rule model for managing spot rotation"""
     __tablename__ = "rotation_rules"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
     name = Column(String(100), nullable=False, index=True)
     description = Column(Text, nullable=True)
     
     # Rotation configuration
     rotation_type = Column(String(20), nullable=False, default=RotationType.SEQUENTIAL.value)
-    daypart_id = Column(Integer, ForeignKey("dayparts.id"), nullable=True, index=True)
-    campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=True, index=True)
+    daypart_id = Column(UUID(as_uuid=True), ForeignKey("dayparts.id"), nullable=True, index=True)
+    campaign_id = Column(UUID(as_uuid=True), ForeignKey("campaigns.id"), nullable=True, index=True)
     
     # Rotation parameters
     min_separation = Column(Integer, default=0)  # Minimum spots between same campaign

@@ -4,7 +4,7 @@
       "id": "ros",
       "term": "ROS",
       "abbreviation": "Run of Schedule",
-      "novice_explanation": "ROS means your commercial will play at any time during the day, whenever there's an available spot. The station decides when to schedule it based on their programming needs. It's the most flexible and usually least expensive option.",
+      "novice_explanation": "ROS (Run of Schedule) means your commercial will play at any time during the day, whenever there's an available spot. The station decides when to schedule it based on their programming needs - they have complete flexibility. It's like saying 'play my commercial whenever you have an opening.' ROS is the most flexible option for advertisers and usually the least expensive because the station can fill any available time slot with your ad. This is great for advertisers who just want maximum exposure and don't care about specific times.",
       "veteran_explanation": "Run of Schedule (ROS) is a rate type where spots are scheduled at the station's discretion throughout the broadcast day without specific time or daypart restrictions. ROS spots typically command lower rates than daypart-specific or fixed-time placements and are used to fill inventory efficiently.",
       "category": "rate_types",
       "related_terms": ["daypart", "fixed_time", "spot"]
@@ -12,7 +12,7 @@
     {
       "id": "daypart",
       "term": "Daypart",
-      "novice_explanation": "A daypart is a specific time period during the day when your commercial plays. Common dayparts include Morning Drive (6am-10am), Afternoon Drive (3pm-7pm), and Evening (7pm-midnight). Different dayparts have different audiences and prices.",
+      "novice_explanation": "A daypart is a specific time period during the day when your commercial plays. Radio stations divide the day into segments called dayparts, each with different audiences and prices. Common dayparts include Morning Drive (6am-10am - commuters, highest rates), Afternoon Drive (3pm-7pm - commuters, high rates), Midday (10am-3pm - at-work listeners), Evening (7pm-midnight - at-home listeners), and Overnight (midnight-6am - smallest audience, lowest rates). When you buy a 'daypart' order, your commercials will only play during that specific time period.",
       "veteran_explanation": "A daypart is a defined time period within a broadcast day, typically used for rate differentiation and audience targeting. Standard dayparts include Morning Drive (6am-10am), Midday (10am-3pm), Afternoon Drive (3pm-7pm), Evening (7pm-midnight), and Overnight (midnight-6am). Daypart rates reflect audience size and demographics.",
       "category": "scheduling",
       "related_terms": ["ros", "spot", "break_position"]
@@ -36,7 +36,7 @@
     {
       "id": "break_position",
       "term": "Break Position",
-      "novice_explanation": "Break position refers to where in a commercial break your ad plays - like first (A), second (B), third (C), etc. First position (A) is usually the most expensive because listeners are most likely to hear it.",
+      "novice_explanation": "Break position refers to where in a commercial break your ad plays - like first (A), second (B), third (C), etc. Think of a commercial break like a line of people - the first person (A position) is seen/heard first, the second person (B position) is next, and so on. First position (A) is usually the most expensive because listeners are most likely to still be paying attention at the start of the break. As the break goes on, some listeners may tune out, so later positions (B, C, D) typically cost less.",
       "veteran_explanation": "Break position indicates the sequential placement of a spot within a commercial break. Positions are typically labeled A (first), B (second), C (third), etc. A-position spots command premium rates due to higher listener retention at the start of breaks.",
       "category": "scheduling",
       "related_terms": ["spot", "daypart", "break_structure"]
@@ -52,7 +52,7 @@
     {
       "id": "clock_template",
       "term": "Clock Template",
-      "novice_explanation": "A clock template is like a blueprint for each hour of radio programming. It shows where music, commercials, news, and other content should be placed within the hour to create a consistent sound.",
+      "novice_explanation": "A clock template is like a blueprint or recipe for each hour of radio programming. It's a template that says 'at 15 minutes past the hour, play a commercial break' or 'at the top of the hour, play the station ID'. It shows exactly where music, commercials, news, station IDs, and other content should be placed within each hour to create a consistent, predictable sound. Every hour follows the same template structure.",
       "veteran_explanation": "A clock template defines the structure and timing of elements within a broadcast hour, including music, spots, IDs, news, and other content. Templates ensure consistent programming flow and are used by log generators to create daily playlists.",
       "category": "programming",
       "related_terms": ["log", "daily_log", "element"]
@@ -60,7 +60,7 @@
     {
       "id": "log",
       "term": "Daily Log",
-      "novice_explanation": "A daily log (or just 'log') is the complete schedule of everything that will play on the radio for a specific day - all the songs, commercials, IDs, news, etc., with exact times.",
+      "novice_explanation": "A daily log (or just 'log') is the complete, detailed schedule of everything that will play on the radio for a specific day. It's like a playlist with exact times - it shows which songs play when, which commercials air at what times, when station IDs play, when news segments air, etc. The log is created by the log generator and then sent to the automation system (LibreTime) which actually plays everything according to the schedule.",
       "veteran_explanation": "A daily log is the complete programming schedule for a broadcast day, generated from clock templates and scheduled spots. Logs include all elements (music, spots, IDs, news) with precise timing and are published to automation systems like LibreTime for playback.",
       "category": "programming",
       "related_terms": ["clock_template", "spot", "log_generator"]
@@ -68,7 +68,7 @@
     {
       "id": "copy",
       "term": "Copy",
-      "novice_explanation": "Copy refers to the actual commercial audio file or script. When you provide your commercial, that's the 'copy'. It can be a pre-recorded audio file or a script for a live read.",
+      "novice_explanation": "Copy refers to the actual commercial audio file or script - it's the creative content of the ad itself. When you provide your commercial (either as a recorded audio file or a written script for the DJ to read), that's the 'copy'. Think of it as the 'material' or 'content' of the commercial. It can be a pre-recorded audio file (MP3, WAV) that plays automatically, or a script that the DJ reads live on-air.",
       "veteran_explanation": "Copy is the commercial creative asset - either a pre-produced audio file or a script for live reads. Copy management includes versioning, expiration dates, multi-cut support, and assignment to specific orders or campaigns.",
       "category": "production",
       "related_terms": ["order", "campaign", "live_read"]
@@ -152,6 +152,221 @@
       "veteran_explanation": "A sales rep is a record representing a salesperson responsible for selling advertising and managing advertiser relationships. Sales reps are assigned to orders for accountability, commission tracking, reporting, and account management. Sales rep records may or may not correspond to system users.",
       "category": "sales",
       "related_terms": ["order", "advertiser", "campaign"]
+    },
+    {
+      "id": "spec_spot",
+      "term": "Spec Spot",
+      "abbreviation": "Speculative Spot",
+      "novice_explanation": "A spec spot is a commercial that's produced before the client commits to an advertising order. It's created on speculation - you produce it hoping the client will like it and place an order. Spec spots are useful for pitches, demos, and showing potential clients what their commercial could sound like.",
+      "veteran_explanation": "A spec spot (speculative spot) is a production order created without an associated sales order. Spec spots are produced before client commitment for use in pitches, demos, or portfolio building. They're marked with order type 'SPEC' and don't require a sales order. When a client commits, spec spots can be linked to new orders or used as reference for new production orders.",
+      "category": "production",
+      "related_terms": ["production_order", "copy", "order"]
+    },
+    {
+      "id": "station",
+      "term": "Station",
+      "novice_explanation": "A station is a radio broadcast entity (like KABC or WXYZ). LibreLog supports multiple stations in the same system. Each station has its own schedule, commercials, and programming. When you create orders, schedule spots, or generate logs, you need to specify which station you're working with.",
+      "veteran_explanation": "A station is a distinct radio broadcast entity within the LibreLog system. Each station operates independently with its own inventory, scheduling, daily logs, dayparts, break structures, and configuration. Stations can share common resources like advertisers, agencies, and users. Station-specific data includes spots, logs, clock templates, and LibreTime integration settings. Users are assigned to specific stations and only see data for their assigned stations (unless they're admins).",
+      "category": "system",
+      "related_terms": ["spot", "log", "daypart", "station_assignment"]
+    },
+    {
+      "id": "station_assignment",
+      "term": "Station Assignment",
+      "novice_explanation": "Station assignment determines which stations a user can access. Regular users are assigned to specific stations and only see orders, spots, and logs for those stations. Admin users can access all stations.",
+      "veteran_explanation": "Station assignment is the relationship between users and stations that determines data access. Users can be assigned to one or more stations. Non-admin users only see data (orders, spots, logs, reports) for their assigned stations. Admin users have access to all stations. Station assignments are managed in Admin > Users and control visibility, filtering, and access throughout the system.",
+      "category": "system",
+      "related_terms": ["station", "user", "access_control"]
+    },
+    {
+      "id": "fixed_time",
+      "term": "Fixed Time",
+      "novice_explanation": "Fixed Time is a rate type where your commercial plays at exact, specific times you choose. For example, you might want your ad to play every day at 8:00 AM and 5:00 PM. This is the most restrictive option and usually costs the most because the station has no flexibility in when to schedule it.",
+      "veteran_explanation": "Fixed Time is a rate type where spots are scheduled at exact, predetermined times specified by the advertiser. Fixed time spots command premium rates due to their restrictive nature and guaranteed placement. They're used when advertisers need specific times (e.g., lunch specials at noon) or want consistency.",
+      "category": "rate_types",
+      "related_terms": ["ros", "daypart", "spot"]
+    },
+    {
+      "id": "commercial_break",
+      "term": "Commercial Break",
+      "novice_explanation": "A commercial break is a short period during radio programming when commercials play instead of music or talk. Think of it like a TV commercial break - the music stops, several ads play in a row, then the music resumes. Commercial breaks happen at specific times (like 15 minutes past the hour) and can hold a certain number of spots.",
+      "veteran_explanation": "A commercial break is a designated time period within programming where multiple spots are played sequentially. Breaks are structured with specific timing, duration, and position capacity. Break positions (A, B, C, etc.) indicate the order spots play within the break.",
+      "category": "scheduling",
+      "related_terms": ["break_position", "spot", "break_structure"]
+    },
+    {
+      "id": "inventory",
+      "term": "Inventory",
+      "novice_explanation": "Inventory in radio means the available commercial time slots that can be sold. Like a store has inventory of products, a radio station has inventory of time slots for commercials. When spots are scheduled, that inventory is 'sold' or 'booked'. When inventory is low or sold out, rates go up.",
+      "veteran_explanation": "Inventory refers to the available commercial time slots available for sale. Inventory is tracked by date, hour, daypart, and break position. Available inventory decreases as spots are scheduled. Inventory scarcity affects pricing - less available inventory typically commands higher rates.",
+      "category": "sales",
+      "related_terms": ["spot", "daypart", "break_position"]
+    },
+    {
+      "id": "preemption",
+      "term": "Preemption",
+      "novice_explanation": "Preemption happens when a scheduled commercial gets bumped or replaced by something else (like breaking news or special programming) before it can air. When this happens, the station usually gives a free replacement commercial (called a makegood) to make up for it.",
+      "veteran_explanation": "Preemption occurs when a scheduled spot is replaced by higher-priority content (breaking news, special programming, political ads during windows, etc.) before it can air. Preempted spots are typically compensated with makegoods scheduled in comparable time periods at no charge to the advertiser.",
+      "category": "scheduling",
+      "related_terms": ["makegood", "spot", "missed_spot"]
+    },
+    {
+      "id": "production_order",
+      "term": "Production Order",
+      "novice_explanation": "A production order is a request to create or produce a commercial. It's like a work order for the production team - it tells them what commercial needs to be made, who it's for, when it's needed, and any special instructions. Production orders can be linked to sales orders (when a client has committed) or can be spec spots (created before client commitment).",
+      "veteran_explanation": "A production order is a work order for creating commercial audio content. Production orders track the workflow from creation through delivery, including assignment to producers/talent, quality control, and delivery to traffic. Production orders can be associated with sales orders or created as spec spots for pitches/demos.",
+      "category": "production",
+      "related_terms": ["spec_spot", "copy", "order"]
+    },
+    {
+      "id": "voice_track",
+      "term": "Voice Track",
+      "novice_explanation": "A voice track is a pre-recorded voice element (like a DJ talking, a station ID, or a liner/promo) that gets inserted into the radio programming. Instead of being live, these are recorded ahead of time and played automatically. Voice tracks help maintain consistency and can be used even when the DJ isn't live.",
+      "veteran_explanation": "A voice track is a pre-recorded audio element containing voice content (DJ breaks, station IDs, liners, promos) used in automated programming. Voice tracks are recorded in advance and inserted into logs at specific times. They enable voice tracking, where stations can sound live even when automated.",
+      "category": "production",
+      "related_terms": ["log", "live_read", "station_id"]
+    },
+    {
+      "id": "station_id",
+      "term": "Station ID",
+      "abbreviation": "ID",
+      "novice_explanation": "A Station ID is the legal identification of the radio station that must be played regularly (usually at the top of each hour). It includes the station's call letters (like KABC or WXYZ) and frequency. The FCC (Federal Communications Commission) requires stations to identify themselves regularly, so these IDs are mandatory.",
+      "veteran_explanation": "A Station ID is the legal station identification required by the FCC, typically including call letters and frequency. IDs must be played at regular intervals (usually hourly) and are often placed at the top of the hour. Station IDs are considered mandatory programming elements and cannot be preempted.",
+      "category": "programming",
+      "related_terms": ["log", "clock_template", "fcc_compliance"]
+    },
+    {
+      "id": "psa",
+      "term": "PSA",
+      "abbreviation": "Public Service Announcement",
+      "novice_explanation": "A PSA (Public Service Announcement) is a free commercial for a non-profit organization or public service message. Stations often play PSAs as a community service. Examples include messages about health, safety, charity events, or community services. PSAs don't generate revenue but fulfill the station's public service obligations.",
+      "veteran_explanation": "A PSA (Public Service Announcement) is a non-commercial message for public benefit, typically for non-profit organizations or government agencies. PSAs are provided at no charge and fulfill stations' public service obligations. They're often placed in less valuable break positions and scheduled when commercial inventory allows.",
+      "category": "programming",
+      "related_terms": ["spot", "break_position", "inventory"]
+    },
+    {
+      "id": "isci_code",
+      "term": "ISCI Code",
+      "abbreviation": "Industry Standard Commercial Identification",
+      "novice_explanation": "An ISCI code is a unique identifier for a commercial, like a barcode for an ad. It's an 8-character code (letters and numbers) that helps track which specific version of a commercial aired. ISCI codes are especially important for national advertisers who need to track which versions of their ads played across different stations.",
+      "veteran_explanation": "An ISCI (Industry Standard Commercial Identification) code is an 8-character alphanumeric identifier assigned to commercial audio files. ISCI codes enable tracking of specific commercial versions across stations and markets. They're particularly important for national advertisers managing multiple versions and compliance tracking.",
+      "category": "production",
+      "related_terms": ["copy", "spot", "campaign"]
+    },
+    {
+      "id": "multi_cut",
+      "term": "Multi-Cut",
+      "novice_explanation": "Multi-cut means having multiple versions of the same commercial that rotate or alternate. For example, a restaurant might have three different 30-second commercials - one for breakfast, one for lunch, one for dinner. The system automatically rotates between them so listeners hear different versions. This prevents listener fatigue from hearing the exact same ad repeatedly.",
+      "veteran_explanation": "Multi-cut refers to multiple versions of copy for the same advertiser/campaign that rotate automatically. Multi-cut campaigns help prevent listener fatigue and allow advertisers to test different messages. Rotation rules control how different cuts alternate, ensuring even distribution across scheduled spots.",
+      "category": "production",
+      "related_terms": ["copy", "campaign", "rotation_rule"]
+    },
+    {
+      "id": "liner",
+      "term": "Liner",
+      "novice_explanation": "A liner is a short, pre-recorded station promo or tagline. It's usually just a few seconds long and promotes the station itself (like 'KABC - Your Music Station' or 'The Best Mix in Town'). Liners are used between songs or during transitions to reinforce the station's brand.",
+      "veteran_explanation": "A liner is a brief, pre-recorded station promotional element, typically 3-10 seconds. Liners reinforce station branding, positioning, and identity. They're inserted into programming at strategic points and are often voice-tracked by on-air talent.",
+      "category": "programming",
+      "related_terms": ["voice_track", "station_id", "promo"]
+    },
+    {
+      "id": "promo",
+      "term": "Promo",
+      "abbreviation": "Promotion",
+      "novice_explanation": "A promo is a short announcement promoting upcoming station events, contests, or programming. For example, 'Win tickets to the concert this Friday!' or 'Coming up next hour, our interview with...' Promos are used to keep listeners engaged and informed about what's coming up on the station.",
+      "veteran_explanation": "A promo is a promotional announcement for station programming, events, contests, or features. Promos are used to drive tune-in, promote engagement, and highlight upcoming content. They're typically short (10-30 seconds) and strategically placed to maximize impact.",
+      "category": "programming",
+      "related_terms": ["liner", "voice_track", "log"]
+    },
+    {
+      "id": "drive_time",
+      "term": "Drive Time",
+      "novice_explanation": "Drive time refers to the morning and afternoon rush hours when people are commuting to and from work - typically 6-10 AM (Morning Drive) and 3-7 PM (Afternoon Drive). These are the most valuable time periods for radio advertising because they have the largest audiences. Drive time spots cost the most but reach the most listeners.",
+      "veteran_explanation": "Drive time encompasses the morning (typically 6-10 AM) and afternoon (typically 3-7 PM) commute periods. These dayparts command the highest rates due to peak listenership during commutes. Drive time represents the most valuable inventory for both stations and advertisers.",
+      "category": "scheduling",
+      "related_terms": ["daypart", "inventory", "spot"]
+    },
+    {
+      "id": "oversell",
+      "term": "Oversell",
+      "novice_explanation": "Oversell happens when more commercials are scheduled in a time period than there are available spots. It's like selling more tickets to a show than there are seats. The system detects oversells and alerts the traffic manager, who must resolve it by moving some spots to other times or canceling some spots.",
+      "veteran_explanation": "Oversell occurs when more spots are scheduled than available inventory allows in a given time period. Oversells are detected by the system and must be resolved by the traffic manager through spot rescheduling, cancellation, or inventory adjustment. Oversells can result from calculation errors, multiple orders competing for same inventory, or break structure changes.",
+      "category": "scheduling",
+      "related_terms": ["inventory", "spot", "conflict"]
+    },
+    {
+      "id": "conflict",
+      "term": "Conflict",
+      "novice_explanation": "A conflict is a problem with the schedule that needs to be fixed. Common conflicts include: two spots scheduled at the exact same time, more spots scheduled than can fit in a break, or a spot scheduled outside its required daypart. The system helps detect conflicts, and the traffic manager resolves them.",
+      "veteran_explanation": "A conflict is a scheduling issue that violates system rules or order requirements. Conflict types include time overlaps, oversells, daypart violations, rate type mismatches, and missing copy. The system automatically detects conflicts, and traffic managers must resolve them before logs can be published.",
+      "category": "scheduling",
+      "related_terms": ["oversell", "spot", "daypart"]
+    },
+    {
+      "id": "fcc",
+      "term": "FCC",
+      "abbreviation": "Federal Communications Commission",
+      "novice_explanation": "The FCC (Federal Communications Commission) is the government agency that regulates radio and TV broadcasting in the United States. They require stations to identify themselves regularly (Station IDs), have rules about political advertising, and ensure stations serve the public interest. Some features in LibreLog help stations comply with FCC requirements.",
+      "veteran_explanation": "The FCC (Federal Communications Commission) is the federal agency regulating broadcast communications. FCC requirements include station identification, political advertising disclosure and archiving, equal time provisions, and public interest obligations. LibreLog includes features to help stations maintain FCC compliance, particularly for political advertising and station identification.",
+      "category": "compliance",
+      "related_terms": ["station_id", "political_advertising", "compliance"]
+    },
+    {
+      "id": "credit_limit",
+      "term": "Credit Limit",
+      "novice_explanation": "A credit limit is the maximum amount an advertiser can owe the station at one time. It's like a credit card limit - once an advertiser reaches their limit, no new orders can be approved until they pay their existing invoices. Credit limits protect the station from bad debt.",
+      "veteran_explanation": "A credit limit is the maximum accounts receivable balance allowed for an advertiser. When an advertiser's current balance plus a new order would exceed the credit limit, the order cannot be approved. Credit limits are set based on payment history, business size, and risk assessment. They're enforced during order approval.",
+      "category": "sales",
+      "related_terms": ["advertiser", "invoice", "order"]
+    },
+    {
+      "id": "net_30",
+      "term": "Net 30",
+      "novice_explanation": "Net 30 means the advertiser has 30 days from the invoice date to pay. It's one of the most common payment terms in radio advertising. For example, if an invoice is dated January 1st, payment is due January 31st. Other common terms are Net 15 (15 days) and Due on Receipt (immediate payment).",
+      "veteran_explanation": "Net 30 is a payment term indicating payment is due 30 days after the invoice date. It's the standard payment term for most radio advertising accounts. Net 30 terms are calculated as invoice date plus 30 days equals due date. Other common terms include Net 15, Net 60, and Due on Receipt.",
+      "category": "billing",
+      "related_terms": ["invoice", "payment_terms", "advertiser"]
+    },
+    {
+      "id": "script",
+      "term": "Script",
+      "novice_explanation": "A script is the written text that a DJ or host reads for a live read commercial. Instead of a pre-recorded audio file, you provide the words for the DJ to read on-air. Scripts should be clear, conversational, and include any special instructions (like emphasis on certain words or pronunciation notes). Scripts are used for live reads, which sound more personal and authentic than pre-recorded ads.",
+      "veteran_explanation": "A script is the written text provided for live read commercials. Scripts should be conversational, include pronunciation guides for difficult words, and specify emphasis points. Scripts may include timing notes, tone instructions, and talent direction. Live read scripts offer flexibility and authenticity compared to pre-produced audio.",
+      "category": "production",
+      "related_terms": ["live_read", "copy", "voice_track"]
+    },
+    {
+      "id": "automation",
+      "term": "Automation",
+      "novice_explanation": "Automation in radio means using computer systems to play programming automatically without a live person operating everything. The daily log (schedule) is created by a person, then sent to an automation system (like LibreTime) which plays the music, commercials, and other content at the exact times specified in the log. This allows stations to run 24/7 even when no one is physically at the station.",
+      "veteran_explanation": "Automation refers to computer-controlled playback of radio programming according to pre-generated logs. Automation systems (like LibreTime) receive daily logs and execute playback of all scheduled elements (music, spots, IDs, voice tracks) at precise times. Automation enables 24/7 operation, consistency, and reduced staffing requirements while maintaining professional sound quality.",
+      "category": "system",
+      "related_terms": ["log", "libretime", "voice_track"]
+    },
+    {
+      "id": "libretime",
+      "term": "LibreTime",
+      "novice_explanation": "LibreTime is an automation system that plays the radio programming automatically. After the log generator creates the daily schedule (log), it's published to LibreTime, which then plays everything - music, commercials, station IDs, etc. - at the exact times specified. LibreTime is the system that actually makes the radio station 'go' - it's the computer that plays all the content.",
+      "veteran_explanation": "LibreTime is an open-source radio automation platform that executes daily logs for on-air playback. LibreLog generates logs and publishes them to LibreTime, which handles media playback, scheduling, and automation. LibreTime can be configured per-station, allowing different stations to use different LibreTime instances or configurations.",
+      "category": "system",
+      "related_terms": ["log", "automation", "station"]
+    },
+    {
+      "id": "ar_aging",
+      "term": "AR Aging",
+      "abbreviation": "Accounts Receivable Aging",
+      "novice_explanation": "AR Aging is a report that shows which invoices are overdue and how long they've been overdue. It groups invoices by how old they are: Current (0-30 days), 31-60 days overdue, 61-90 days overdue, and Over 90 days overdue. This helps billing track which advertisers need payment reminders and which accounts might have collection issues.",
+      "veteran_explanation": "AR (Accounts Receivable) Aging is a financial report categorizing outstanding invoices by age. Aging buckets typically include Current (0-30 days), 31-60 days, 61-90 days, and Over 90 days. AR aging reports help identify collection priorities, assess credit risk, and track payment trends. They're essential for cash flow management and identifying problematic accounts.",
+      "category": "billing",
+      "related_terms": ["invoice", "payment", "advertiser"]
+    },
+    {
+      "id": "break_structure",
+      "term": "Break Structure",
+      "novice_explanation": "A break structure defines when commercial breaks happen and how many spots can fit in each break. For example, a break structure might say 'at 15 minutes past every hour, there's a 2-minute break that can hold 3 commercials.' Break structures are like templates that ensure breaks happen at consistent times and have consistent capacity.",
+      "veteran_explanation": "A break structure defines the timing, duration, and spot capacity of commercial breaks within each hour. Break structures specify when breaks occur (time offset from hour start), how long they last, and how many positions (A, B, C, etc.) are available. Break structures work with clock templates to create complete programming schedules.",
+      "category": "scheduling",
+      "related_terms": ["break_position", "commercial_break", "clock_template"]
     }
   ]
 }

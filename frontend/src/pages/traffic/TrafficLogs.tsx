@@ -41,14 +41,14 @@ import {
 import { format } from 'date-fns'
 
 interface TrafficLog {
-  id: number
+  id?: string
   log_type: string
-  log_id?: number
-  spot_id?: number
-  order_id?: number
-  campaign_id?: number
-  copy_id?: number
-  user_id: number
+  log_id?: string
+  spot_id?: string
+  order_id?: string
+  campaign_id?: string
+  copy_id?: string
+  user_id?: string
   message: string
   metadata?: Record<string, any>
   username?: string

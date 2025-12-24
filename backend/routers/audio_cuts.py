@@ -3,6 +3,7 @@ Audio Cuts router for managing multi-cut audio assets
 """
 
 import os
+from uuid import UUID
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -50,7 +51,7 @@ router = APIRouter(prefix="/audio-cuts", tags=["audio-cuts"])
 
 
 class AudioCutCreate(BaseModel):
-    copy_id: int
+    copy_id: UUID
     cut_id: str
     cut_name: Optional[str] = None
     rotation_weight: float = 1.0
@@ -73,8 +74,8 @@ class AudioCutUpdate(BaseModel):
 
 
 class AudioCutResponse(BaseModel):
-    id: int
-    copy_id: int
+    id: UUID
+    copy_id: UUID
     cut_id: str
     cut_name: Optional[str]
     audio_file_path: Optional[str]
@@ -98,7 +99,7 @@ class AudioCutResponse(BaseModel):
 
 @router.get("/", response_model=List[AudioCutResponse])
 async def list_cuts(
-    copy_id: Optional[int] = Query(None),
+    copy_id: Optional[UUID] = Query(None),
     active_only: bool = Query(False),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
@@ -123,7 +124,7 @@ async def list_cuts(
 
 @router.get("/{cut_id}", response_model=AudioCutResponse)
 async def get_cut(
-    cut_id: int,
+    cut_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -164,7 +165,7 @@ async def create_cut(
 @router.post("/upload", response_model=AudioCutResponse, status_code=status.HTTP_201_CREATED)
 async def upload_cut_audio(
     file: UploadFile = File(...),
-    copy_id: int = Form(...),
+    copy_id: UUID = Form(...),
     cut_id: str = Form(...),
     cut_name: Optional[str] = Form(None),
     rotation_weight: float = Form(1.0),
@@ -253,7 +254,7 @@ async def upload_cut_audio(
 
 @router.put("/{cut_id}", response_model=AudioCutResponse)
 async def update_cut(
-    cut_id: int,
+    cut_id: UUID,
     cut_data: AudioCutUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -279,7 +280,7 @@ async def update_cut(
 
 @router.delete("/{cut_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_cut(
-    cut_id: int,
+    cut_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -293,7 +294,7 @@ async def delete_cut(
 
 @router.post("/{cut_id}/versions", response_model=dict)
 async def create_version(
-    cut_id: int,
+    cut_id: UUID,
     version_notes: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -313,7 +314,7 @@ async def create_version(
 
 @router.get("/{cut_id}/versions", response_model=List[dict])
 async def get_versions(
-    cut_id: int,
+    cut_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -335,7 +336,7 @@ async def get_versions(
 
 @router.post("/{cut_id}/rollback/{version_number}", response_model=AudioCutResponse)
 async def rollback_to_version(
-    cut_id: int,
+    cut_id: UUID,
     version_number: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -351,7 +352,7 @@ async def rollback_to_version(
 
 @router.get("/{cut_id}/file")
 async def serve_cut_file(
-    cut_id: int,
+    cut_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

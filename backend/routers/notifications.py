@@ -3,6 +3,7 @@ Notifications router for email and in-app notifications
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from typing import List, Optional
@@ -19,7 +20,7 @@ router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 
 class NotificationResponse(BaseModel):
-    id: int
+    id: UUID
     notification_type: NotificationType
     status: NotificationStatus
     subject: Optional[str] = None
@@ -35,7 +36,7 @@ class NotificationResponse(BaseModel):
 
 
 class NotificationCreate(BaseModel):
-    user_id: int
+    user_id: UUID
     message: str
     notification_type: NotificationType = NotificationType.IN_APP
     subject: Optional[str] = None
@@ -105,7 +106,7 @@ async def create_notification(
 @router.post("/{notification_id}/read", status_code=status.HTTP_200_OK)
 @router.put("/{notification_id}/read", status_code=status.HTTP_200_OK)
 async def mark_notification_read(
-    notification_id: int,
+    notification_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

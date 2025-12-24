@@ -2,7 +2,8 @@
 Payment model for billing
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Numeric, ForeignKey
+from sqlalchemy import Column, String, DateTime, Numeric, ForeignKey, text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -12,8 +13,8 @@ class Payment(Base):
     """Payment model for tracking invoice payments"""
     __tablename__ = "payments"
 
-    id = Column(Integer, primary_key=True, index=True)
-    invoice_id = Column(Integer, ForeignKey("invoices.id"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
+    invoice_id = Column(UUID(as_uuid=True), ForeignKey("invoices.id"), nullable=False, index=True)
     amount = Column(Numeric(10, 2), nullable=False)
     payment_date = Column(DateTime(timezone=True), nullable=False, index=True)
     payment_method = Column(String(50))  # e.g., "Check", "Credit Card", "Wire Transfer"

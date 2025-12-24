@@ -14,6 +14,8 @@ html, body {
   height: 100%;
 }
 
+/* Material-UI styles are handled by ThemeProvider and CssBaseline */
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

@@ -2,8 +2,8 @@
 Voice track model for voice tracking
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, Enum as SQLEnum, Numeric
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, Enum as SQLEnum, Numeric, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -29,11 +29,11 @@ class VoiceTrack(Base):
     """Voice track model for voice tracking"""
     __tablename__ = "voice_tracks"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
     show_name = Column(String(255), index=True)
     file_url = Column(Text, nullable=False)
     scheduled_time = Column(DateTime(timezone=True), index=True)
-    uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    uploaded_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     libretime_id = Column(String(50), nullable=True, index=True)  # LibreTime file ID after upload
     standardized_name = Column(String(50), nullable=True, index=True)  # Format: "HH-00_BreakX" for fallback lookup
     recorded_date = Column(DateTime(timezone=True), nullable=True, index=True)  # Date when this recording was made

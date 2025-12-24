@@ -44,12 +44,12 @@ import {
 } from '../../utils/api'
 
 interface RotationRule {
-  id: number
+  id?: string
   name: string
   description?: string
   rotation_type: string
-  daypart_id?: number
-  campaign_id?: number
+  daypart_id?: string
+  campaign_id?: string
   min_separation: number
   max_per_hour?: number
   max_per_day?: number
@@ -121,7 +121,7 @@ const RotationRules: React.FC = () => {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) =>
+    mutationFn: ({ id, data }: { id?: string; data: any }) =>
       updateRotationRule(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rotation-rules'] })
@@ -187,7 +187,7 @@ const RotationRules: React.FC = () => {
     }
   }
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id?: string) => {
     if (window.confirm('Are you sure you want to delete this rotation rule?')) {
       deleteMutation.mutate(id)
     }

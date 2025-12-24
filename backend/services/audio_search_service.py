@@ -3,6 +3,7 @@ AudioSearchService for advanced audio asset search
 """
 
 from typing import List, Optional, Dict, Any
+from uuid import UUID
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func
@@ -64,8 +65,8 @@ class AudioSearchService:
     
     async def advanced_search(
         self,
-        advertiser_id: Optional[int] = None,
-        order_id: Optional[int] = None,
+        advertiser_id: Optional[UUID] = None,
+        order_id: Optional[UUID] = None,
         cut_id: Optional[str] = None,
         tags: Optional[List[str]] = None,
         status: Optional[str] = None,  # active, inactive, expired
@@ -110,8 +111,8 @@ class AudioSearchService:
     
     async def search_by_folder(
         self,
-        advertiser_id: Optional[int] = None,
-        order_id: Optional[int] = None
+        advertiser_id: Optional[UUID] = None,
+        order_id: Optional[UUID] = None
     ) -> Dict[str, Any]:
         """Folder-like navigation: Advertiser → Order → Cuts"""
         folder_structure = {}

@@ -3,7 +3,7 @@ import { Box, Chip, Avatar, Tooltip } from '@mui/material'
 import { Person as PersonIcon } from '@mui/icons-material'
 
 interface ActiveUsersProps {
-  users: Array<{ user_id: number; username: string }>
+  users: Array<{ user_id?: string; username: string }>
   isConnected: boolean
 }
 

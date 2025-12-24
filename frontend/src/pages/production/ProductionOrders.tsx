@@ -23,16 +23,17 @@ import {
   FormControl,
   InputLabel,
 } from '@mui/material'
-import { Visibility, CheckCircle, Schedule, Warning } from '@mui/icons-material'
+import { Visibility, CheckCircle, Schedule, Warning, Add } from '@mui/icons-material'
 import { getProductionOrders, updateProductionOrderStatus } from '../../utils/api'
 import { useNavigate } from 'react-router-dom'
+import ProductionOrderFormDialog from '../../components/production/ProductionOrderFormDialog'
 
 interface ProductionOrder {
-  id: number
+  id?: string
   po_number: string
-  copy_id: number
-  order_id?: number
-  advertiser_id: number
+  copy_id?: string
+  order_id?: string
+  advertiser_id?: string
   client_name: string
   campaign_title?: string
   deadline?: string
@@ -45,6 +46,7 @@ interface ProductionOrder {
 const ProductionOrders: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
@@ -62,7 +64,7 @@ const ProductionOrders: React.FC = () => {
   })
 
   const statusUpdateMutation = useMutation({
-    mutationFn: async ({ po_id, new_status }: { po_id: number; new_status: string }) => {
+    mutationFn: async ({ po_id, new_status }: { po_id?: string; new_status: string }) => {
       return await updateProductionOrderStatus(po_id, new_status)
     },
     onSuccess: () => {
@@ -120,22 +122,32 @@ const ProductionOrders: React.FC = () => {
     <Box p={3}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4">Production Orders</Typography>
-        <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel>Filter by Status</InputLabel>
-          <Select
-            value={statusFilter}
-            label="Filter by Status"
-            onChange={(e) => setStatusFilter(e.target.value)}
+        <Box display="flex" gap={2} alignItems="center">
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>Filter by Status</InputLabel>
+            <Select
+              value={statusFilter}
+              label="Filter by Status"
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="PENDING">Pending</MenuItem>
+              <MenuItem value="ASSIGNED">Assigned</MenuItem>
+              <MenuItem value="IN_PROGRESS">In Progress</MenuItem>
+              <MenuItem value="QC">QC</MenuItem>
+              <MenuItem value="COMPLETED">Completed</MenuItem>
+              <MenuItem value="DELIVERED">Delivered</MenuItem>
+            </Select>
+          </FormControl>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<Add />}
+            onClick={() => setCreateDialogOpen(true)}
           >
-            <MenuItem value="">All</MenuItem>
-            <MenuItem value="PENDING">Pending</MenuItem>
-            <MenuItem value="ASSIGNED">Assigned</MenuItem>
-            <MenuItem value="IN_PROGRESS">In Progress</MenuItem>
-            <MenuItem value="QC">QC</MenuItem>
-            <MenuItem value="COMPLETED">Completed</MenuItem>
-            <MenuItem value="DELIVERED">Delivered</MenuItem>
-          </Select>
-        </FormControl>
+            Create Production Order
+          </Button>
+        </Box>
       </Box>
 
       {errorMessage && (
@@ -150,7 +162,7 @@ const ProductionOrders: React.FC = () => {
             <TableRow>
               <TableCell>PO Number</TableCell>
               <TableCell>Client</TableCell>
-              <TableCell>Campaign</TableCell>
+              <TableCell>Campaign / Order</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Type</TableCell>
               <TableCell>Deadline</TableCell>
@@ -164,7 +176,24 @@ const ProductionOrders: React.FC = () => {
                 <TableRow key={order.id}>
                   <TableCell>{order.po_number}</TableCell>
                   <TableCell>{order.client_name}</TableCell>
-                  <TableCell>{order.campaign_title || 'N/A'}</TableCell>
+                  <TableCell>
+                    {order.order_type === 'spec' ? (
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">
+                          Spec Spot
+                        </Typography>
+                        {order.campaign_title && (
+                          <Typography variant="caption" color="text.secondary">
+                            {order.campaign_title}
+                          </Typography>
+                        )}
+                      </Box>
+                    ) : (
+                      <>
+                        {order.campaign_title || (order.order_id ? `Order #${order.order_id}` : 'N/A')}
+                      </>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Chip
                       label={order.status}
@@ -172,7 +201,32 @@ const ProductionOrders: React.FC = () => {
                       size="small"
                     />
                   </TableCell>
-                  <TableCell>{order.order_type}</TableCell>
+                  <TableCell>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      {order.order_type === 'spec' ? (
+                        <Chip
+                          label="SPEC"
+                          color="warning"
+                          size="small"
+                          sx={{ fontWeight: 'bold' }}
+                        />
+                      ) : (
+                        <Chip
+                          label={order.order_type.toUpperCase()}
+                          size="small"
+                          variant="outlined"
+                        />
+                      )}
+                      {!order.order_id && order.order_type !== 'spec' && (
+                        <Chip
+                          label="No Order"
+                          size="small"
+                          color="default"
+                          variant="outlined"
+                        />
+                      )}
+                    </Box>
+                  </TableCell>
                   <TableCell>
                     {order.deadline ? (
                       <Box display="flex" alignItems="center" gap={1}>
@@ -208,6 +262,15 @@ const ProductionOrders: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <ProductionOrderFormDialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        onSuccess={(productionOrderId) => {
+          queryClient.invalidateQueries({ queryKey: ['production-orders'] })
+          navigate(`/production/orders/${productionOrderId}`)
+        }}
+      />
     </Box>
   )
 }

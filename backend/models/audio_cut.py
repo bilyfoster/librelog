@@ -2,8 +2,8 @@
 AudioCut model for multi-cut audio asset management
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey, Float, CheckConstraint
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey, Float, CheckConstraint, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -13,8 +13,8 @@ class AudioCut(Base):
     """AudioCut model for managing multiple cuts per copy"""
     __tablename__ = "audio_cuts"
 
-    id = Column(Integer, primary_key=True, index=True)
-    copy_id = Column(Integer, ForeignKey("copy.id"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
+    copy_id = Column(UUID(as_uuid=True), ForeignKey("copy.id"), nullable=False, index=True)
     
     # Cut identification
     cut_id = Column(String(50), nullable=False, index=True)  # A, B, C, 1, 2, 3, or custom
@@ -43,7 +43,7 @@ class AudioCut(Base):
     # Metadata
     notes = Column(Text, nullable=True)
     tags = Column(JSONB, nullable=True)  # List of tags for searching
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

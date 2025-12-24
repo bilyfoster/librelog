@@ -2,7 +2,8 @@
 ProductionAssignment model for assigning production work to users
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, String, DateTime, Text, ForeignKey, Enum as SQLEnum, text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -31,9 +32,9 @@ class ProductionAssignment(Base):
     """ProductionAssignment model for assigning production work"""
     __tablename__ = "production_assignments"
 
-    id = Column(Integer, primary_key=True, index=True)
-    production_order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
+    production_order_id = Column(UUID(as_uuid=True), ForeignKey("production_orders.id"), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     
     # Assignment details
     assignment_type = Column(SQLEnum(AssignmentType), nullable=False, index=True)

@@ -36,6 +36,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
   Build as BuildIcon,
+  Create as CreateIcon,
 } from '@mui/icons-material'
 import {
   getCopyProxy,
@@ -46,6 +47,7 @@ import {
   approveCopy,
   rejectCopy,
   getCopyProductionStatus,
+  createProductionOrder,
 } from '../../utils/api'
 import api from '../../utils/api'
 import CopyUpload from '../../components/copy/CopyUpload'
@@ -54,9 +56,9 @@ import CopyAssignment from '../../components/copy/CopyAssignment'
 import ExpiringCopyAlert from '../../components/copy/ExpiringCopyAlert'
 
 interface Copy {
-  id: number
-  order_id?: number
-  advertiser_id?: number
+  id?: string
+  order_id?: string
+  advertiser_id?: string
   title: string
   script_text?: string
   audio_file_path?: string
@@ -69,7 +71,7 @@ interface Copy {
   needs_production?: boolean
   copy_status?: string
   copy_approval_status?: string
-  production_order_id?: number
+  production_order_id?: string
 }
 
 const CopyLibrary: React.FC = () => {
@@ -80,8 +82,15 @@ const CopyLibrary: React.FC = () => {
   const [uploadOpen, setUploadOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
   const [assignmentOpen, setAssignmentOpen] = useState(false)
+  const [specOrderOpen, setSpecOrderOpen] = useState(false)
   const [selectedCopy, setSelectedCopy] = useState<Copy | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [specOrderForm, setSpecOrderForm] = useState({
+    client_name: '',
+    spot_lengths: [] as number[],
+    deadline: '',
+    instructions: '',
+  })
   const queryClient = useQueryClient()
 
   const { data: copyItems, isLoading, error } = useQuery({
@@ -127,7 +136,7 @@ const CopyLibrary: React.FC = () => {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id?: string) => {
       await deleteCopy(id)
     },
     onSuccess: () => {
@@ -149,7 +158,7 @@ const CopyLibrary: React.FC = () => {
   })
 
   const needsProductionMutation = useMutation({
-    mutationFn: async ({ id, needs_production }: { id: number; needs_production: boolean }) => {
+    mutationFn: async ({ id, needs_production }: { id?: string; needs_production: boolean }) => {
       return await setNeedsProduction(id, needs_production)
     },
     onSuccess: () => {
@@ -162,7 +171,7 @@ const CopyLibrary: React.FC = () => {
   })
 
   const approveCopyMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id?: string) => {
       return await approveCopy(id, true)
     },
     onSuccess: () => {
@@ -175,8 +184,28 @@ const CopyLibrary: React.FC = () => {
     },
   })
 
+  const createSpecOrderMutation = useMutation({
+    mutationFn: async (data: { copy_id?: string; client_name: string; spot_lengths?: number[]; deadline?: string; instructions?: string }) => {
+      return await createProductionOrder({
+        ...data,
+        is_spec: true,
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['copy'] })
+      queryClient.invalidateQueries({ queryKey: ['production-orders'] })
+      setSpecOrderOpen(false)
+      setSpecOrderForm({ client_name: '', spot_lengths: [], deadline: '', instructions: '' })
+      setSelectedCopy(null)
+      setErrorMessage(null)
+    },
+    onError: (error: any) => {
+      setErrorMessage(error?.response?.data?.detail || 'Failed to create spec production order')
+    },
+  })
+
   const rejectCopyMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id?: string) => {
       return await rejectCopy(id)
     },
     onSuccess: () => {
@@ -198,7 +227,7 @@ const CopyLibrary: React.FC = () => {
     setDetailOpen(true)
   }
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id?: string) => {
     if (window.confirm('Are you sure you want to delete this copy?')) {
       deleteMutation.mutate(id)
     }
@@ -207,6 +236,32 @@ const CopyLibrary: React.FC = () => {
   const handleAssign = (copy: Copy) => {
     setSelectedCopy(copy)
     setAssignmentOpen(true)
+  }
+
+  const handleCreateSpecOrder = (copy: Copy) => {
+    setSelectedCopy(copy)
+    setSpecOrderForm({
+      client_name: '',
+      spot_lengths: [],
+      deadline: '',
+      instructions: '',
+    })
+    setSpecOrderOpen(true)
+  }
+
+  const handleSpecOrderSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedCopy || !specOrderForm.client_name) {
+      setErrorMessage('Client name is required for spec spots')
+      return
+    }
+    createSpecOrderMutation.mutate({
+      copy_id: selectedCopy.id,
+      client_name: specOrderForm.client_name,
+      spot_lengths: specOrderForm.spot_lengths.length > 0 ? specOrderForm.spot_lengths : undefined,
+      deadline: specOrderForm.deadline || undefined,
+      instructions: specOrderForm.instructions || undefined,
+    })
   }
 
   const formatDate = (dateStr?: string) => {

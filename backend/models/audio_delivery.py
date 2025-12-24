@@ -2,7 +2,8 @@
 AudioDelivery model for tracking delivery to playback systems
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey, text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -30,11 +31,11 @@ class AudioDelivery(Base):
     """AudioDelivery model for tracking audio file delivery to playback systems"""
     __tablename__ = "audio_deliveries"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"), index=True)
     
     # Association with cut
-    cut_id = Column(Integer, ForeignKey("audio_cuts.id"), nullable=False, index=True)
-    copy_id = Column(Integer, ForeignKey("copy.id"), nullable=True, index=True)
+    cut_id = Column(UUID(as_uuid=True), ForeignKey("audio_cuts.id"), nullable=False, index=True)
+    copy_id = Column(UUID(as_uuid=True), ForeignKey("copy.id"), nullable=True, index=True)
     
     # Delivery configuration
     delivery_method = Column(String(20), nullable=False)  # SFTP, RSYNC, API, LOCAL

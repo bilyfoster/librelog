@@ -5,6 +5,7 @@ Order service for traffic management
 from typing import Optional
 from datetime import date
 from decimal import Decimal
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.order import Order, RateType, OrderStatus, ApprovalStatus
 from backend.models.order_template import OrderTemplate
@@ -72,8 +73,8 @@ class OrderService:
     
     async def create_from_template(
         self,
-        template_id: int,
-        advertiser_id: int,
+        template_id: UUID,
+        advertiser_id: UUID,
         start_date: date,
         end_date: date,
         order_number: str,

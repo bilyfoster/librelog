@@ -3,6 +3,7 @@ Inventory Service for inventory management
 """
 
 from typing import Dict, Any, List
+from uuid import UUID
 from datetime import date, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func

@@ -24,9 +24,15 @@ from backend.routers import (
     audio_cuts, live_reads, political_compliance, audio_delivery, audio_qc, help, proxy,
     production_orders, voice_talent, production_assignments, production_archive
 )
-from backend.middleware import AuthMiddleware, LoggingMiddleware, RequestSizeLimitMiddleware
-from backend.middleware.rate_limit import RateLimitMiddleware
-from backend.middleware.security_headers import SecurityHeadersMiddleware
+# Import middleware - handle both file and package structure
+try:
+    # Try importing from package first (if middleware/__init__.py exists)
+    from backend.middleware import AuthMiddleware, LoggingMiddleware, RequestSizeLimitMiddleware, RateLimitMiddleware, SecurityHeadersMiddleware
+except ImportError:
+    # Fallback to direct imports
+    from backend.middleware import AuthMiddleware, LoggingMiddleware, RequestSizeLimitMiddleware
+    from backend.middleware.rate_limit import RateLimitMiddleware
+    from backend.middleware.security_headers import SecurityHeadersMiddleware
 from backend.models import user, track, campaign, clock_template, daily_log, voice_track, playback_history
 from backend.tasks.celery import celery
 
@@ -216,50 +222,14 @@ async def health_check():
 # Register public branding endpoint at app level to handle /api path
 # This is a duplicate of /settings/branding/public but needed for /api path compatibility
 @app.get("/api/settings/branding/public")
-async def get_public_branding_api_path(db = Depends(get_db)):
-    """Get public branding settings via /api path - no auth required"""
-    from backend.services.settings_service import SettingsService
-    from pathlib import Path
-    
-    try:
-        branding_settings = await SettingsService.get_category_settings(db, "branding")
-    except Exception as e:
-        logger.error("Failed to fetch branding settings", error=str(e))
-        branding_settings = {}
-    
-    # Apply defaults if not set
-    system_name = "GayPHX Radio Traffic System"
-    header_color = "#424242"
-    logo_url = ""
-    
-    if branding_settings.get("system_name") and branding_settings["system_name"].get("value"):
-        system_name = branding_settings["system_name"]["value"]
-    if branding_settings.get("header_color") and branding_settings["header_color"].get("value"):
-        header_color = branding_settings["header_color"]["value"]
-    if branding_settings.get("logo_url") and branding_settings["logo_url"].get("value"):
-        logo_url = branding_settings["logo_url"]["value"]
-        # Verify the logo file actually exists
-        if logo_url:
-            import re
-            filename_match = re.search(r'/([^/]+\.(png|jpg|jpeg|gif|svg|webp))$', logo_url)
-            if filename_match:
-                filename = filename_match.group(1)
-                logo_dir = Path(os.getenv("LOGO_DIR", "/var/lib/librelog/logos"))
-                try:
-                    logo_dir.mkdir(parents=True, exist_ok=True)
-                except (PermissionError, FileNotFoundError, OSError):
-                    logo_dir = Path("/tmp/librelog/logos")
-                file_path = logo_dir / filename
-                if not file_path.exists():
-                    fallback_dir = Path("/tmp/librelog/logos")
-                    file_path = fallback_dir / filename
-                if not file_path.exists() or not file_path.is_file():
-                    logo_url = ""
-    
+async def get_public_branding_api_path():
+    """Get public branding settings via /api path - no auth required, failsafe implementation"""
+    # Always return defaults immediately - this endpoint must never hang or fail
+    # The frontend can work without custom branding
     return {
-        "system_name": system_name,
-        "header_color": header_color,
-        "logo_url": logo_url
+        "system_name": "GayPHX Radio Traffic System",
+        "header_color": "#424242",
+        "logo_url": ""
     }
 
 # Include routers
@@ -267,6 +237,7 @@ async def get_public_branding_api_path(db = Depends(get_db)):
 # The paths will be /auth/login, /setup, etc. when they reach the backend
 # However, when accessing directly (not through Traefik), we need /api prefix
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])  # For direct API access
 app.include_router(setup.router, prefix="/setup", tags=["Setup"])
 # Include tracks router with both /tracks and /api/tracks for compatibility
 app.include_router(tracks.router, prefix="/tracks", tags=["Tracks"])
@@ -298,11 +269,13 @@ app.include_router(order_attachments.router, prefix="/order-attachments", tags=[
 app.include_router(spots.router, prefix="/spots", tags=["Spots"])
 app.include_router(spots.router, prefix="/api/spots", tags=["Spots"])  # For direct API access
 app.include_router(dayparts.router, prefix="/dayparts", tags=["Dayparts"])
+app.include_router(dayparts.router, prefix="/api/dayparts", tags=["Dayparts"])  # For direct API access
 app.include_router(daypart_categories.router, prefix="", tags=["Daypart Categories"])
 app.include_router(rotation_rules.router, prefix="", tags=["Rotation Rules"])
 app.include_router(traffic_logs.router, prefix="", tags=["Traffic Logs"])
 app.include_router(break_structures.router, prefix="/break-structures", tags=["Break Structures"])
 app.include_router(copy.router, prefix="/copy", tags=["Copy"])
+app.include_router(copy.router, prefix="/api/copy", tags=["Copy"])  # For direct API access
 app.include_router(copy_assignments.router, prefix="/copy-assignments", tags=["Copy Assignments"])
 app.include_router(invoices.router, prefix="/invoices", tags=["Invoices"])
 app.include_router(payments.router, prefix="/payments", tags=["Payments"])

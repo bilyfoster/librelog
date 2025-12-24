@@ -4,6 +4,7 @@ Pydantic schemas for Track model
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
+from uuid import UUID
 
 
 class TrackBase(BaseModel):
@@ -45,7 +46,7 @@ class TrackUpdate(BaseModel):
 
 class TrackResponse(TrackBase):
     """Schema for track response"""
-    id: int
+    id: UUID
     last_played: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime

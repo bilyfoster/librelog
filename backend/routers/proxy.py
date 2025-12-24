@@ -224,21 +224,30 @@ async def get_users_proxy(
         result = await db.execute(query)
         users = result.scalars().all()
         
+        logger.info("Fetched users from database", count=len(users), role_filter=role, search=search)
+        
         # Convert datetime fields to strings for Pydantic validation
         users_data = []
         for user in users:
-            user_dict = {
-                "id": user.id,
-                "username": user.username,
-                "role": user.role,
-                "created_at": user.created_at.isoformat() if user.created_at else "",
-                "last_login": user.last_login.isoformat() if user.last_login else None,
-                "last_activity": user.last_activity.isoformat() if user.last_activity else None,
-            }
-            users_data.append(UserResponse(**user_dict))
+            try:
+                user_dict = {
+                    "id": user.id,
+                    "username": user.username,
+                    "role": user.role,
+                    "created_at": user.created_at.isoformat() if user.created_at else "",
+                    "last_login": user.last_login.isoformat() if user.last_login else None,
+                    "last_activity": user.last_activity.isoformat() if user.last_activity else None,
+                }
+                users_data.append(UserResponse(**user_dict))
+            except Exception as e:
+                logger.error("Failed to serialize user", user_id=user.id, username=user.username, error=str(e), exc_info=True)
+                # Continue with other users instead of failing completely
+                continue
         
+        logger.info("Returning users data", count=len(users_data))
         return users_data
     except Exception as e:
+        logger.error("Failed to fetch users", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to fetch users: {str(e)}")
 
 
