@@ -1,0 +1,4 @@
+# Integration tests directory
+# Place end-to-end or integration tests here (e.g., UserIntegrationTest.java)
+# Integration test classes should have the suffix "IT" (e.g., UserIT.java)
+

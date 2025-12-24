@@ -30,19 +30,17 @@ The generated task list _must_ follow this structure:
 ```markdown
 ## Relevant Files
 
-- `backend/routers/feature.py` - Brief description (e.g., FastAPI router for this feature).
-- `tests/routers/test_feature.py` - Unit tests for `feature.py`.
-- `backend/schemas/feature.py` - Brief description (e.g., Pydantic schemas for request/response validation).
-- `backend/services/feature_service.py` - Brief description (e.g., Business logic service for this feature).
-- `backend/models/feature.py` - Brief description (e.g., SQLAlchemy model for database entity).
-- `alembic/versions/XXX_add_feature_table.py` - Brief description (e.g., Database migration for feature table).
+- `path/to/potential/file1.ts` - Brief description of why this file is relevant (e.g., Contains the main component for this feature).
+- `path/to/file1.test.ts` - Unit tests for `file1.ts`.
+- `path/to/another/file.tsx` - Brief description (e.g., API route handler for data submission).
+- `path/to/another/file.test.tsx` - Unit tests for `another/file.tsx`.
+- `lib/utils/helpers.ts` - Brief description (e.g., Utility functions needed for calculations).
+- `lib/utils/helpers.test.ts` - Unit tests for `helpers.ts`.
 
 ### Notes
 
-- Unit tests should be placed in the `tests/` directory mirroring the backend structure (e.g., `backend/routers/auth.py` → `tests/routers/test_auth.py`).
-- Frontend tests should be placed alongside components (e.g., `MyComponent.tsx` and `MyComponent.test.tsx` in the same directory).
-- Use `pytest [optional/path/to/test/file]` to run backend tests. Running without a path executes all tests found by pytest.
-- Use `npm test` or `vitest` to run frontend tests.
+- Unit tests should typically be placed alongside the code files they are testing (e.g., `MyComponent.tsx` and `MyComponent.test.tsx` in the same directory).
+- Use `npx jest [optional/path/to/test/file]` to run tests. Running without a path executes all tests found by the Jest configuration.
 
 ## Tasks
 

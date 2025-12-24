@@ -1,0 +1,4 @@
+# Data Transfer Objects directory
+# Place DTOs here (e.g., UserResponseDTO.java, RegisterRequestDTO.java)
+# All DTO classes must end with "DTO" suffix
+
