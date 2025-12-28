@@ -117,7 +117,7 @@ Based on PRD: `prd-clock-template-builder.md`
 
 ## Tasks
 
-- [ ] 1.0 Enhance Database Schema for Clock Template Elements
+- [x] 1.0 Enhance Database Schema for Clock Template Elements
   - [x] 1.1 Create Liquibase changeset `006-enhance-break-structures.xml` to add `avail_type`, `timing_type`, and `transition_code` columns to `break_structures` table
   - [x] 1.2 Create Liquibase changeset `007-create-fixed-assets-table.xml` to create `fixed_assets` table with columns: id (UUID), clock_template_id (UUID FK), name (VARCHAR), asset_type (VARCHAR), start_time (TIME), asset_identifier (VARCHAR), timing_type (VARCHAR), created_at, updated_at
   - [x] 1.3 Create Liquibase changeset `008-create-automation-commands-table.xml` to create `automation_commands` table with columns: id (UUID), clock_template_id (UUID FK), command_type (VARCHAR), trigger_time (TIME), priority (VARCHAR), parameters (JSONB), created_at, updated_at
@@ -129,21 +129,21 @@ Based on PRD: `prd-clock-template-builder.md`
   - [x] 1.9 Update `db.changelog-master.xml` to include all new changesets in order
   - [x] 1.10 Verify all changesets are idempotent and can be run multiple times safely
 
-- [ ] 2.0 Create Backend Entities and Enums for New Element Types
-  - [ ] 2.1 Create `TimingType` enum in `enums` package with values: HARD_START, SOFT_START
-  - [ ] 2.2 Create `TransitionCode` enum in `enums` package with values: SEGUE, OVERLAP, HARD_START
-  - [ ] 2.3 Create `AutomationCommandType` enum in `enums` package with values: SWITCH_TO_SATELLITE, START_RECORDING, ENABLE_LIVE_MIX, etc.
-  - [ ] 2.4 Create `AssetType` enum in `enums` package with WideOrbit values: IM (Imaging), ID (Legal ID), CM (Commercials), PR (Promos), VT (Voice Tracks), SH (Show/Longform)
-  - [ ] 2.5 Create `MusicCategory` enum in `enums` package with WideOrbit values: S1 (Power/Current), S2 (Secondary), S3 (New/Discovery)
-  - [ ] 2.6 Create `AvailType` entity in `models` package with JPA annotations, UUID primary key, Lombok annotations (@Data, @Builder, @NoArgsConstructor, @AllArgsConstructor)
-  - [ ] 2.7 Create `FixedAsset` entity in `models` package with relationship to ClockTemplate, fields for name, asset_type (enum), start_time, asset_identifier, timing_type (enum), and timestamps
-  - [ ] 2.8 Create `AutomationCommand` entity in `models` package with relationship to ClockTemplate, fields for command_type (enum), trigger_time, priority, parameters (JSONB), and timestamps
-  - [ ] 2.9 Create `DaypartAssignment` entity in `models` package with relationships to Daypart and ClockTemplate
-  - [ ] 2.10 Create `Grid` entity in `models` package with relationship to Channel, fields for name, description, is_active, and timestamps
-  - [ ] 2.11 Create `GridDaypartMapping` entity for weekly schedule assignments
-  - [ ] 2.12 Update `BreakStructure` entity to include new fields: avail_type (relationship or enum), timing_type (enum), transition_code (enum)
-  - [ ] 2.13 Write unit tests for all new enum classes (80%+ coverage)
-  - [ ] 2.14 Verify all entities use `@Enumerated(EnumType.STRING)` for enum fields
+- [x] 2.0 Create Backend Entities and Enums for New Element Types
+  - [x] 2.1 Create `TimingType` enum in `enums` package with values: HARD_START, SOFT_START
+  - [x] 2.2 Create `TransitionCode` enum in `enums` package with values: SEGUE, OVERLAP, HARD_START
+  - [x] 2.3 Create `AutomationCommandType` enum in `enums` package with values: SWITCH_TO_SATELLITE, START_RECORDING, ENABLE_LIVE_MIX, etc.
+  - [x] 2.4 Create `AssetType` enum in `enums` package with WideOrbit values: IM (Imaging), ID (Legal ID), CM (Commercials), PR (Promos), VT (Voice Tracks), SH (Show/Longform)
+  - [x] 2.5 Create `MusicCategory` enum in `enums` package with WideOrbit values: S1 (Power/Current), S2 (Secondary), S3 (New/Discovery)
+  - [x] 2.6 Create `AvailType` entity in `models` package with JPA annotations, UUID primary key, Lombok annotations (@Data, @Builder, @NoArgsConstructor, @AllArgsConstructor)
+  - [x] 2.7 Create `FixedAsset` entity in `models` package with relationship to ClockTemplate, fields for name, asset_type (enum), start_time, asset_identifier, timing_type (enum), and timestamps
+  - [x] 2.8 Create `AutomationCommand` entity in `models` package with relationship to ClockTemplate, fields for command_type (enum), trigger_time, priority, parameters (JSONB), and timestamps
+  - [x] 2.9 Create `DaypartAssignment` entity in `models` package with relationships to Daypart and ClockTemplate
+  - [x] 2.10 Create `Grid` entity in `models` package with relationship to Channel, fields for name, description, is_active, and timestamps
+  - [x] 2.11 Create `GridDaypartMapping` entity for weekly schedule assignments
+  - [x] 2.12 Update `BreakStructure` entity to include new fields: avail_type (relationship or enum), timing_type (enum), transition_code (enum)
+  - [x] 2.13 Write unit tests for all new enum classes (80%+ coverage)
+  - [x] 2.14 Verify all entities use `@Enumerated(EnumType.STRING)` for enum fields
 
 - [ ] 3.0 Implement Break Structure Service and Controller
   - [ ] 3.1 Create `BreakStructureRequestDTO` with fields: name, startTime, durationSeconds, isFloating, availTypeId, timingType, transitionCode, clockTemplateId
