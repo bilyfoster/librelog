@@ -157,17 +157,17 @@ Based on PRD: `prd-clock-template-builder.md`
   - [x] 3.9 Write unit tests for `BreakStructureServiceImpl` (80%+ coverage)
   - [ ] 3.10 Write integration tests for `BreakStructureController` endpoints
 
-- [ ] 4.0 Create Fixed Assets and Automation Commands Infrastructure
-  - [ ] 4.1 Create `FixedAssetRequestDTO` and `FixedAssetResponseDTO` with all required fields
-  - [ ] 4.2 Create `FixedAssetService` interface and `FixedAssetServiceImpl` with CRUD operations
-  - [ ] 4.3 Create `FixedAssetRepository` interface extending JpaRepository
-  - [ ] 4.4 Create `FixedAssetController` with REST endpoints for CRUD operations
-  - [ ] 4.5 Create `AutomationCommandRequestDTO` and `AutomationCommandResponseDTO` with all required fields including parameters (Map or JSON)
-  - [ ] 4.6 Create `AutomationCommandService` interface and `AutomationCommandServiceImpl` with CRUD operations
-  - [ ] 4.7 Create `AutomationCommandRepository` interface extending JpaRepository
-  - [ ] 4.8 Create `AutomationCommandController` with REST endpoints for CRUD operations
-  - [ ] 4.9 Add Swagger/OpenAPI annotations to all new controller endpoints
-  - [ ] 4.10 Write unit tests for both service implementations (80%+ coverage)
+- [x] 4.0 Create Fixed Assets and Automation Commands Infrastructure
+  - [x] 4.1 Create `FixedAssetRequestDTO` and `FixedAssetResponseDTO` with all required fields
+  - [x] 4.2 Create `FixedAssetService` interface and `FixedAssetServiceImpl` with CRUD operations
+  - [x] 4.3 Create `FixedAssetRepository` interface extending JpaRepository
+  - [x] 4.4 Create `FixedAssetController` with REST endpoints for CRUD operations
+  - [x] 4.5 Create `AutomationCommandRequestDTO` and `AutomationCommandResponseDTO` with all required fields including parameters (Map or JSON)
+  - [x] 4.6 Create `AutomationCommandService` interface and `AutomationCommandServiceImpl` with CRUD operations
+  - [x] 4.7 Create `AutomationCommandRepository` interface extending JpaRepository
+  - [x] 4.8 Create `AutomationCommandController` with REST endpoints for CRUD operations
+  - [x] 4.9 Add Swagger/OpenAPI annotations to all new controller endpoints
+  - [x] 4.10 Write unit tests for both service implementations (80%+ coverage)
   - [ ] 4.11 Write integration tests for both controllers
 
 - [ ] 5.0 Implement Avail Types and Timing Rules
