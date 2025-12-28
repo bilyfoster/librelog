@@ -145,16 +145,16 @@ Based on PRD: `prd-clock-template-builder.md`
   - [x] 2.13 Write unit tests for all new enum classes (80%+ coverage)
   - [x] 2.14 Verify all entities use `@Enumerated(EnumType.STRING)` for enum fields
 
-- [ ] 3.0 Implement Break Structure Service and Controller
-  - [ ] 3.1 Create `BreakStructureRequestDTO` with fields: name, startTime, durationSeconds, isFloating, availTypeId, timingType, transitionCode, clockTemplateId
-  - [ ] 3.2 Create `BreakStructureResponseDTO` with all break structure fields plus related data (avail type name, etc.)
-  - [ ] 3.3 Create `BreakStructureService` interface in `services` package with methods: create, getById, getByClockTemplateId, update, delete
-  - [ ] 3.4 Create `BreakStructureServiceImpl` in `services.impl` package implementing the interface with constructor injection, transaction management, and proper error handling
-  - [ ] 3.5 Create `BreakStructureRepository` interface extending JpaRepository with custom query methods (findByClockTemplateId, etc.)
-  - [ ] 3.6 Create `BreakStructureController` in `controllers` package with REST endpoints: POST /api/clock-templates/{clockId}/breaks, GET /api/clock-templates/{clockId}/breaks, GET /api/breaks/{id}, PUT /api/breaks/{id}, DELETE /api/breaks/{id}
-  - [ ] 3.7 Add Swagger/OpenAPI annotations to all controller endpoints
-  - [ ] 3.8 Implement proper validation in service layer (check clock template exists, validate timing, etc.)
-  - [ ] 3.9 Write unit tests for `BreakStructureServiceImpl` (80%+ coverage)
+- [x] 3.0 Implement Break Structure Service and Controller
+  - [x] 3.1 Create `BreakStructureRequestDTO` with fields: name, startTime, durationSeconds, isFloating, availTypeId, timingType, transitionCode, clockTemplateId
+  - [x] 3.2 Create `BreakStructureResponseDTO` with all break structure fields plus related data (avail type name, etc.)
+  - [x] 3.3 Create `BreakStructureService` interface in `services` package with methods: create, getById, getByClockTemplateId, update, delete
+  - [x] 3.4 Create `BreakStructureServiceImpl` in `services.impl` package implementing the interface with constructor injection, transaction management, and proper error handling
+  - [x] 3.5 Create `BreakStructureRepository` interface extending JpaRepository with custom query methods (findByClockTemplateId, etc.)
+  - [x] 3.6 Create `BreakStructureController` in `controllers` package with REST endpoints: POST /api/breaks, GET /api/breaks/{id}, GET /api/breaks/clock-templates/{clockId}, PUT /api/breaks/{id}, DELETE /api/breaks/{id}
+  - [x] 3.7 Add Swagger/OpenAPI annotations to all controller endpoints
+  - [x] 3.8 Implement proper validation in service layer (check clock template exists, validate timing, etc.)
+  - [x] 3.9 Write unit tests for `BreakStructureServiceImpl` (80%+ coverage)
   - [ ] 3.10 Write integration tests for `BreakStructureController` endpoints
 
 - [ ] 4.0 Create Fixed Assets and Automation Commands Infrastructure
