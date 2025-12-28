@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="008-create-automation-commands-table" author="librelog">
+		<comment>Create automation_commands table for automation system triggers</comment>
+		
+		<createTable tableName="automation_commands">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="clock_template_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="command_type" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="trigger_time" type="TIME">
+				<constraints nullable="false"/>
+			</column>
+			<column name="priority" type="VARCHAR(50)"/>
+			<column name="parameters" type="JSONB"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		
+		<addForeignKeyConstraint
+			baseTableName="automation_commands"
+			baseColumnNames="clock_template_id"
+			constraintName="fk_automation_commands_clock_template"
+			referencedTableName="clock_templates"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		
+		<createIndex indexName="idx_automation_commands_clock_template_id" tableName="automation_commands">
+			<column name="clock_template_id"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_automation_commands_command_type" tableName="automation_commands">
+			<column name="command_type"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_automation_commands_priority" tableName="automation_commands">
+			<column name="priority"/>
+		</createIndex>
+	</changeSet>
+
+</databaseChangeLog>
+

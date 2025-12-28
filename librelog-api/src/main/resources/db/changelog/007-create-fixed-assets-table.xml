@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="007-create-fixed-assets-table" author="librelog">
+		<comment>Create fixed_assets table for static carts (Legal IDs, News Intros, etc.)</comment>
+		
+		<createTable tableName="fixed_assets">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="clock_template_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="asset_type" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="start_time" type="TIME">
+				<constraints nullable="false"/>
+			</column>
+			<column name="asset_identifier" type="VARCHAR(255)"/>
+			<column name="timing_type" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		
+		<addForeignKeyConstraint
+			baseTableName="fixed_assets"
+			baseColumnNames="clock_template_id"
+			constraintName="fk_fixed_assets_clock_template"
+			referencedTableName="clock_templates"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		
+		<createIndex indexName="idx_fixed_assets_clock_template_id" tableName="fixed_assets">
+			<column name="clock_template_id"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_fixed_assets_asset_type" tableName="fixed_assets">
+			<column name="asset_type"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_fixed_assets_timing_type" tableName="fixed_assets">
+			<column name="timing_type"/>
+		</createIndex>
+	</changeSet>
+
+</databaseChangeLog>
+

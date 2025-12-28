@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="012-create-grid-daypart-mappings-table" author="librelog">
+		<comment>Create grid_daypart_mappings table for weekly schedule assignments (dayparts to specific days of week)</comment>
+		
+		<createTable tableName="grid_daypart_mappings">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="grid_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="daypart_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="day_of_week" type="INTEGER">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		
+		<addForeignKeyConstraint
+			baseTableName="grid_daypart_mappings"
+			baseColumnNames="grid_id"
+			constraintName="fk_grid_daypart_mappings_grid"
+			referencedTableName="grids"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		
+		<addForeignKeyConstraint
+			baseTableName="grid_daypart_mappings"
+			baseColumnNames="daypart_id"
+			constraintName="fk_grid_daypart_mappings_daypart"
+			referencedTableName="dayparts"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		
+		<createIndex indexName="idx_grid_daypart_mappings_grid_id" tableName="grid_daypart_mappings">
+			<column name="grid_id"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_grid_daypart_mappings_daypart_id" tableName="grid_daypart_mappings">
+			<column name="daypart_id"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_grid_daypart_mappings_day_of_week" tableName="grid_daypart_mappings">
+			<column name="day_of_week"/>
+		</createIndex>
+		
+		<!-- Ensure unique combination of grid, daypart, and day of week -->
+		<createIndex indexName="idx_grid_daypart_mappings_unique" tableName="grid_daypart_mappings" unique="true">
+			<column name="grid_id"/>
+			<column name="daypart_id"/>
+			<column name="day_of_week"/>
+		</createIndex>
+	</changeSet>
+
+</databaseChangeLog>
+

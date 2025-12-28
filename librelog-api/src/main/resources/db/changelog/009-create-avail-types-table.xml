@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="009-create-avail-types-table" author="librelog">
+		<comment>Create avail_types table for commercial break categorization</comment>
+		
+		<createTable tableName="avail_types">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false" unique="true"/>
+			</column>
+			<column name="description" type="TEXT"/>
+			<column name="is_active" type="BOOLEAN">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		
+		<createIndex indexName="idx_avail_types_name" tableName="avail_types">
+			<column name="name"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_avail_types_is_active" tableName="avail_types">
+			<column name="is_active"/>
+		</createIndex>
+		
+		<!-- Add foreign key constraint to break_structures.avail_type_id -->
+		<addForeignKeyConstraint
+			baseTableName="break_structures"
+			baseColumnNames="avail_type_id"
+			constraintName="fk_break_structures_avail_type"
+			referencedTableName="avail_types"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+	</changeSet>
+
+</databaseChangeLog>
+

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="010-create-daypart-assignments-table" author="librelog">
+		<comment>Create daypart_assignments table for assigning clock templates to dayparts</comment>
+		
+		<createTable tableName="daypart_assignments">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="daypart_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="clock_template_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		
+		<addForeignKeyConstraint
+			baseTableName="daypart_assignments"
+			baseColumnNames="daypart_id"
+			constraintName="fk_daypart_assignments_daypart"
+			referencedTableName="dayparts"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		
+		<addForeignKeyConstraint
+			baseTableName="daypart_assignments"
+			baseColumnNames="clock_template_id"
+			constraintName="fk_daypart_assignments_clock_template"
+			referencedTableName="clock_templates"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		
+		<createIndex indexName="idx_daypart_assignments_daypart_id" tableName="daypart_assignments">
+			<column name="daypart_id"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_daypart_assignments_clock_template_id" tableName="daypart_assignments">
+			<column name="clock_template_id"/>
+		</createIndex>
+		
+		<!-- Ensure unique combination of daypart and clock template -->
+		<createIndex indexName="idx_daypart_assignments_unique" tableName="daypart_assignments" unique="true">
+			<column name="daypart_id"/>
+			<column name="clock_template_id"/>
+		</createIndex>
+	</changeSet>
+
+</databaseChangeLog>
+

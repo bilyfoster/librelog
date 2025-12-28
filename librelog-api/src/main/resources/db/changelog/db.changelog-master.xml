@@ -1,0 +1,672 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="001-create-users-table" author="librelog">
+		<createTable tableName="users">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="email" type="VARCHAR(255)">
+				<constraints nullable="false" unique="true"/>
+			</column>
+			<column name="password" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="status" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="role" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
+		</createTable>
+	</changeSet>
+
+	<changeSet id="002-create-stations-table" author="librelog">
+		<createTable tableName="stations">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="call_sign" type="VARCHAR(255)">
+				<constraints nullable="false" unique="true"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="frequency" type="VARCHAR(50)"/>
+			<column name="market" type="VARCHAR(255)"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<createIndex indexName="idx_stations_call_sign" tableName="stations">
+			<column name="call_sign"/>
+		</createIndex>
+	</changeSet>
+
+	<changeSet id="002-create-channels-table" author="librelog">
+		<createTable tableName="channels">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="station_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="channel_number" type="INTEGER"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<addForeignKeyConstraint
+			baseTableName="channels"
+			baseColumnNames="station_id"
+			constraintName="fk_channels_station"
+			referencedTableName="stations"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		<createIndex indexName="idx_channels_station_id" tableName="channels">
+			<column name="station_id"/>
+		</createIndex>
+	</changeSet>
+
+	<changeSet id="002-create-daypart-categories-table" author="librelog">
+		<createTable tableName="daypart_categories">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false" unique="true"/>
+			</column>
+			<column name="description" type="TEXT"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<createIndex indexName="idx_daypart_categories_name" tableName="daypart_categories">
+			<column name="name"/>
+		</createIndex>
+	</changeSet>
+
+	<changeSet id="002-create-dayparts-table" author="librelog">
+		<createTable tableName="dayparts">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="start_time" type="TIME">
+				<constraints nullable="false"/>
+			</column>
+			<column name="end_time" type="TIME">
+				<constraints nullable="false"/>
+			</column>
+			<column name="category_id" type="UUID"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<addForeignKeyConstraint
+			baseTableName="dayparts"
+			baseColumnNames="category_id"
+			constraintName="fk_dayparts_category"
+			referencedTableName="daypart_categories"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+		<createIndex indexName="idx_dayparts_category_id" tableName="dayparts">
+			<column name="category_id"/>
+		</createIndex>
+	</changeSet>
+
+	<changeSet id="002-create-clock-templates-table" author="librelog">
+		<createTable tableName="clock_templates">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="station_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="description" type="TEXT"/>
+			<column name="is_active" type="BOOLEAN">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<addForeignKeyConstraint
+			baseTableName="clock_templates"
+			baseColumnNames="station_id"
+			constraintName="fk_clock_templates_station"
+			referencedTableName="stations"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		<createIndex indexName="idx_clock_templates_station_id" tableName="clock_templates">
+			<column name="station_id"/>
+		</createIndex>
+		<createIndex indexName="idx_clock_templates_is_active" tableName="clock_templates">
+			<column name="is_active"/>
+		</createIndex>
+	</changeSet>
+
+	<changeSet id="002-create-break-structures-table" author="librelog">
+		<createTable tableName="break_structures">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="clock_template_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="start_time" type="TIME">
+				<constraints nullable="false"/>
+			</column>
+			<column name="duration_seconds" type="INTEGER">
+				<constraints nullable="false"/>
+			</column>
+			<column name="is_floating" type="BOOLEAN"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<addForeignKeyConstraint
+			baseTableName="break_structures"
+			baseColumnNames="clock_template_id"
+			constraintName="fk_break_structures_clock_template"
+			referencedTableName="clock_templates"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		<createIndex indexName="idx_break_structures_clock_template_id" tableName="break_structures">
+			<column name="clock_template_id"/>
+		</createIndex>
+	</changeSet>
+
+	<changeSet id="003-create-admin-user" author="librelog">
+		<comment>Create initial admin user (admin@librelog.com/admin123)</comment>
+		<sql>
+			-- Password: admin123 (bcrypt hash)
+			INSERT INTO users (id, email, password, status, role, created_at, updated_at)
+			VALUES (
+				gen_random_uuid(),
+				'admin@librelog.com',
+				'$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+				'ACTIVE',
+				'ADMIN',
+				CURRENT_TIMESTAMP,
+				CURRENT_TIMESTAMP
+			)
+			ON CONFLICT (email) DO NOTHING;
+		</sql>
+	</changeSet>
+
+	<!-- Phase 1.2: Order Management System -->
+	<changeSet id="004-create-orders-table" author="librelog">
+		<createTable tableName="orders">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="order_number" type="VARCHAR(255)">
+				<constraints nullable="false" unique="true"/>
+			</column>
+			<column name="station_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="advertiser_name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="agency_name" type="VARCHAR(255)"/>
+			<column name="sales_rep_name" type="VARCHAR(255)"/>
+			<column name="status" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="start_date" type="DATE">
+				<constraints nullable="false"/>
+			</column>
+			<column name="end_date" type="DATE">
+				<constraints nullable="false"/>
+			</column>
+			<column name="total_spots" type="INTEGER"/>
+			<column name="total_amount" type="NUMERIC(19,2)"/>
+			<column name="notes" type="TEXT"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<addForeignKeyConstraint
+			baseTableName="orders"
+			baseColumnNames="station_id"
+			constraintName="fk_orders_station"
+			referencedTableName="stations"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		<createIndex indexName="idx_orders_order_number" tableName="orders">
+			<column name="order_number"/>
+		</createIndex>
+		<createIndex indexName="idx_orders_station_id" tableName="orders">
+			<column name="station_id"/>
+		</createIndex>
+		<createIndex indexName="idx_orders_status" tableName="orders">
+			<column name="status"/>
+		</createIndex>
+		<createIndex indexName="idx_orders_start_date" tableName="orders">
+			<column name="start_date"/>
+		</createIndex>
+		<createIndex indexName="idx_orders_end_date" tableName="orders">
+			<column name="end_date"/>
+		</createIndex>
+	</changeSet>
+
+	<changeSet id="004-create-order-lines-table" author="librelog">
+		<createTable tableName="order_lines">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="order_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="daypart_id" type="UUID"/>
+			<column name="spot_length_seconds" type="INTEGER">
+				<constraints nullable="false"/>
+			</column>
+			<column name="quantity" type="INTEGER">
+				<constraints nullable="false"/>
+			</column>
+			<column name="rate" type="NUMERIC(19,2)"/>
+			<column name="start_date" type="DATE"/>
+			<column name="end_date" type="DATE"/>
+			<column name="start_time" type="TIME"/>
+			<column name="end_time" type="TIME"/>
+			<column name="notes" type="TEXT"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<addForeignKeyConstraint
+			baseTableName="order_lines"
+			baseColumnNames="order_id"
+			constraintName="fk_order_lines_order"
+			referencedTableName="orders"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		<addForeignKeyConstraint
+			baseTableName="order_lines"
+			baseColumnNames="daypart_id"
+			constraintName="fk_order_lines_daypart"
+			referencedTableName="dayparts"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+		<createIndex indexName="idx_order_lines_order_id" tableName="order_lines">
+			<column name="order_id"/>
+		</createIndex>
+		<createIndex indexName="idx_order_lines_daypart_id" tableName="order_lines">
+			<column name="daypart_id"/>
+		</createIndex>
+	</changeSet>
+
+	<changeSet id="004-create-order-attachments-table" author="librelog">
+		<createTable tableName="order_attachments">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="order_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="file_name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="file_path" type="VARCHAR(500)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="file_size" type="BIGINT"/>
+			<column name="content_type" type="VARCHAR(255)"/>
+			<column name="description" type="TEXT"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<addForeignKeyConstraint
+			baseTableName="order_attachments"
+			baseColumnNames="order_id"
+			constraintName="fk_order_attachments_order"
+			referencedTableName="orders"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		<createIndex indexName="idx_order_attachments_order_id" tableName="order_attachments">
+			<column name="order_id"/>
+		</createIndex>
+	</changeSet>
+
+	<!-- Phase 1.3: Advertiser/Agency CRM -->
+	<changeSet id="005-create-agencies-table" author="librelog">
+		<createTable tableName="agencies">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="legal_name" type="VARCHAR(255)"/>
+			<column name="tax_id" type="VARCHAR(50)"/>
+			<column name="address_line1" type="VARCHAR(255)"/>
+			<column name="address_line2" type="VARCHAR(255)"/>
+			<column name="city" type="VARCHAR(255)"/>
+			<column name="state" type="VARCHAR(100)"/>
+			<column name="zip_code" type="VARCHAR(20)"/>
+			<column name="country" type="VARCHAR(100)"/>
+			<column name="phone" type="VARCHAR(50)"/>
+			<column name="email" type="VARCHAR(255)"/>
+			<column name="website" type="VARCHAR(255)"/>
+			<column name="notes" type="TEXT"/>
+			<column name="is_active" type="BOOLEAN">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<createIndex indexName="idx_agencies_name" tableName="agencies">
+			<column name="name"/>
+		</createIndex>
+		<createIndex indexName="idx_agencies_is_active" tableName="agencies">
+			<column name="is_active"/>
+		</createIndex>
+	</changeSet>
+
+	<changeSet id="005-create-sales-regions-table" author="librelog">
+		<createTable tableName="sales_regions">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false" unique="true"/>
+			</column>
+			<column name="description" type="TEXT"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<createIndex indexName="idx_sales_regions_name" tableName="sales_regions">
+			<column name="name"/>
+		</createIndex>
+	</changeSet>
+
+	<changeSet id="005-create-sales-offices-table" author="librelog">
+		<createTable tableName="sales_offices">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="address_line1" type="VARCHAR(255)"/>
+			<column name="address_line2" type="VARCHAR(255)"/>
+			<column name="city" type="VARCHAR(255)"/>
+			<column name="state" type="VARCHAR(100)"/>
+			<column name="zip_code" type="VARCHAR(20)"/>
+			<column name="country" type="VARCHAR(100)"/>
+			<column name="phone" type="VARCHAR(50)"/>
+			<column name="sales_region_id" type="UUID"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<addForeignKeyConstraint
+			baseTableName="sales_offices"
+			baseColumnNames="sales_region_id"
+			constraintName="fk_sales_offices_sales_region"
+			referencedTableName="sales_regions"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+		<createIndex indexName="idx_sales_offices_sales_region_id" tableName="sales_offices">
+			<column name="sales_region_id"/>
+		</createIndex>
+	</changeSet>
+
+	<changeSet id="005-create-sales-teams-table" author="librelog">
+		<createTable tableName="sales_teams">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false" unique="true"/>
+			</column>
+			<column name="description" type="TEXT"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<createIndex indexName="idx_sales_teams_name" tableName="sales_teams">
+			<column name="name"/>
+		</createIndex>
+	</changeSet>
+
+	<changeSet id="005-create-sales-reps-table" author="librelog">
+		<createTable tableName="sales_reps">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="first_name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="last_name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="email" type="VARCHAR(255)">
+				<constraints nullable="false" unique="true"/>
+			</column>
+			<column name="phone" type="VARCHAR(50)"/>
+			<column name="employee_id" type="VARCHAR(50)"/>
+			<column name="sales_team_id" type="UUID"/>
+			<column name="sales_office_id" type="UUID"/>
+			<column name="sales_region_id" type="UUID"/>
+			<column name="commission_rate" type="NUMERIC(5,2)"/>
+			<column name="is_active" type="BOOLEAN">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<addForeignKeyConstraint
+			baseTableName="sales_reps"
+			baseColumnNames="sales_team_id"
+			constraintName="fk_sales_reps_sales_team"
+			referencedTableName="sales_teams"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+		<addForeignKeyConstraint
+			baseTableName="sales_reps"
+			baseColumnNames="sales_office_id"
+			constraintName="fk_sales_reps_sales_office"
+			referencedTableName="sales_offices"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+		<addForeignKeyConstraint
+			baseTableName="sales_reps"
+			baseColumnNames="sales_region_id"
+			constraintName="fk_sales_reps_sales_region"
+			referencedTableName="sales_regions"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+		<createIndex indexName="idx_sales_reps_email" tableName="sales_reps">
+			<column name="email"/>
+		</createIndex>
+		<createIndex indexName="idx_sales_reps_sales_team_id" tableName="sales_reps">
+			<column name="sales_team_id"/>
+		</createIndex>
+		<createIndex indexName="idx_sales_reps_is_active" tableName="sales_reps">
+			<column name="is_active"/>
+		</createIndex>
+	</changeSet>
+
+	<changeSet id="005-create-advertisers-table" author="librelog">
+		<createTable tableName="advertisers">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="legal_name" type="VARCHAR(255)"/>
+			<column name="tax_id" type="VARCHAR(50)"/>
+			<column name="credit_limit" type="NUMERIC(19,2)"/>
+			<column name="payment_terms" type="VARCHAR(255)"/>
+			<column name="address_line1" type="VARCHAR(255)"/>
+			<column name="address_line2" type="VARCHAR(255)"/>
+			<column name="city" type="VARCHAR(255)"/>
+			<column name="state" type="VARCHAR(100)"/>
+			<column name="zip_code" type="VARCHAR(20)"/>
+			<column name="country" type="VARCHAR(100)"/>
+			<column name="phone" type="VARCHAR(50)"/>
+			<column name="email" type="VARCHAR(255)"/>
+			<column name="website" type="VARCHAR(255)"/>
+			<column name="agency_id" type="UUID"/>
+			<column name="sales_rep_id" type="UUID"/>
+			<column name="notes" type="TEXT"/>
+			<column name="is_active" type="BOOLEAN">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<addForeignKeyConstraint
+			baseTableName="advertisers"
+			baseColumnNames="agency_id"
+			constraintName="fk_advertisers_agency"
+			referencedTableName="agencies"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+		<addForeignKeyConstraint
+			baseTableName="advertisers"
+			baseColumnNames="sales_rep_id"
+			constraintName="fk_advertisers_sales_rep"
+			referencedTableName="sales_reps"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+		<createIndex indexName="idx_advertisers_name" tableName="advertisers">
+			<column name="name"/>
+		</createIndex>
+		<createIndex indexName="idx_advertisers_agency_id" tableName="advertisers">
+			<column name="agency_id"/>
+		</createIndex>
+		<createIndex indexName="idx_advertisers_sales_rep_id" tableName="advertisers">
+			<column name="sales_rep_id"/>
+		</createIndex>
+		<createIndex indexName="idx_advertisers_is_active" tableName="advertisers">
+			<column name="is_active"/>
+		</createIndex>
+	</changeSet>
+
+	<changeSet id="005-create-contacts-table" author="librelog">
+		<createTable tableName="contacts">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="first_name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="last_name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="title" type="VARCHAR(255)"/>
+			<column name="email" type="VARCHAR(255)"/>
+			<column name="phone" type="VARCHAR(50)"/>
+			<column name="mobile" type="VARCHAR(50)"/>
+			<column name="advertiser_id" type="UUID"/>
+			<column name="agency_id" type="UUID"/>
+			<column name="is_primary" type="BOOLEAN"/>
+			<column name="notes" type="TEXT"/>
+			<column name="is_active" type="BOOLEAN">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<addForeignKeyConstraint
+			baseTableName="contacts"
+			baseColumnNames="advertiser_id"
+			constraintName="fk_contacts_advertiser"
+			referencedTableName="advertisers"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		<addForeignKeyConstraint
+			baseTableName="contacts"
+			baseColumnNames="agency_id"
+			constraintName="fk_contacts_agency"
+			referencedTableName="agencies"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		<createIndex indexName="idx_contacts_advertiser_id" tableName="contacts">
+			<column name="advertiser_id"/>
+		</createIndex>
+		<createIndex indexName="idx_contacts_agency_id" tableName="contacts">
+			<column name="agency_id"/>
+		</createIndex>
+		<createIndex indexName="idx_contacts_is_active" tableName="contacts">
+			<column name="is_active"/>
+		</createIndex>
+	</changeSet>
+
+	<changeSet id="005-create-clusters-table" author="librelog">
+		<createTable tableName="clusters">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false" unique="true"/>
+			</column>
+			<column name="description" type="TEXT"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		<createIndex indexName="idx_clusters_name" tableName="clusters">
+			<column name="name"/>
+		</createIndex>
+	</changeSet>
+
+	<include file="db/changelog/004-add-station-type.xml"/>
+	<include file="db/changelog/005-multi-tenant-hierarchy.xml"/>
+	<include file="db/changelog/006-enhance-break-structures.xml"/>
+	<include file="db/changelog/007-create-fixed-assets-table.xml"/>
+	<include file="db/changelog/008-create-automation-commands-table.xml"/>
+	<include file="db/changelog/009-create-avail-types-table.xml"/>
+	<include file="db/changelog/010-create-daypart-assignments-table.xml"/>
+	<include file="db/changelog/011-create-grids-table.xml"/>
+	<include file="db/changelog/012-create-grid-daypart-mappings-table.xml"/>
+
+</databaseChangeLog>

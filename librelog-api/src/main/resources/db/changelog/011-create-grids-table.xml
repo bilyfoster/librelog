@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="011-create-grids-table" author="librelog">
+		<comment>Create grids table for weekly schedule management</comment>
+		
+		<createTable tableName="grids">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="channel_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="description" type="TEXT"/>
+			<column name="is_active" type="BOOLEAN">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+		
+		<addForeignKeyConstraint
+			baseTableName="grids"
+			baseColumnNames="channel_id"
+			constraintName="fk_grids_channel"
+			referencedTableName="channels"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		
+		<createIndex indexName="idx_grids_channel_id" tableName="grids">
+			<column name="channel_id"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_grids_is_active" tableName="grids">
+			<column name="is_active"/>
+		</createIndex>
+	</changeSet>
+
+</databaseChangeLog>
+
