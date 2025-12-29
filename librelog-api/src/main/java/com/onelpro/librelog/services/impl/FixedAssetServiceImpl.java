@@ -48,13 +48,19 @@ public class FixedAssetServiceImpl implements FixedAssetService {
 					return new NotFoundException("Clock template not found with ID: " + request.getClockTemplateId());
 				});
 
+		// Fixed assets default to HARD_START if not specified
+		com.onelpro.librelog.enums.TimingType timingType = request.getTimingType();
+		if (timingType == null) {
+			timingType = com.onelpro.librelog.enums.TimingType.HARD_START;
+		}
+
 		FixedAsset fixedAsset = FixedAsset.builder()
 				.clockTemplate(clockTemplate)
 				.name(request.getName())
 				.assetType(request.getAssetType())
 				.startTime(request.getStartTime())
 				.assetIdentifier(request.getAssetIdentifier())
-				.timingType(request.getTimingType())
+				.timingType(timingType)
 				.createdAt(LocalDateTime.now())
 				.updatedAt(LocalDateTime.now())
 				.build();
@@ -111,11 +117,17 @@ public class FixedAssetServiceImpl implements FixedAssetService {
 			fixedAsset.setClockTemplate(clockTemplate);
 		}
 
+		// Fixed assets default to HARD_START if not specified
+		com.onelpro.librelog.enums.TimingType timingType = request.getTimingType();
+		if (timingType == null) {
+			timingType = com.onelpro.librelog.enums.TimingType.HARD_START;
+		}
+
 		fixedAsset.setName(request.getName());
 		fixedAsset.setAssetType(request.getAssetType());
 		fixedAsset.setStartTime(request.getStartTime());
 		fixedAsset.setAssetIdentifier(request.getAssetIdentifier());
-		fixedAsset.setTimingType(request.getTimingType());
+		fixedAsset.setTimingType(timingType);
 		fixedAsset.setUpdatedAt(LocalDateTime.now());
 
 		fixedAsset = fixedAssetRepository.save(fixedAsset);

@@ -170,15 +170,15 @@ Based on PRD: `prd-clock-template-builder.md`
   - [x] 4.10 Write unit tests for both service implementations (80%+ coverage)
   - [ ] 4.11 Write integration tests for both controllers
 
-- [ ] 5.0 Implement Avail Types and Timing Rules
-  - [ ] 5.1 Create `AvailTypeRepository` interface extending JpaRepository
-  - [ ] 5.2 Create `AvailTypeService` interface and `AvailTypeServiceImpl` for managing avail types (if entity-based)
-  - [ ] 5.3 Create `AvailTypeController` with REST endpoints for CRUD operations (if entity-based)
-  - [ ] 5.4 Implement default avail types seeding (Weather Sponsor Only, Sports Content Only, General, Premium)
-  - [ ] 5.5 Update `BreakStructureService` to validate and assign avail types
-  - [ ] 5.6 Implement timing type validation logic (Hard Start must have exact time, Soft Start can be approximate)
-  - [ ] 5.7 Add timing type defaults (Fixed Assets default to Hard Start, Breaks default to Soft Start)
-  - [ ] 5.8 Write unit tests for avail type and timing rule logic (80%+ coverage)
+- [x] 5.0 Implement Avail Types and Timing Rules
+  - [x] 5.1 Create `AvailTypeRepository` interface extending JpaRepository
+  - [x] 5.2 Create `AvailTypeService` interface and `AvailTypeServiceImpl` for managing avail types (if entity-based)
+  - [x] 5.3 Create `AvailTypeController` with REST endpoints for CRUD operations (if entity-based)
+  - [x] 5.4 Implement default avail types seeding (Weather Sponsor Only, Sports Content Only, General, Premium)
+  - [x] 5.5 Update `BreakStructureService` to validate and assign avail types
+  - [x] 5.6 Implement timing type validation logic (Hard Start must have exact time, Soft Start can be approximate)
+  - [x] 5.7 Add timing type defaults (Fixed Assets default to Hard Start, Breaks default to Soft Start)
+  - [x] 5.8 Write unit tests for avail type and timing rule logic (80%+ coverage)
 
 - [ ] 6.0 Build Clock Validation and Conflict Detection Service
   - [ ] 6.1 Create `ClockValidationService` interface with methods: validateClock, detectConflicts, checkOverlaps, validateTiming

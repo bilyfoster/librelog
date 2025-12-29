@@ -35,7 +35,6 @@ public class FixedAssetRequestDTO {
 
 	private String assetIdentifier;
 
-	@NotNull(message = "Timing type is required")
 	private TimingType timingType;
 
 }

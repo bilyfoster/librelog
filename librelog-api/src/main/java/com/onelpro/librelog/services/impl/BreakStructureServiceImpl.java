@@ -75,6 +75,12 @@ public class BreakStructureServiceImpl implements BreakStructureService {
 			throw new BadRequestException("Break structure start time plus duration cannot exceed 60 minutes");
 		}
 
+		// Commercial breaks default to SOFT_START if not specified
+		com.onelpro.librelog.enums.TimingType timingType = request.getTimingType();
+		if (timingType == null) {
+			timingType = com.onelpro.librelog.enums.TimingType.SOFT_START;
+		}
+
 		BreakStructure breakStructure = BreakStructure.builder()
 				.clockTemplate(clockTemplate)
 				.name(request.getName())
@@ -82,7 +88,7 @@ public class BreakStructureServiceImpl implements BreakStructureService {
 				.durationSeconds(request.getDurationSeconds())
 				.isFloating(request.getIsFloating() != null ? request.getIsFloating() : false)
 				.availType(availType)
-				.timingType(request.getTimingType())
+				.timingType(timingType)
 				.transitionCode(request.getTransitionCode())
 				.createdAt(LocalDateTime.now())
 				.updatedAt(LocalDateTime.now())
@@ -159,12 +165,18 @@ public class BreakStructureServiceImpl implements BreakStructureService {
 			throw new BadRequestException("Break structure start time plus duration cannot exceed 60 minutes");
 		}
 
+		// Commercial breaks default to SOFT_START if not specified
+		com.onelpro.librelog.enums.TimingType timingType = request.getTimingType();
+		if (timingType == null) {
+			timingType = com.onelpro.librelog.enums.TimingType.SOFT_START;
+		}
+
 		breakStructure.setName(request.getName());
 		breakStructure.setStartTime(request.getStartTime());
 		breakStructure.setDurationSeconds(request.getDurationSeconds());
 		breakStructure.setIsFloating(request.getIsFloating() != null ? request.getIsFloating() : false);
 		breakStructure.setAvailType(availType);
-		breakStructure.setTimingType(request.getTimingType());
+		breakStructure.setTimingType(timingType);
 		breakStructure.setTransitionCode(request.getTransitionCode());
 		breakStructure.setUpdatedAt(LocalDateTime.now());
 
