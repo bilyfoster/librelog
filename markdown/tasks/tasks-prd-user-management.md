@@ -149,7 +149,7 @@ Based on PRD: `prd-user-management.md`
   - [x] 1.9 Verify all changesets are idempotent and can be run multiple times safely
   - [x] 1.10 Test database migrations on a clean database to ensure they execute correctly
 
-- [ ] 2.0 Enums and Constants
+- [x] 2.0 Enums and Constants
   - [x] 2.1 Create `PermissionLevel` enum in `enums` package with values: FULL_ACCESS, VIEW_ONLY, CUSTOM, with Javadoc comments
   - [x] 2.2 Create `ActionType` enum in `enums` package with values: VIEW, CREATE, EDIT, DELETE, with Javadoc comments
   - [x] 2.3 Create `ModuleType` enum in `enums` package with values: ORDERS, LOGS, INVENTORY, BILLING, REPORTS, MATERIAL_INSTRUCTIONS, CLOCK_TEMPLATES, USER_MANAGEMENT, SYSTEM_SETTINGS, with Javadoc comments
@@ -159,16 +159,16 @@ Based on PRD: `prd-user-management.md`
   - [x] 2.7 Verify all enums follow naming conventions (PascalCase for enum name, UPPER_SNAKE_CASE for constants)
 
 - [ ] 3.0 Entity Models
-  - [ ] 3.1 Create `UserStationAssignment` entity in `models` package with JPA annotations, UUID primary key, Lombok annotations (@Data, @Builder, @NoArgsConstructor, @AllArgsConstructor), relationships to User and Station, fields for permission_level (enum), custom_permissions (JSONB), and timestamps
-  - [ ] 3.2 Create `CustomRole` entity in `models` package with JPA annotations, UUID primary key, Lombok annotations, fields for name (unique), description, permissions (JSONB), created_by_user_id (FK), and timestamps
-  - [ ] 3.3 Create `AuditLog` entity in `models` package with JPA annotations, UUID primary key, Lombok annotations, relationships to User (user_id and impersonated_user_id, both nullable), Station (nullable), fields for action_type (enum), resource_type, resource_id (UUID nullable), previous_value (JSONB nullable), new_value (JSONB nullable), ip_address, user_agent, and timestamp
-  - [ ] 3.4 Create `UserSession` entity in `models` package with JPA annotations, UUID primary key, Lombok annotations, relationship to User, fields for session_token (hashed), login_timestamp, last_activity_timestamp, ip_address, user_agent, current_station_id (FK nullable), current_resource_id (UUID nullable), is_active (boolean), expires_at
-  - [ ] 3.5 Create `UserMarketAssignment` entity in `models` package (Phase 2 preparation) with similar structure to UserStationAssignment but for markets
-  - [ ] 3.6 Create `UserClusterAssignment` entity in `models` package (Phase 2 preparation) with similar structure to UserStationAssignment but for clusters
-  - [ ] 3.7 Update `User` entity to add @OneToMany relationships to UserStationAssignment, UserSession, and audit logs (as creator)
-  - [ ] 3.8 Verify all entities use `@Enumerated(EnumType.STRING)` for enum fields
-  - [ ] 3.9 Verify all entities use UUID for primary keys with `@GeneratedValue(strategy = GenerationType.UUID)`
-  - [ ] 3.10 Write unit tests for entity classes verifying Lombok annotations work correctly
+  - [x] 3.1 Create `UserStationAssignment` entity in `models` package with JPA annotations, UUID primary key, Lombok annotations (@Data, @Builder, @NoArgsConstructor, @AllArgsConstructor), relationships to User and Station, fields for permission_level (enum), custom_permissions (JSONB), and timestamps
+  - [x] 3.2 Create `CustomRole` entity in `models` package with JPA annotations, UUID primary key, Lombok annotations, fields for name (unique), description, permissions (JSONB), created_by_user_id (FK), and timestamps
+  - [x] 3.3 Create `AuditLog` entity in `models` package with JPA annotations, UUID primary key, Lombok annotations, relationships to User (user_id and impersonated_user_id, both nullable), Station (nullable), fields for action_type (enum), resource_type, resource_id (UUID nullable), previous_value (JSONB nullable), new_value (JSONB nullable), ip_address, user_agent, and timestamp
+  - [x] 3.4 Create `UserSession` entity in `models` package with JPA annotations, UUID primary key, Lombok annotations, relationship to User, fields for session_token (hashed), login_timestamp, last_activity_timestamp, ip_address, user_agent, current_station_id (FK nullable), current_resource_id (UUID nullable), is_active (boolean), expires_at
+  - [x] 3.5 Create `UserMarketAssignment` entity in `models` package (Phase 2 preparation) with similar structure to UserStationAssignment but for markets
+  - [x] 3.6 Create `UserClusterAssignment` entity in `models` package (Phase 2 preparation) with similar structure to UserStationAssignment but for clusters
+  - [x] 3.7 Update `User` entity to add @OneToMany relationships to UserStationAssignment, UserSession, and audit logs (as creator)
+  - [x] 3.8 Verify all entities use `@Enumerated(EnumType.STRING)` for enum fields
+  - [x] 3.9 Verify all entities use UUID for primary keys with `@GeneratedValue(strategy = GenerationType.UUID)`
+  - [x] 3.10 Write unit tests for entity classes verifying Lombok annotations work correctly
 
 - [ ] 4.0 Repository Interfaces
   - [ ] 4.1 Create `UserStationAssignmentRepository` interface extending JpaRepository with custom query methods: findByUserId, findByStationId, findByUserIdAndStationId, findByUserIdIn
