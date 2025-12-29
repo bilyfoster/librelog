@@ -12,11 +12,20 @@ import java.util.UUID;
 
 /**
  * Specifications for building dynamic queries for AuditLog entities.
+ * Uses JPA Criteria API for type-safe query building.
  */
 public class AuditLogSpecifications {
 
 	/**
-	 * Build a specification for filtering audit logs with multiple optional filters.
+	 * Creates a specification with multiple optional filters.
+	 *
+	 * @param userId optional user ID filter
+	 * @param actionType optional action type filter
+	 * @param resourceType optional resource type filter
+	 * @param stationId optional station ID filter
+	 * @param startDate optional start date filter (inclusive)
+	 * @param endDate optional end date filter (inclusive)
+	 * @return specification for filtering audit logs
 	 */
 	public static Specification<AuditLog> withFilters(
 			UUID userId,
@@ -25,6 +34,7 @@ public class AuditLogSpecifications {
 			UUID stationId,
 			LocalDateTime startDate,
 			LocalDateTime endDate) {
+
 		return (root, query, cb) -> {
 			List<Predicate> predicates = new ArrayList<>();
 
@@ -36,7 +46,7 @@ public class AuditLogSpecifications {
 				predicates.add(cb.equal(root.get("actionType"), actionType));
 			}
 
-			if (resourceType != null) {
+			if (resourceType != null && !resourceType.isEmpty()) {
 				predicates.add(cb.equal(root.get("resourceType"), resourceType));
 			}
 
@@ -57,4 +67,3 @@ public class AuditLogSpecifications {
 	}
 
 }
-

@@ -214,12 +214,12 @@ Based on PRD: `prd-user-management.md`
 
 - [ ] 7.0 Audit Trail System
   - [x] 7.1 Create `AuditService` interface in `services` package with methods: logAction(actionType, resourceType, resourceId, previousValue, newValue, userId, stationId), logLogin(userId, ipAddress, userAgent), logLogout(userId), logPermissionChange(userId, targetUserId, previousPermissions, newPermissions), getAuditLogs(filter), exportAuditLogs(filter)
-  - [ ] 7.2 Create `AuditServiceImpl` in `services.impl` package implementing the interface with constructor injection, transaction management, and proper error handling
-  - [ ] 7.3 Implement `logAction` method that creates audit log entries with all required fields
-  - [ ] 7.4 Implement `logLogin` and `logLogout` methods for authentication events
-  - [ ] 7.5 Implement `logPermissionChange` method for tracking permission modifications
-  - [ ] 7.6 Implement `getAuditLogs` method with filtering, pagination, and sorting support
-  - [ ] 7.7 Implement `exportAuditLogs` method that generates CSV/Excel export
+  - [x] 7.2 Create `AuditServiceImpl` in `services.impl` package implementing the interface with constructor injection, transaction management, and proper error handling
+  - [x] 7.3 Implement `logAction` method that creates audit log entries with all required fields
+  - [x] 7.4 Implement `logLogin` and `logLogout` methods for authentication events
+  - [x] 7.5 Implement `logPermissionChange` method for tracking permission modifications
+  - [x] 7.6 Implement `getAuditLogs` method with filtering, pagination, and sorting support
+  - [x] 7.7 Implement `exportAuditLogs` method that generates CSV/Excel export
   - [ ] 7.8 Create audit logging interceptor/aspect to automatically log data changes in service methods (optional, for future use)
   - [ ] 7.9 Integrate audit logging into existing services (UserService, OrderService, etc.) for CREATE, UPDATE, DELETE operations
   - [ ] 7.10 Implement broadcast-specific audit logging for spot moves, log edits, and order approvals

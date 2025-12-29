@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="019-add-wideorbit-fields" author="librelog">
+		<comment>Add WideOrbit compatibility fields to break_structures and fixed_assets tables</comment>
+		
+		<!-- Add WideOrbit fields to break_structures -->
+		<addColumn tableName="break_structures">
+			<column name="asset_type" type="VARCHAR(50)"/>
+			<column name="music_category" type="VARCHAR(50)"/>
+			<column name="show_segment_name" type="VARCHAR(255)"/>
+		</addColumn>
+		
+		<!-- Add WideOrbit fields to fixed_assets (music_category and show_segment_name) -->
+		<addColumn tableName="fixed_assets">
+			<column name="music_category" type="VARCHAR(50)"/>
+			<column name="show_segment_name" type="VARCHAR(255)"/>
+		</addColumn>
+		
+		<!-- Create indexes for filtering -->
+		<createIndex indexName="idx_break_structures_asset_type" tableName="break_structures">
+			<column name="asset_type"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_break_structures_music_category" tableName="break_structures">
+			<column name="music_category"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_fixed_assets_music_category" tableName="fixed_assets">
+			<column name="music_category"/>
+		</createIndex>
+	</changeSet>
+
+</databaseChangeLog>
+
