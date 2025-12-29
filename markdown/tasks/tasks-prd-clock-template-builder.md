@@ -180,19 +180,19 @@ Based on PRD: `prd-clock-template-builder.md`
   - [x] 5.7 Add timing type defaults (Fixed Assets default to Hard Start, Breaks default to Soft Start)
   - [x] 5.8 Write unit tests for avail type and timing rule logic (80%+ coverage)
 
-- [ ] 6.0 Build Clock Validation and Conflict Detection Service
-  - [ ] 6.1 Create `ClockValidationService` interface with methods: validateClock, detectConflicts, checkOverlaps, validateTiming
-  - [ ] 6.2 Create `ClockValidationResultDTO` with fields: isValid, errors (List), warnings (List), conflictDetails
-  - [ ] 6.3 Create `ClockValidationServiceImpl` implementing validation logic:
+- [x] 6.0 Build Clock Validation and Conflict Detection Service
+  - [x] 6.1 Create `ClockValidationService` interface with methods: validateClock, detectConflicts, checkOverlaps, validateTiming
+  - [x] 6.2 Create `ClockValidationResultDTO` with fields: isValid, errors (List), warnings (List), conflictDetails
+  - [x] 6.3 Create `ClockValidationServiceImpl` implementing validation logic:
     - Detect overlapping commercial breaks
     - Detect overlapping fixed assets with breaks
     - Detect high-priority automation commands within 30 seconds
     - Validate total break time doesn't exceed limits (e.g., >18 minutes/hour)
     - Check all elements fit within 60-minute hour
-  - [ ] 6.4 Implement real-time validation that can be called during clock building
-  - [ ] 6.5 Create validation error/warning message formatting with actionable descriptions
-  - [ ] 6.6 Add endpoint in `ClockBuilderController`: POST /api/clock-templates/{id}/validate
-  - [ ] 6.7 Write comprehensive unit tests for all validation scenarios (80%+ coverage)
+  - [x] 6.4 Implement real-time validation that can be called during clock building
+  - [x] 6.5 Create validation error/warning message formatting with actionable descriptions
+  - [x] 6.6 Add endpoint in `ClockController`: POST /api/clocks/{id}/validate
+  - [x] 6.7 Write comprehensive unit tests for all validation scenarios (80%+ coverage)
   - [ ] 6.8 Write integration tests for validation endpoint
 
 - [ ] 7.0 Create Clock Builder Service with Structure Management

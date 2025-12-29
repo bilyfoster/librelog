@@ -2,7 +2,9 @@ package com.onelpro.librelog.controllers;
 
 import com.onelpro.librelog.dto.ClockTemplateRequestDTO;
 import com.onelpro.librelog.dto.ClockTemplateResponseDTO;
+import com.onelpro.librelog.dto.ClockValidationResultDTO;
 import com.onelpro.librelog.services.ClockService;
+import com.onelpro.librelog.services.ClockValidationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,9 +37,11 @@ public class ClockController {
 	private static final Logger logger = LoggerFactory.getLogger(ClockController.class);
 
 	private final ClockService clockService;
+	private final ClockValidationService clockValidationService;
 
-	public ClockController(ClockService clockService) {
+	public ClockController(ClockService clockService, ClockValidationService clockValidationService) {
 		this.clockService = clockService;
+		this.clockValidationService = clockValidationService;
 	}
 
 	@PostMapping
@@ -111,6 +115,19 @@ public class ClockController {
 		logger.info("DELETE /api/clocks/{} - Deleting clock template", id);
 		clockService.delete(id);
 		return ResponseEntity.noContent().build();
+	}
+
+	@PostMapping("/{id}/validate")
+	@Operation(
+			summary = "Validate clock template",
+			description = "Validates a clock template for conflicts, overlaps, and timing issues"
+	)
+	@ApiResponse(responseCode = "200", description = "Validation completed")
+	@ApiResponse(responseCode = "404", description = "Clock template not found")
+	public ResponseEntity<ClockValidationResultDTO> validate(@PathVariable UUID id) {
+		logger.info("POST /api/clocks/{}/validate - Validating clock template", id);
+		ClockValidationResultDTO result = clockValidationService.validateClock(id);
+		return ResponseEntity.ok(result);
 	}
 
 }

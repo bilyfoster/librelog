@@ -219,6 +219,17 @@ public class ClockValidationServiceImpl implements ClockValidationService {
 		List<BreakStructure> breaks = breakStructureRepository.findByClockTemplateId(clockTemplateId);
 		List<FixedAsset> fixedAssets = fixedAssetRepository.findByClockTemplateId(clockTemplateId);
 
+		// Validate total break time doesn't exceed limits (e.g., >18 minutes/hour)
+		int totalBreakSeconds = breaks.stream()
+				.mapToInt(BreakStructure::getDurationSeconds)
+				.sum();
+		if (totalBreakSeconds > 18 * 60) { // 18 minutes = 1080 seconds
+			result.addWarning(String.format(
+					"Total commercial break time (%d minutes) exceeds recommended limit of 18 minutes per hour",
+					totalBreakSeconds / 60
+			));
+		}
+
 		// Validate breaks don't exceed 60-minute clock
 		for (BreakStructure breakStructure : breaks) {
 			int startMinutes = breakStructure.getStartTime().getMinute();
