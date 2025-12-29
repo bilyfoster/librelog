@@ -24,7 +24,10 @@ function initClockBuilder(clockTemplateId) {
 // Load clock structure from API
 async function loadClockStructure(clockTemplateId) {
     try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            throw new Error('Authentication token not found. Please log in again.');
+        }
         const response = await fetch(`/api/clock-templates/${clockTemplateId}/structure`, {
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -586,7 +589,7 @@ async function saveElementProperties(elementId) {
 // Save element position
 async function saveElementPosition(element) {
     try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('authToken');
         let endpoint = '';
         let method = 'PUT';
         let body = {};
@@ -656,8 +659,8 @@ async function saveElementPosition(element) {
 // Load validation results
 async function loadValidation(clockTemplateId) {
     try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`/api/clocks/${clockTemplateId}/validate`, {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch(`/api/clock-templates/${clockTemplateId}/validate`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -710,7 +713,7 @@ function displayValidation(validation) {
 // Load revenue analysis
 async function loadRevenueAnalysis(clockTemplateId) {
     try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('authToken');
         const response = await fetch(`/api/clock-templates/${clockTemplateId}/revenue-analysis`, {
             headers: {
                 'Authorization': `Bearer ${token}`
