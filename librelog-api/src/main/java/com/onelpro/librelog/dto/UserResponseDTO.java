@@ -3,6 +3,7 @@ package com.onelpro.librelog.dto;
 import com.onelpro.librelog.enums.UserRole;
 import com.onelpro.librelog.enums.UserStatus;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -37,7 +38,7 @@ public class UserResponseDTO {
 	 * DTO for station assignment summary information.
 	 */
 	@Data
-	@lombok.Builder
+	@Builder
 	@NoArgsConstructor
 	@AllArgsConstructor
 	public static class StationAssignmentSummaryDTO {
