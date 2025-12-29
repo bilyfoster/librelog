@@ -137,7 +137,7 @@ Based on PRD: `prd-user-management.md`
 
 ## Tasks
 
-- [ ] 1.0 Database Schema and Migrations
+- [x] 1.0 Database Schema and Migrations
   - [x] 1.1 Create Liquibase changeset `013-create-user-station-assignments-table.xml` to create `user_station_assignments` table with columns: id (UUID PK), user_id (UUID FK to users), station_id (UUID FK to stations), permission_level (VARCHAR enum), custom_permissions (JSONB), created_at (TIMESTAMP), updated_at (TIMESTAMP), with unique constraint on (user_id, station_id)
   - [x] 1.2 Create Liquibase changeset `014-create-custom-roles-table.xml` to create `custom_roles` table with columns: id (UUID PK), name (VARCHAR UNIQUE), description (TEXT), permissions (JSONB), created_by_user_id (UUID FK to users), created_at (TIMESTAMP), updated_at (TIMESTAMP)
   - [x] 1.3 Create Liquibase changeset `015-create-audit-logs-table.xml` to create `audit_logs` table with columns: id (UUID PK), user_id (UUID FK to users, nullable), impersonated_user_id (UUID FK to users, nullable), action_type (VARCHAR enum), resource_type (VARCHAR), resource_id (UUID, nullable), previous_value (JSONB, nullable), new_value (JSONB, nullable), ip_address (VARCHAR), user_agent (VARCHAR), station_id (UUID FK to stations, nullable), timestamp (TIMESTAMP WITH TIME ZONE)
@@ -150,13 +150,13 @@ Based on PRD: `prd-user-management.md`
   - [x] 1.10 Test database migrations on a clean database to ensure they execute correctly
 
 - [ ] 2.0 Enums and Constants
-  - [ ] 2.1 Create `PermissionLevel` enum in `enums` package with values: FULL_ACCESS, VIEW_ONLY, CUSTOM, with Javadoc comments
-  - [ ] 2.2 Create `ActionType` enum in `enums` package with values: VIEW, CREATE, EDIT, DELETE, with Javadoc comments
-  - [ ] 2.3 Create `ModuleType` enum in `enums` package with values: ORDERS, LOGS, INVENTORY, BILLING, REPORTS, MATERIAL_INSTRUCTIONS, CLOCK_TEMPLATES, USER_MANAGEMENT, SYSTEM_SETTINGS, with Javadoc comments
-  - [ ] 2.4 Create `AuditActionType` enum in `enums` package with values: CREATE, UPDATE, DELETE, LOGIN, LOGOUT, PERMISSION_CHANGE, STATION_ASSIGNMENT, ROLE_ASSIGNMENT, IMPERSONATION_START, IMPERSONATION_END, SESSION_TERMINATED, with Javadoc comments
-  - [ ] 2.5 Create `ResourceType` enum in `enums` package with values: ORDER, LOG, USER, PERMISSION, STATION, ROLE, CUSTOM_ROLE, SESSION, with Javadoc comments
-  - [ ] 2.6 Write unit tests for all enum classes verifying values() and valueOf() methods work correctly (80%+ coverage)
-  - [ ] 2.7 Verify all enums follow naming conventions (PascalCase for enum name, UPPER_SNAKE_CASE for constants)
+  - [x] 2.1 Create `PermissionLevel` enum in `enums` package with values: FULL_ACCESS, VIEW_ONLY, CUSTOM, with Javadoc comments
+  - [x] 2.2 Create `ActionType` enum in `enums` package with values: VIEW, CREATE, EDIT, DELETE, with Javadoc comments
+  - [x] 2.3 Create `ModuleType` enum in `enums` package with values: ORDERS, LOGS, INVENTORY, BILLING, REPORTS, MATERIAL_INSTRUCTIONS, CLOCK_TEMPLATES, USER_MANAGEMENT, SYSTEM_SETTINGS, with Javadoc comments
+  - [x] 2.4 Create `AuditActionType` enum in `enums` package with values: CREATE, UPDATE, DELETE, LOGIN, LOGOUT, PERMISSION_CHANGE, STATION_ASSIGNMENT, ROLE_ASSIGNMENT, IMPERSONATION_START, IMPERSONATION_END, SESSION_TERMINATED, with Javadoc comments
+  - [x] 2.5 Create `ResourceType` enum in `enums` package with values: ORDER, LOG, USER, PERMISSION, STATION, ROLE, CUSTOM_ROLE, SESSION, with Javadoc comments
+  - [x] 2.6 Write unit tests for all enum classes verifying values() and valueOf() methods work correctly (80%+ coverage)
+  - [x] 2.7 Verify all enums follow naming conventions (PascalCase for enum name, UPPER_SNAKE_CASE for constants)
 
 - [ ] 3.0 Entity Models
   - [ ] 3.1 Create `UserStationAssignment` entity in `models` package with JPA annotations, UUID primary key, Lombok annotations (@Data, @Builder, @NoArgsConstructor, @AllArgsConstructor), relationships to User and Station, fields for permission_level (enum), custom_permissions (JSONB), and timestamps
