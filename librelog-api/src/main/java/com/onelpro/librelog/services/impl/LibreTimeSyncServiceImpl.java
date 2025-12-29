@@ -38,10 +38,11 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 	public LibreTimeSyncServiceImpl(
 			ClockBuilderService clockBuilderService,
 			LibreTimeClient libreTimeClient,
-			ObjectMapper objectMapper) {
+			org.springframework.beans.factory.ObjectProvider<ObjectMapper> objectMapperProvider) {
 		this.clockBuilderService = clockBuilderService;
 		this.libreTimeClient = libreTimeClient;
-		this.objectMapper = objectMapper;
+		// Use ObjectMapper from provider, or create a new one if not available
+		this.objectMapper = objectMapperProvider.getIfAvailable(() -> new ObjectMapper());
 	}
 
 	@Override
