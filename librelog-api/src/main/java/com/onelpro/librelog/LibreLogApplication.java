@@ -2,6 +2,7 @@ package com.onelpro.librelog;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Main Spring Boot application entry point for LibreLog.
@@ -11,6 +12,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * traffic scheduling, placement automation, and financial operations.
  */
 @SpringBootApplication
+@EnableScheduling
 public class LibreLogApplication {
 
 	public static void main(String[] args) {

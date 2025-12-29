@@ -50,8 +50,12 @@ async function loadClockStructure(clockTemplateId) {
                     durationSeconds: breakItem.durationSeconds,
                     isFloating: breakItem.isFloating || false,
                     availType: breakItem.availTypeName,
+                    availTypeId: breakItem.availTypeId,
                     timingType: breakItem.timingType,
-                    transitionCode: breakItem.transitionCode
+                    transitionCode: breakItem.transitionCode,
+                    assetType: breakItem.assetType,
+                    musicCategory: breakItem.musicCategory,
+                    showSegmentName: breakItem.showSegmentName
                 });
             });
         }
@@ -65,7 +69,10 @@ async function loadClockStructure(clockTemplateId) {
                     name: asset.name,
                     startTime: asset.startTime,
                     assetType: asset.assetType,
-                    timingType: asset.timingType
+                    assetIdentifier: asset.assetIdentifier,
+                    timingType: asset.timingType,
+                    musicCategory: asset.musicCategory,
+                    showSegmentName: asset.showSegmentName
                 });
             });
         }
