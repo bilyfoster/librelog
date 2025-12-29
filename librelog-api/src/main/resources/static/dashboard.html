@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LibreLog - Admin Dashboard</title>
+    <link rel="stylesheet" href="/css/clock-builder.css">
     <style>
         * {
             margin: 0;
@@ -727,6 +728,25 @@
                         </thead>
                         <tbody id="clocksTableBody"></tbody>
                     </table>
+                </div>
+                
+                <!-- Clock Builder UI -->
+                <div id="clockBuilderContainer" class="clock-builder-container" style="display: none;">
+                    <div class="clock-builder-header">
+                        <div class="clock-builder-title" id="clockBuilderTitle">Clock Builder</div>
+                        <div class="clock-builder-actions">
+                            <button class="btn btn-secondary" onclick="addBreakToClock()">+ Add Break</button>
+                            <button class="btn btn-secondary" onclick="addFixedAssetToClock()">+ Add Fixed Asset</button>
+                            <button class="btn btn-secondary" onclick="addAutomationCommandToClock()">+ Add Command</button>
+                        </div>
+                    </div>
+                    <div id="timelineContainer" class="timeline-container">
+                        <div class="clock-builder-loading">Loading clock structure...</div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                        <div id="validationPanel" class="validation-panel" style="flex: 1;"></div>
+                        <div id="revenuePanel" class="revenue-panel" style="flex: 1;"></div>
+                    </div>
                 </div>
             </div>
 
@@ -2786,6 +2806,7 @@
                     <td>
                         <div class="action-buttons">
                             <button class="btn btn-secondary btn-sm" onclick="editClock('${c.id}')">Edit</button>
+                            <button class="btn btn-primary btn-sm" onclick="openClockBuilder('${c.id}', '${c.name}')">Build</button>
                             <button class="btn btn-danger btn-sm" onclick="deleteClock('${c.id}', '${c.name}')">Delete</button>
                         </div>
                     </td>
@@ -3218,6 +3239,18 @@
             document.getElementById('clockModal').classList.remove('show');
         }
 
+        // Open clock builder
+        function openClockBuilder(clockTemplateId, clockName) {
+            const builderContainer = document.getElementById('clockBuilderContainer');
+            const builderTitle = document.getElementById('clockBuilderTitle');
+            
+            if (builderContainer && builderTitle) {
+                builderTitle.textContent = `Clock Builder: ${clockName}`;
+                builderContainer.style.display = 'block';
+                initClockBuilder(clockTemplateId);
+            }
+        }
+
         // Daypart Category Management
         let daypartCategoriesList = [];
         async function loadDaypartCategoriesForTable() {
@@ -3577,6 +3610,20 @@
         loadUserInfo();
         loadStations();
     </script>
+    
+    <!-- Clock Builder Script -->
+    <script src="/js/clock-builder.js"></script>
+    
+    <!-- Properties Panel -->
+    <div id="propertiesPanel" class="properties-panel">
+        <div class="properties-panel-header">
+            <div class="properties-panel-title">Element Properties</div>
+            <button class="properties-panel-close" onclick="closePropertiesPanel()">&times;</button>
+        </div>
+        <div class="properties-panel-content">
+            <form id="propertiesForm"></form>
+        </div>
+    </div>
 </body>
 </html>
 

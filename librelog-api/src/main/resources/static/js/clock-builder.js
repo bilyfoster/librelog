@@ -521,6 +521,7 @@ async function loadValidation(clockTemplateId) {
     try {
         const token = localStorage.getItem('token');
         const response = await fetch(`/api/clocks/${clockTemplateId}/validate`, {
+            method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`
             }
