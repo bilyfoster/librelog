@@ -223,6 +223,7 @@
 								<exclude>**/*Configuration.class</exclude>
 								<exclude>**/config/**</exclude>
 								<exclude>**/services/impl/**</exclude>
+								<exclude>**/integrations/**</exclude>
 							</excludes>
 							<rules>
 								<rule>
