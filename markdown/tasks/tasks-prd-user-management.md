@@ -200,14 +200,14 @@ Based on PRD: `prd-user-management.md`
 
 - [ ] 6.0 Permission System Core
   - [x] 6.1 Create `PermissionService` interface in `services` package with methods: hasPermission(userId, stationId, moduleType, actionType), getUserStations(userId), canAccessStation(userId, stationId), getEffectivePermissions(userId, stationId)
-  - [ ] 6.2 Create `PermissionServiceImpl` in `services.impl` package implementing the interface with constructor injection, caching for permission lookups, and proper error handling
-  - [ ] 6.3 Implement `hasPermission` method that checks user-station assignments, role permissions, and custom permissions
-  - [ ] 6.4 Implement `getUserStations` method that returns all stations a user has access to
-  - [ ] 6.5 Implement `canAccessStation` method that verifies if a user can access a specific station
-  - [ ] 6.6 Implement `getEffectivePermissions` method that returns the effective permissions for a user at a station (considering role, custom role, and station-specific overrides)
-  - [ ] 6.7 Create `PermissionChecker` utility class with static methods for common permission checks
-  - [ ] 6.8 Create `StationFilter` utility class for filtering collections by user's station assignments
-  - [ ] 6.9 Implement permission caching strategy (5-minute cache with invalidation on permission changes)
+  - [x] 6.2 Create `PermissionServiceImpl` in `services.impl` package implementing the interface with constructor injection, caching for permission lookups, and proper error handling
+  - [x] 6.3 Implement `hasPermission` method that checks user-station assignments, role permissions, and custom permissions
+  - [x] 6.4 Implement `getUserStations` method that returns all stations a user has access to
+  - [x] 6.5 Implement `canAccessStation` method that verifies if a user can access a specific station
+  - [x] 6.6 Implement `getEffectivePermissions` method that returns the effective permissions for a user at a station (considering role, custom role, and station-specific overrides)
+  - [x] 6.7 Create `PermissionChecker` utility class with static methods for common permission checks
+  - [x] 6.8 Create `StationFilter` utility class for filtering collections by user's station assignments
+  - [x] 6.9 Implement permission caching strategy (5-minute cache with invalidation on permission changes)
   - [ ] 6.10 Create `PermissionAspect` aspect class for automatic permission checking on service methods (optional, for future use)
   - [ ] 6.11 Write comprehensive unit tests for `PermissionServiceImpl` covering all permission scenarios (80%+ coverage)
   - [ ] 6.12 Write integration tests for permission enforcement across different user-station combinations
