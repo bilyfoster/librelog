@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="002-create-stations-table" author="librelog">
+		<comment>Create stations table</comment>
+		
+		<createTable tableName="stations">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="call_sign" type="VARCHAR(255)">
+				<constraints nullable="false" unique="true"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="frequency" type="VARCHAR(50)"/>
+			<column name="market" type="VARCHAR(255)"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+
+		<createIndex indexName="idx_stations_call_sign" tableName="stations">
+			<column name="call_sign"/>
+		</createIndex>
+
+	</changeSet>
+
+	<changeSet id="002-create-channels-table" author="librelog">
+		<comment>Create channels table</comment>
+		
+		<createTable tableName="channels">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="station_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="channel_number" type="INTEGER"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+
+		<addForeignKeyConstraint
+			baseTableName="channels"
+			baseColumnNames="station_id"
+			constraintName="fk_channels_station"
+			referencedTableName="stations"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+
+		<createIndex indexName="idx_channels_station_id" tableName="channels">
+			<column name="station_id"/>
+		</createIndex>
+
+	</changeSet>
+
+	<changeSet id="002-create-daypart-categories-table" author="librelog">
+		<comment>Create daypart_categories table</comment>
+		
+		<createTable tableName="daypart_categories">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false" unique="true"/>
+			</column>
+			<column name="description" type="TEXT"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+
+		<createIndex indexName="idx_daypart_categories_name" tableName="daypart_categories">
+			<column name="name"/>
+		</createIndex>
+
+	</changeSet>
+
+	<changeSet id="002-create-dayparts-table" author="librelog">
+		<comment>Create dayparts table</comment>
+		
+		<createTable tableName="dayparts">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="start_time" type="TIME">
+				<constraints nullable="false"/>
+			</column>
+			<column name="end_time" type="TIME">
+				<constraints nullable="false"/>
+			</column>
+			<column name="category_id" type="UUID"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+
+		<addForeignKeyConstraint
+			baseTableName="dayparts"
+			baseColumnNames="category_id"
+			constraintName="fk_dayparts_category"
+			referencedTableName="daypart_categories"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+
+		<createIndex indexName="idx_dayparts_category_id" tableName="dayparts">
+			<column name="category_id"/>
+		</createIndex>
+
+	</changeSet>
+
+	<changeSet id="002-create-clock-templates-table" author="librelog">
+		<comment>Create clock_templates table</comment>
+		
+		<createTable tableName="clock_templates">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="station_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="description" type="TEXT"/>
+			<column name="is_active" type="BOOLEAN">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+
+		<addForeignKeyConstraint
+			baseTableName="clock_templates"
+			baseColumnNames="station_id"
+			constraintName="fk_clock_templates_station"
+			referencedTableName="stations"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+
+		<createIndex indexName="idx_clock_templates_station_id" tableName="clock_templates">
+			<column name="station_id"/>
+		</createIndex>
+
+		<createIndex indexName="idx_clock_templates_is_active" tableName="clock_templates">
+			<column name="is_active"/>
+		</createIndex>
+
+	</changeSet>
+
+	<changeSet id="002-create-break-structures-table" author="librelog">
+		<comment>Create break_structures table</comment>
+		
+		<createTable tableName="break_structures">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="clock_template_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="start_time" type="TIME">
+				<constraints nullable="false"/>
+			</column>
+			<column name="duration_seconds" type="INTEGER">
+				<constraints nullable="false"/>
+			</column>
+			<column name="is_floating" type="BOOLEAN"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+
+		<addForeignKeyConstraint
+			baseTableName="break_structures"
+			baseColumnNames="clock_template_id"
+			constraintName="fk_break_structures_clock_template"
+			referencedTableName="clock_templates"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+
+		<createIndex indexName="idx_break_structures_clock_template_id" tableName="break_structures">
+			<column name="clock_template_id"/>
+		</createIndex>
+
+	</changeSet>
+
+</databaseChangeLog>
+

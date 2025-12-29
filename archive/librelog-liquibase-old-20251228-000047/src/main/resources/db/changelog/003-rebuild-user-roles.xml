@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="003-rebuild-user-roles" author="rebuild">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="user_roles"/>
+            </not>
+        </preConditions>
+        <comment>Create user_roles junction table for many-to-many relationship - Phase 1: Foundation</comment>
+
+        <!-- Create user_roles junction table -->
+        <createTable tableName="user_roles">
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Add primary key constraint -->
+        <addPrimaryKey tableName="user_roles" columnNames="user_id,role" constraintName="pk_user_roles"/>
+
+        <!-- Add foreign key constraint -->
+        <addForeignKeyConstraint
+                baseTableName="user_roles"
+                baseColumnNames="user_id"
+                constraintName="fk_user_roles_user_id"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <!-- Add check constraint for role values -->
+        <sql>
+            <![CDATA[
+            ALTER TABLE user_roles ADD CONSTRAINT user_roles_role_check CHECK (role IN ('ADMIN', 'PRODUCER', 'DJ', 'SALES'));
+            ]]>
+        </sql>
+
+        <!-- Create indexes -->
+        <createIndex tableName="user_roles" indexName="ix_user_roles_user_id">
+            <column name="user_id"/>
+        </createIndex>
+
+        <createIndex tableName="user_roles" indexName="ix_user_roles_role">
+            <column name="role"/>
+        </createIndex>
+
+            <!-- Migrate existing role data from users table to user_roles table (if column exists) -->
+            <sql>
+                <![CDATA[
+                DO $$
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'role') THEN
+                        INSERT INTO user_roles (user_id, role)
+                        SELECT id, role FROM users WHERE role IS NOT NULL;
+                    END IF;
+                END $$;
+                ]]>
+            </sql>
+
+            <!-- Drop the old role column from users table after migration -->
+            <!-- First drop the constraint and index if they exist -->
+            <sql>
+                <![CDATA[
+                DO $$
+                BEGIN
+                    -- Drop the check constraint if it exists
+                    IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'users' AND constraint_name = 'users_role_check') THEN
+                        ALTER TABLE users DROP CONSTRAINT users_role_check;
+                    END IF;
+                    -- Drop the index if it exists
+                    IF EXISTS (SELECT 1 FROM pg_indexes WHERE tablename = 'users' AND indexname = 'ix_users_role') THEN
+                        DROP INDEX IF EXISTS ix_users_role;
+                    END IF;
+                    -- Drop the column if it exists
+                    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'role') THEN
+                        ALTER TABLE users DROP COLUMN role;
+                    END IF;
+                END $$;
+                ]]>
+            </sql>
+        </changeSet>
+
+</databaseChangeLog>
+

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<!-- Rebuild changelog - modules will be added in dependency order -->
+	<!-- Migration: Update existing tables if needed -->
+	<include file="db/changelog/000-migrate-existing-users.xml"/>
+	<!-- Phase 1: Foundation -->
+	<include file="db/changelog/001-rebuild-users.xml"/>
+	<include file="db/changelog/002-rebuild-stations.xml"/>
+	<include file="db/changelog/003-rebuild-user-roles.xml"/>
+	
+	<!-- Additional phases will be added as modules are implemented -->
+
+</databaseChangeLog>
+

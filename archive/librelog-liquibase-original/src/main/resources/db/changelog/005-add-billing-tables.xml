@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="005-add-billing-tables" author="migration">
+        <comment>Add billing tables: invoices, invoice_lines, payments, makegoods</comment>
+
+        <!-- Create enum type -->
+        <sql>
+            CREATE TYPE invoicestatus AS ENUM ('DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED');
+        </sql>
+
+        <!-- Create invoices table -->
+        <createTable tableName="invoices">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="invoice_number" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="advertiser_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="agency_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="order_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="campaign_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="invoice_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="due_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="subtotal" type="NUMERIC(10,2)" defaultValueNumeric="0">
+                <constraints nullable="true"/>
+            </column>
+            <column name="tax" type="NUMERIC(10,2)" defaultValueNumeric="0">
+                <constraints nullable="true"/>
+            </column>
+            <column name="total" type="NUMERIC(10,2)" defaultValueNumeric="0">
+                <constraints nullable="true"/>
+            </column>
+            <column name="status" type="invoicestatus" defaultValue="DRAFT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payment_terms" type="VARCHAR(100)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="notes" type="VARCHAR(500)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="invoices"
+            baseColumnNames="advertiser_id"
+            constraintName="fk_invoices_advertiser_id"
+            referencedTableName="advertisers"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="invoices"
+            baseColumnNames="agency_id"
+            constraintName="fk_invoices_agency_id"
+            referencedTableName="agencies"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="invoices"
+            baseColumnNames="order_id"
+            constraintName="fk_invoices_order_id"
+            referencedTableName="orders"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="invoices"
+            baseColumnNames="campaign_id"
+            constraintName="fk_invoices_campaign_id"
+            referencedTableName="campaigns"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="invoices" indexName="ix_invoices_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="invoices" indexName="ix_invoices_invoice_number" unique="true">
+            <column name="invoice_number"/>
+        </createIndex>
+        <createIndex tableName="invoices" indexName="ix_invoices_advertiser_id">
+            <column name="advertiser_id"/>
+        </createIndex>
+        <createIndex tableName="invoices" indexName="ix_invoices_agency_id">
+            <column name="agency_id"/>
+        </createIndex>
+        <createIndex tableName="invoices" indexName="ix_invoices_order_id">
+            <column name="order_id"/>
+        </createIndex>
+        <createIndex tableName="invoices" indexName="ix_invoices_campaign_id">
+            <column name="campaign_id"/>
+        </createIndex>
+        <createIndex tableName="invoices" indexName="ix_invoices_invoice_date">
+            <column name="invoice_date"/>
+        </createIndex>
+        <createIndex tableName="invoices" indexName="ix_invoices_due_date">
+            <column name="due_date"/>
+        </createIndex>
+        <createIndex tableName="invoices" indexName="ix_invoices_status">
+            <column name="status"/>
+        </createIndex>
+
+        <!-- Create invoice_lines table -->
+        <createTable tableName="invoice_lines">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="invoice_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="quantity" type="INTEGER" defaultValueNumeric="1">
+                <constraints nullable="true"/>
+            </column>
+            <column name="unit_price" type="NUMERIC(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total" type="NUMERIC(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="spot_ids" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="invoice_lines"
+            baseColumnNames="invoice_id"
+            constraintName="fk_invoice_lines_invoice_id"
+            referencedTableName="invoices"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="invoice_lines" indexName="ix_invoice_lines_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="invoice_lines" indexName="ix_invoice_lines_invoice_id">
+            <column name="invoice_id"/>
+        </createIndex>
+
+        <!-- Create payments table -->
+        <createTable tableName="payments">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="invoice_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="NUMERIC(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payment_date" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payment_method" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="reference_number" type="VARCHAR(100)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="notes" type="VARCHAR(500)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="payments"
+            baseColumnNames="invoice_id"
+            constraintName="fk_payments_invoice_id"
+            referencedTableName="invoices"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="payments" indexName="ix_payments_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="payments" indexName="ix_payments_invoice_id">
+            <column name="invoice_id"/>
+        </createIndex>
+        <createIndex tableName="payments" indexName="ix_payments_payment_date">
+            <column name="payment_date"/>
+        </createIndex>
+
+        <!-- Create makegoods table -->
+        <createTable tableName="makegoods">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="original_spot_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="makegood_spot_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="campaign_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="reason" type="VARCHAR(500)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="approved_by" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="approved_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="makegoods"
+            baseColumnNames="approved_by"
+            constraintName="fk_makegoods_approved_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="makegoods"
+            baseColumnNames="campaign_id"
+            constraintName="fk_makegoods_campaign_id"
+            referencedTableName="campaigns"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="makegoods"
+            baseColumnNames="makegood_spot_id"
+            constraintName="fk_makegoods_makegood_spot_id"
+            referencedTableName="spots"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="makegoods"
+            baseColumnNames="original_spot_id"
+            constraintName="fk_makegoods_original_spot_id"
+            referencedTableName="spots"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="makegoods" indexName="ix_makegoods_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="makegoods" indexName="ix_makegoods_original_spot_id">
+            <column name="original_spot_id"/>
+        </createIndex>
+        <createIndex tableName="makegoods" indexName="ix_makegoods_makegood_spot_id">
+            <column name="makegood_spot_id"/>
+        </createIndex>
+        <createIndex tableName="makegoods" indexName="ix_makegoods_campaign_id">
+            <column name="campaign_id"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
+

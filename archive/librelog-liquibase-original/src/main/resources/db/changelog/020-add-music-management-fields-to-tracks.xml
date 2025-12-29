@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="020-add-music-management-fields-to-tracks" author="migration">
+        <comment>Add music management fields to tracks: bpm, daypart_eligible, is_new_release, allow_back_to_back</comment>
+
+        <!-- Add BPM field -->
+        <addColumn tableName="tracks">
+            <column name="bpm" type="INTEGER"/>
+        </addColumn>
+
+        <createIndex tableName="tracks" indexName="ix_tracks_bpm">
+            <column name="bpm"/>
+        </createIndex>
+
+        <!-- Add daypart_eligible field (JSONB array of daypart IDs) -->
+        <addColumn tableName="tracks">
+            <column name="daypart_eligible" type="JSONB"/>
+        </addColumn>
+
+        <!-- Add is_new_release flag -->
+        <addColumn tableName="tracks">
+            <column name="is_new_release" type="BOOLEAN" defaultValueBoolean="false"/>
+        </addColumn>
+
+        <createIndex tableName="tracks" indexName="ix_tracks_is_new_release">
+            <column name="is_new_release"/>
+        </createIndex>
+
+        <!-- Add allow_back_to_back flag -->
+        <addColumn tableName="tracks">
+            <column name="allow_back_to_back" type="BOOLEAN" defaultValueBoolean="false"/>
+        </addColumn>
+
+    </changeSet>
+
+</databaseChangeLog>
+
+

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="003-create-admin-user" author="librelog">
+		<comment>Create initial admin user (admin/admin123)</comment>
+		
+		<sql>
+			-- Password: admin123 (bcrypt hash)
+			-- Generated using BCrypt with cost factor 10
+			INSERT INTO users (id, email, password, status, role, created_at, updated_at)
+			VALUES (
+				gen_random_uuid(),
+				'admin@librelog.com',
+				'$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+				'ACTIVE',
+				'ADMIN',
+				CURRENT_TIMESTAMP,
+				CURRENT_TIMESTAMP
+			)
+			ON CONFLICT (email) DO NOTHING;
+		</sql>
+
+	</changeSet>
+
+</databaseChangeLog>
+

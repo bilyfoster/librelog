@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<!-- Create Organizations table (Tenant/Company level) -->
+	<changeSet id="005-create-organizations-table" author="librelog">
+		<comment>Create organizations table for multi-tenant support</comment>
+		
+		<createTable tableName="organizations">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false" unique="true"/>
+			</column>
+			<column name="legal_name" type="VARCHAR(255)"/>
+			<column name="tax_id" type="VARCHAR(50)"/>
+			<column name="address_line1" type="VARCHAR(255)"/>
+			<column name="address_line2" type="VARCHAR(255)"/>
+			<column name="city" type="VARCHAR(255)"/>
+			<column name="state" type="VARCHAR(100)"/>
+			<column name="zip_code" type="VARCHAR(20)"/>
+			<column name="country" type="VARCHAR(100)"/>
+			<column name="phone" type="VARCHAR(50)"/>
+			<column name="email" type="VARCHAR(255)"/>
+			<column name="website" type="VARCHAR(255)"/>
+			<column name="is_active" type="BOOLEAN">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+
+		<createIndex indexName="idx_organizations_name" tableName="organizations">
+			<column name="name"/>
+		</createIndex>
+		<createIndex indexName="idx_organizations_is_active" tableName="organizations">
+			<column name="is_active"/>
+		</createIndex>
+	</changeSet>
+
+	<!-- Create Markets table (Geographic grouping) -->
+	<changeSet id="005-create-markets-table" author="librelog">
+		<comment>Create markets table for geographic market grouping</comment>
+		
+		<createTable tableName="markets">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="organization_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="name" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="description" type="TEXT"/>
+			<column name="city" type="VARCHAR(255)"/>
+			<column name="state" type="VARCHAR(100)"/>
+			<column name="country" type="VARCHAR(100)"/>
+			<column name="timezone" type="VARCHAR(100)"/>
+			<column name="is_active" type="BOOLEAN">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+
+		<addForeignKeyConstraint
+			baseTableName="markets"
+			baseColumnNames="organization_id"
+			constraintName="fk_markets_organization"
+			referencedTableName="organizations"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+
+		<createIndex indexName="idx_markets_organization_id" tableName="markets">
+			<column name="organization_id"/>
+		</createIndex>
+		<createIndex indexName="idx_markets_name" tableName="markets">
+			<column name="name"/>
+		</createIndex>
+		<createIndex indexName="idx_markets_is_active" tableName="markets">
+			<column name="is_active"/>
+		</createIndex>
+	</changeSet>
+
+	<!-- Update Stations table to add hierarchy relationships -->
+	<changeSet id="005-update-stations-hierarchy" author="librelog">
+		<comment>Add organization_id, market_id, cluster_id, and is_active to stations table</comment>
+		
+		<!-- Add new columns -->
+		<addColumn tableName="stations">
+			<column name="organization_id" type="UUID"/>
+			<column name="market_id" type="UUID"/>
+			<column name="cluster_id" type="UUID"/>
+			<column name="is_active" type="BOOLEAN"/>
+		</addColumn>
+
+		<!-- Set default values for existing records -->
+		<sql>
+			-- Create a default organization for existing stations
+			INSERT INTO organizations (id, name, is_active, created_at, updated_at)
+			SELECT gen_random_uuid(), 'Default Organization', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+			WHERE NOT EXISTS (SELECT 1 FROM organizations WHERE name = 'Default Organization');
+		</sql>
+
+		<sql>
+			-- Link existing stations to default organization
+			UPDATE stations
+			SET organization_id = (SELECT id FROM organizations WHERE name = 'Default Organization' LIMIT 1),
+			    is_active = true
+			WHERE organization_id IS NULL;
+		</sql>
+
+		<!-- Make organization_id required after populating -->
+		<addNotNullConstraint tableName="stations" columnName="organization_id" columnDataType="UUID"/>
+		<addNotNullConstraint tableName="stations" columnName="is_active" columnDataType="BOOLEAN"/>
+
+		<!-- Add foreign keys -->
+		<addForeignKeyConstraint
+			baseTableName="stations"
+			baseColumnNames="organization_id"
+			constraintName="fk_stations_organization"
+			referencedTableName="organizations"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+
+		<addForeignKeyConstraint
+			baseTableName="stations"
+			baseColumnNames="market_id"
+			constraintName="fk_stations_market"
+			referencedTableName="markets"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+
+		<addForeignKeyConstraint
+			baseTableName="stations"
+			baseColumnNames="cluster_id"
+			constraintName="fk_stations_cluster"
+			referencedTableName="clusters"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+
+		<!-- Add indexes -->
+		<createIndex indexName="idx_stations_organization_id" tableName="stations">
+			<column name="organization_id"/>
+		</createIndex>
+		<createIndex indexName="idx_stations_market_id" tableName="stations">
+			<column name="market_id"/>
+		</createIndex>
+		<createIndex indexName="idx_stations_cluster_id" tableName="stations">
+			<column name="cluster_id"/>
+		</createIndex>
+		<createIndex indexName="idx_stations_is_active" tableName="stations">
+			<column name="is_active"/>
+		</createIndex>
+	</changeSet>
+
+	<!-- Update Clusters table to add organization and market relationships -->
+	<changeSet id="005-update-clusters-hierarchy" author="librelog">
+		<comment>Add organization_id, market_id, and is_active to clusters table</comment>
+		
+		<addColumn tableName="clusters">
+			<column name="organization_id" type="UUID"/>
+			<column name="market_id" type="UUID"/>
+			<column name="is_active" type="BOOLEAN"/>
+		</addColumn>
+
+		<sql>
+			-- Link existing clusters to default organization
+			UPDATE clusters
+			SET organization_id = (SELECT id FROM organizations WHERE name = 'Default Organization' LIMIT 1),
+			    is_active = true
+			WHERE organization_id IS NULL;
+		</sql>
+
+		<addNotNullConstraint tableName="clusters" columnName="organization_id" columnDataType="UUID"/>
+		<addNotNullConstraint tableName="clusters" columnName="is_active" columnDataType="BOOLEAN"/>
+
+		<addForeignKeyConstraint
+			baseTableName="clusters"
+			baseColumnNames="organization_id"
+			constraintName="fk_clusters_organization"
+			referencedTableName="organizations"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+
+		<addForeignKeyConstraint
+			baseTableName="clusters"
+			baseColumnNames="market_id"
+			constraintName="fk_clusters_market"
+			referencedTableName="markets"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+
+		<createIndex indexName="idx_clusters_organization_id" tableName="clusters">
+			<column name="organization_id"/>
+		</createIndex>
+		<createIndex indexName="idx_clusters_market_id" tableName="clusters">
+			<column name="market_id"/>
+		</createIndex>
+		<createIndex indexName="idx_clusters_is_active" tableName="clusters">
+			<column name="is_active"/>
+		</createIndex>
+	</changeSet>
+
+	<!-- Update Channels table to add format_type and is_active -->
+	<changeSet id="005-update-channels-format" author="librelog">
+		<comment>Add format_type, description, and is_active to channels table</comment>
+		
+		<addColumn tableName="channels">
+			<column name="format_type" type="VARCHAR(50)"/>
+			<column name="description" type="TEXT"/>
+			<column name="is_active" type="BOOLEAN"/>
+		</addColumn>
+
+		<sql>
+			-- Set default format type for existing channels
+			UPDATE channels
+			SET format_type = 'LINEAR', is_active = true
+			WHERE format_type IS NULL;
+		</sql>
+
+		<addNotNullConstraint tableName="channels" columnName="format_type" columnDataType="VARCHAR(50)"/>
+		<addNotNullConstraint tableName="channels" columnName="is_active" columnDataType="BOOLEAN"/>
+
+		<createIndex indexName="idx_channels_format_type" tableName="channels">
+			<column name="format_type"/>
+		</createIndex>
+		<createIndex indexName="idx_channels_is_active" tableName="channels">
+			<column name="is_active"/>
+		</createIndex>
+	</changeSet>
+
+	<!-- Update Clock Templates to link to Channel instead of Station -->
+	<!-- Step 1: Add channel_id column if station_id exists -->
+	<changeSet id="005-update-clock-templates-channel-1" author="librelog">
+		<comment>Add channel_id column to clock_templates if station_id exists</comment>
+		<sql splitStatements="false">
+DO $body$
+BEGIN
+	IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clock_templates' AND column_name = 'station_id')
+		AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clock_templates' AND column_name = 'channel_id')
+	THEN
+		ALTER TABLE clock_templates ADD COLUMN channel_id UUID;
+	END IF;
+END $body$;
+		</sql>
+	</changeSet>
+
+	<!-- Step 2: Migrate data from station_id to channel_id -->
+	<changeSet id="005-update-clock-templates-channel-2" author="librelog">
+		<comment>Migrate clock_templates from station_id to channel_id</comment>
+		<sql splitStatements="false">
+DO $body$
+BEGIN
+	IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clock_templates' AND column_name = 'station_id')
+	THEN
+		UPDATE clock_templates ct
+		SET channel_id = (SELECT c.id FROM channels c WHERE c.station_id = ct.station_id ORDER BY c.created_at LIMIT 1)
+		WHERE ct.channel_id IS NULL AND EXISTS (SELECT 1 FROM channels c WHERE c.station_id = ct.station_id);
+	END IF;
+END $body$;
+		</sql>
+	</changeSet>
+
+	<!-- Step 3: Create default channels for clock templates without channels -->
+	<changeSet id="005-update-clock-templates-channel-3" author="librelog">
+		<comment>Create default channels for clock templates without channels</comment>
+		<sql splitStatements="false">
+DO $body$
+BEGIN
+	IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clock_templates' AND column_name = 'station_id')
+	THEN
+		INSERT INTO channels (id, station_id, name, channel_number, format_type, is_active, created_at, updated_at)
+		SELECT DISTINCT gen_random_uuid(), ct.station_id, 'Default Channel', 1, 'LINEAR', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+		FROM clock_templates ct
+		WHERE ct.channel_id IS NULL AND NOT EXISTS (SELECT 1 FROM channels c WHERE c.station_id = ct.station_id);
+		
+		UPDATE clock_templates ct
+		SET channel_id = (SELECT c.id FROM channels c WHERE c.station_id = ct.station_id ORDER BY c.created_at LIMIT 1)
+		WHERE ct.channel_id IS NULL;
+	END IF;
+END $body$;
+		</sql>
+	</changeSet>
+
+	<!-- Step 4: Add constraints and drop old column -->
+	<changeSet id="005-update-clock-templates-channel-4" author="librelog">
+		<comment>Add constraints and drop old station_id column</comment>
+		<sql splitStatements="false">
+DO $body$
+BEGIN
+	IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clock_templates' AND column_name = 'channel_id')
+	THEN
+		IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'fk_clock_templates_station' AND table_name = 'clock_templates')
+		THEN ALTER TABLE clock_templates DROP CONSTRAINT fk_clock_templates_station; END IF;
+		
+		DROP INDEX IF EXISTS idx_clock_templates_station_id;
+		
+		IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clock_templates' AND column_name = 'channel_id' AND is_nullable = 'YES')
+		THEN ALTER TABLE clock_templates ALTER COLUMN channel_id SET NOT NULL; END IF;
+		
+		IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'fk_clock_templates_channel' AND table_name = 'clock_templates')
+		THEN ALTER TABLE clock_templates ADD CONSTRAINT fk_clock_templates_channel FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE; END IF;
+		
+		IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_clock_templates_channel_id' AND tablename = 'clock_templates')
+		THEN CREATE INDEX idx_clock_templates_channel_id ON clock_templates(channel_id); END IF;
+		
+		IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clock_templates' AND column_name = 'station_id')
+		THEN ALTER TABLE clock_templates DROP COLUMN station_id; END IF;
+	END IF;
+END $body$;
+		</sql>
+	</changeSet>
+
+</databaseChangeLog>
+

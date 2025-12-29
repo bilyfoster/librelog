@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="012-rename-metadata-to-meta-data" author="migration">
+        <comment>Rename metadata column to meta_data in traffic_logs and notifications tables</comment>
+
+        <!-- Note: traffic_logs already uses meta_data from migration 011, so only need to update notifications -->
+        <renameColumn tableName="notifications" oldColumnName="metadata" newColumnName="meta_data" columnDataType="JSONB"/>
+
+    </changeSet>
+
+</databaseChangeLog>
+
+

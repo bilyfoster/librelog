@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="013-create-user-station-assignments-table" author="librelog">
+		<comment>Create user_station_assignments table for property-based access control</comment>
+		
+		<createTable tableName="user_station_assignments">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="user_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="station_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="permission_level" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="custom_permissions" type="JSONB"/>
+			<column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
+		</createTable>
+		
+		<addForeignKeyConstraint
+			baseTableName="user_station_assignments"
+			baseColumnNames="user_id"
+			constraintName="fk_user_station_assignments_user"
+			referencedTableName="users"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		
+		<addForeignKeyConstraint
+			baseTableName="user_station_assignments"
+			baseColumnNames="station_id"
+			constraintName="fk_user_station_assignments_station"
+			referencedTableName="stations"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		
+		<!-- Unique constraint to prevent duplicate assignments -->
+		<addUniqueConstraint
+			tableName="user_station_assignments"
+			columnNames="user_id, station_id"
+			constraintName="uk_user_station_assignments_user_station"/>
+		
+		<createIndex indexName="idx_user_station_assignments_user_id" tableName="user_station_assignments">
+			<column name="user_id"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_user_station_assignments_station_id" tableName="user_station_assignments">
+			<column name="station_id"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_user_station_assignments_permission_level" tableName="user_station_assignments">
+			<column name="permission_level"/>
+		</createIndex>
+	</changeSet>
+
+</databaseChangeLog>
+

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="018-extend-voice-track-model" author="migration">
+        <comment>Extend voice_tracks table with new fields and create voice_track_slots table</comment>
+
+        <!-- Extend voice_tracks table -->
+        <addColumn tableName="voice_tracks">
+            <column name="break_id" type="INTEGER"/>
+            <column name="playlist_id" type="INTEGER"/>
+            <column name="break_type" type="VARCHAR(20)"/>
+            <column name="slot_position" type="VARCHAR(10)"/>
+            <column name="ramp_time" type="NUMERIC(5,2)"/>
+            <column name="back_time" type="NUMERIC(5,2)"/>
+            <column name="take_number" type="INTEGER" defaultValueNumeric="1"/>
+            <column name="is_final" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="status" type="VARCHAR(20)" defaultValue="draft"/>
+            <column name="ducking_threshold" type="NUMERIC(5,2)" defaultValueNumeric="-18.0"/>
+            <column name="raw_file_url" type="TEXT"/>
+            <column name="mixed_file_url" type="TEXT"/>
+            <column name="track_metadata" type="JSONB"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </addColumn>
+
+        <createIndex tableName="voice_tracks" indexName="ix_voice_tracks_break_id">
+            <column name="break_id"/>
+        </createIndex>
+        <createIndex tableName="voice_tracks" indexName="ix_voice_tracks_playlist_id">
+            <column name="playlist_id"/>
+        </createIndex>
+        <createIndex tableName="voice_tracks" indexName="ix_voice_tracks_is_final">
+            <column name="is_final"/>
+        </createIndex>
+        <createIndex tableName="voice_tracks" indexName="ix_voice_tracks_status">
+            <column name="status"/>
+        </createIndex>
+
+        <!-- Create voice_track_slots table -->
+        <createTable tableName="voice_track_slots">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="log_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="hour" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="break_position" type="VARCHAR(10)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="assigned_dj_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="voice_track_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="previous_track_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="next_track_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="ramp_time" type="NUMERIC(5,2)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="pending">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="voice_track_slots"
+            baseColumnNames="assigned_dj_id"
+            constraintName="fk_voice_track_slots_assigned_dj_id"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="voice_track_slots"
+            baseColumnNames="log_id"
+            constraintName="fk_voice_track_slots_log_id"
+            referencedTableName="daily_logs"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="voice_track_slots"
+            baseColumnNames="voice_track_id"
+            constraintName="fk_voice_track_slots_voice_track_id"
+            referencedTableName="voice_tracks"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="voice_track_slots" indexName="ix_voice_track_slots_log_id">
+            <column name="log_id"/>
+        </createIndex>
+        <createIndex tableName="voice_track_slots" indexName="ix_voice_track_slots_hour">
+            <column name="hour"/>
+        </createIndex>
+        <createIndex tableName="voice_track_slots" indexName="ix_voice_track_slots_voice_track_id">
+            <column name="voice_track_id"/>
+        </createIndex>
+        <createIndex tableName="voice_track_slots" indexName="ix_voice_track_slots_status">
+            <column name="status"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
+
+

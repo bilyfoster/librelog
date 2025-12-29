@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<!-- Include all changesets here -->
+	<include file="db/changelog/001-initial-schema.xml"/>
+	<include file="db/changelog/002-add-traffic-management-tables.xml"/>
+	<include file="db/changelog/003-add-spot-scheduling-tables.xml"/>
+	<include file="db/changelog/004-add-copy-management-tables.xml"/>
+	<include file="db/changelog/005-add-billing-tables.xml"/>
+	<include file="db/changelog/006-add-audit-and-permissions.xml"/>
+	<include file="db/changelog/007-add-inventory-revenue-tables.xml"/>
+	<include file="db/changelog/008-add-digital-orders.xml"/>
+	<include file="db/changelog/009-add-webhooks-and-notifications.xml"/>
+	<include file="db/changelog/010-add-settings-table.xml"/>
+	<include file="db/changelog/011-add-rotation-rules-traffic-logs.xml"/>
+	<include file="db/changelog/012-rename-metadata-to-meta-data.xml"/>
+	<include file="db/changelog/013-add-news-track-type.xml"/>
+	<include file="db/changelog/014-update-track-types.xml"/>
+	<include file="db/changelog/015-add-audio-management-tables.xml"/>
+	<include file="db/changelog/016-add-libretime-id-to-voice-tracks.xml"/>
+	<include file="db/changelog/017-add-production-workflow-tables.xml"/>
+	<include file="db/changelog/018-extend-voice-track-model.xml"/>
+	<include file="db/changelog/019-add-standardized-name-to-voice-tracks.xml"/>
+	<include file="db/changelog/020-add-music-management-fields-to-tracks.xml"/>
+	<include file="db/changelog/021-wideorbit-sales-order-schema.xml"/>
+	<include file="db/changelog/022-sales-admin-models.xml"/>
+	<include file="db/changelog/023-add-station-support.xml"/>
+	<include file="db/changelog/024-split-contact-name.xml"/>
+	<include file="db/changelog/025-fix-schema-add-station-id-columns.xml"/>
+	<include file="db/changelog/026-add-failed-login-attempts-table.xml"/>
+	<include file="db/changelog/027-migrate-to-uuid-primary-keys.xml"/>
+
+</databaseChangeLog>
+

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="025-fix-schema-add-station-id-columns-spots" author="migration">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="spots" columnName="station_id"/>
+            </not>
+        </preConditions>
+        <comment>Add station_id column to spots (redundant with 023, but ensures consistency)</comment>
+
+        <addColumn tableName="spots">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <sql>
+            <![CDATA[
+            UPDATE spots SET station_id = (SELECT id FROM stations LIMIT 1) WHERE station_id IS NULL;
+            ]]>
+        </sql>
+
+        <addNotNullConstraint tableName="spots" columnName="station_id" columnDataType="UUID"/>
+        <addForeignKeyConstraint
+            baseTableName="spots"
+            baseColumnNames="station_id"
+            constraintName="fk_spots_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="spots" indexName="ix_spots_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+    </changeSet>
+
+    <changeSet id="025-fix-schema-add-station-id-columns-order-lines" author="migration">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="order_lines" columnName="station_id"/>
+            </not>
+        </preConditions>
+        <comment>Add station_id column to order_lines (redundant with 023, but ensures consistency)</comment>
+
+        <addColumn tableName="order_lines">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <sql>
+            <![CDATA[
+            UPDATE order_lines SET station_id = (SELECT id FROM stations LIMIT 1) WHERE station_id IS NULL;
+            ]]>
+        </sql>
+
+        <addNotNullConstraint tableName="order_lines" columnName="station_id" columnDataType="UUID"/>
+        <addForeignKeyConstraint
+            baseTableName="order_lines"
+            baseColumnNames="station_id"
+            constraintName="fk_order_lines_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="order_lines" indexName="ix_order_lines_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
+
+

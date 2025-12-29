@@ -1,0 +1,63 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: librelog-db
+    environment:
+      POSTGRES_DB: librelog
+      POSTGRES_USER: librelog
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-librelog}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U librelog"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - librelog-network
+
+  # Spring Boot API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: librelog-api
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/librelog
+      - SPRING_DATASOURCE_USERNAME=librelog
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-librelog}
+      - JWT_SECRET=${JWT_SECRET:-your-256-bit-secret-key-change-this-in-production-minimum-32-characters}
+      - SERVER_PORT=8080
+    # Port not exposed on host - Traefik routes via Docker network
+    # ports:
+    #   - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - librelog-network
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      # HTTPS router for root and API
+      - "traefik.http.routers.librelog.rule=Host(`log.gayphx.com`)"
+      - "traefik.http.routers.librelog.entrypoints=websecure"
+      - "traefik.http.routers.librelog.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.librelog.priority=10"
+      # Service
+      - "traefik.http.services.librelog.loadbalancer.server.port=8080"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  librelog-network:
+    driver: bridge
+  traefik:
+    external: true
+

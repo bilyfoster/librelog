@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="001-initial-schema" author="librelog">
+		<comment>Initial database schema with users table</comment>
+		
+		<!-- Users table -->
+		<createTable tableName="users">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="email" type="VARCHAR(255)">
+				<constraints nullable="false" unique="true"/>
+			</column>
+			<column name="password" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="status" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="role" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+
+		<createIndex indexName="idx_users_email" tableName="users">
+			<column name="email"/>
+		</createIndex>
+
+		<createIndex indexName="idx_users_status" tableName="users">
+			<column name="status"/>
+		</createIndex>
+
+	</changeSet>
+
+</databaseChangeLog>
+

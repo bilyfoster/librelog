@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="027-migrate-to-uuid-primary-keys" author="migration">
+        <comment>Migration to UUID primary keys - NO-OP: All tables already use UUID primary keys from initial schema</comment>
+
+        <!-- This migration is a no-op because we've been creating all tables with UUID primary keys from the start.
+             The original Python migration 027 dropped all tables and recreated them with UUIDs, but since we're
+             doing a fresh start with the Java backend, all tables already use UUIDs. -->
+        
+        <sql>
+            -- This is intentionally empty - all tables already use UUID primary keys
+            SELECT 1;
+        </sql>
+
+    </changeSet>
+
+</databaseChangeLog>
+
+

@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="002-add-traffic-management-tables" author="migration">
+        <comment>Add traffic management tables: advertisers, agencies, sales_reps, order_templates, orders, and extend campaigns</comment>
+
+        <!-- Create enum types -->
+        <sql>
+            CREATE TYPE ratetype AS ENUM ('ROS', 'DAYPART', 'PROGRAM', 'FIXED_TIME');
+            CREATE TYPE orderstatus AS ENUM ('DRAFT', 'PENDING', 'APPROVED', 'ACTIVE', 'COMPLETED', 'CANCELLED');
+            CREATE TYPE approvalstatus AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'NOT_REQUIRED');
+        </sql>
+
+        <!-- Create advertisers table -->
+        <createTable tableName="advertisers">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="contact_name" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="phone" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="address" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="tax_id" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="payment_terms" type="VARCHAR(100)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="credit_limit" type="NUMERIC(10,2)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="advertisers" indexName="ix_advertisers_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="advertisers" indexName="ix_advertisers_name">
+            <column name="name"/>
+        </createIndex>
+        <createIndex tableName="advertisers" indexName="ix_advertisers_email">
+            <column name="email"/>
+        </createIndex>
+        <createIndex tableName="advertisers" indexName="ix_advertisers_active">
+            <column name="active"/>
+        </createIndex>
+
+        <!-- Create agencies table -->
+        <createTable tableName="agencies">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="contact_name" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="phone" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="address" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="commission_rate" type="NUMERIC(5,2)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="agencies" indexName="ix_agencies_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="agencies" indexName="ix_agencies_name">
+            <column name="name"/>
+        </createIndex>
+        <createIndex tableName="agencies" indexName="ix_agencies_email">
+            <column name="email"/>
+        </createIndex>
+        <createIndex tableName="agencies" indexName="ix_agencies_active">
+            <column name="active"/>
+        </createIndex>
+
+        <!-- Create sales_reps table -->
+        <createTable tableName="sales_reps">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="employee_id" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="commission_rate" type="NUMERIC(5,2)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="sales_goal" type="NUMERIC(10,2)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="sales_reps"
+            baseColumnNames="user_id"
+            constraintName="fk_sales_reps_user_id"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="sales_reps" indexName="ix_sales_reps_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="sales_reps" indexName="ix_sales_reps_user_id" unique="true">
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex tableName="sales_reps" indexName="ix_sales_reps_employee_id" unique="true">
+            <column name="employee_id"/>
+        </createIndex>
+        <createIndex tableName="sales_reps" indexName="ix_sales_reps_active">
+            <column name="active"/>
+        </createIndex>
+
+        <!-- Create order_templates table -->
+        <createTable tableName="order_templates">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="default_spot_lengths" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="default_rate_type" type="VARCHAR(20)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="default_rates" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_by" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="order_templates"
+            baseColumnNames="created_by"
+            constraintName="fk_order_templates_created_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="order_templates" indexName="ix_order_templates_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="order_templates" indexName="ix_order_templates_name">
+            <column name="name"/>
+        </createIndex>
+
+        <!-- Create orders table -->
+        <createTable tableName="orders">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="order_number" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="campaign_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="advertiser_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="agency_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="sales_rep_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="start_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="spot_lengths" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="total_spots" type="INTEGER" defaultValueNumeric="0">
+                <constraints nullable="true"/>
+            </column>
+            <column name="rate_type" type="ratetype" defaultValue="ROS">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rates" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="total_value" type="NUMERIC(10,2)" defaultValueNumeric="0">
+                <constraints nullable="true"/>
+            </column>
+            <column name="status" type="orderstatus" defaultValue="DRAFT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="approval_status" type="approvalstatus" defaultValue="NOT_REQUIRED">
+                <constraints nullable="false"/>
+            </column>
+            <column name="approved_by" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="approved_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="orders"
+            baseColumnNames="advertiser_id"
+            constraintName="fk_orders_advertiser_id"
+            referencedTableName="advertisers"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="orders"
+            baseColumnNames="agency_id"
+            constraintName="fk_orders_agency_id"
+            referencedTableName="agencies"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="orders"
+            baseColumnNames="campaign_id"
+            constraintName="fk_orders_campaign_id"
+            referencedTableName="campaigns"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="orders"
+            baseColumnNames="sales_rep_id"
+            constraintName="fk_orders_sales_rep_id"
+            referencedTableName="sales_reps"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="orders"
+            baseColumnNames="approved_by"
+            constraintName="fk_orders_approved_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="orders" indexName="ix_orders_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_order_number" unique="true">
+            <column name="order_number"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_campaign_id">
+            <column name="campaign_id"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_advertiser_id">
+            <column name="advertiser_id"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_agency_id">
+            <column name="agency_id"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_sales_rep_id">
+            <column name="sales_rep_id"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_start_date">
+            <column name="start_date"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_end_date">
+            <column name="end_date"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_status">
+            <column name="status"/>
+        </createIndex>
+
+        <!-- Extend campaigns table -->
+        <addColumn tableName="campaigns">
+            <column name="order_number" type="VARCHAR(50)"/>
+            <column name="contract_number" type="VARCHAR(50)"/>
+            <column name="insertion_order_url" type="TEXT"/>
+            <column name="spot_lengths" type="JSONB"/>
+            <column name="rate_type" type="ratetype"/>
+            <column name="rates" type="JSONB"/>
+            <column name="scripts" type="JSONB"/>
+            <column name="copy_instructions" type="TEXT"/>
+            <column name="traffic_restrictions" type="JSONB"/>
+            <column name="approval_status" type="approvalstatus" defaultValue="NOT_REQUIRED"/>
+            <column name="approved_by" type="UUID"/>
+            <column name="approved_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+            baseTableName="campaigns"
+            baseColumnNames="approved_by"
+            constraintName="fk_campaigns_approved_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="campaigns" indexName="ix_campaigns_order_number" unique="true">
+            <column name="order_number"/>
+        </createIndex>
+        <createIndex tableName="campaigns" indexName="ix_campaigns_contract_number">
+            <column name="contract_number"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
+

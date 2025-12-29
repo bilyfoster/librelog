@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="015-create-audit-logs-table" author="librelog">
+		<comment>Create audit_logs table for comprehensive action logging and compliance</comment>
+		
+		<createTable tableName="audit_logs">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="user_id" type="UUID">
+				<constraints nullable="true"/>
+			</column>
+			<column name="impersonated_user_id" type="UUID">
+				<constraints nullable="true"/>
+			</column>
+			<column name="action_type" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="resource_type" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="resource_id" type="UUID">
+				<constraints nullable="true"/>
+			</column>
+			<column name="previous_value" type="JSONB">
+				<constraints nullable="true"/>
+			</column>
+			<column name="new_value" type="JSONB">
+				<constraints nullable="true"/>
+			</column>
+			<column name="ip_address" type="VARCHAR(255)">
+				<constraints nullable="true"/>
+			</column>
+			<column name="user_agent" type="VARCHAR(500)">
+				<constraints nullable="true"/>
+			</column>
+			<column name="station_id" type="UUID">
+				<constraints nullable="true"/>
+			</column>
+			<column name="timestamp" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+		</createTable>
+		
+		<addForeignKeyConstraint
+			baseTableName="audit_logs"
+			baseColumnNames="user_id"
+			constraintName="fk_audit_logs_user"
+			referencedTableName="users"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+		
+		<addForeignKeyConstraint
+			baseTableName="audit_logs"
+			baseColumnNames="impersonated_user_id"
+			constraintName="fk_audit_logs_impersonated_user"
+			referencedTableName="users"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+		
+		<addForeignKeyConstraint
+			baseTableName="audit_logs"
+			baseColumnNames="station_id"
+			constraintName="fk_audit_logs_station"
+			referencedTableName="stations"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+		
+		<!-- Indexes for frequently queried columns -->
+		<createIndex indexName="idx_audit_logs_user_id" tableName="audit_logs">
+			<column name="user_id"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_audit_logs_timestamp" tableName="audit_logs">
+			<column name="timestamp"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_audit_logs_action_type" tableName="audit_logs">
+			<column name="action_type"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_audit_logs_resource_type" tableName="audit_logs">
+			<column name="resource_type"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_audit_logs_station_id" tableName="audit_logs">
+			<column name="station_id"/>
+		</createIndex>
+		
+		<!-- Composite index for common query patterns -->
+		<createIndex indexName="idx_audit_logs_user_timestamp" tableName="audit_logs">
+			<column name="user_id"/>
+			<column name="timestamp"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_audit_logs_resource" tableName="audit_logs">
+			<column name="resource_type"/>
+			<column name="resource_id"/>
+		</createIndex>
+	</changeSet>
+
+</databaseChangeLog>
+

@@ -1,0 +1,33 @@
+package com.onelpro.librelog.dto;
+
+import com.onelpro.librelog.enums.UserRole;
+import com.onelpro.librelog.enums.UserStatus;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+
+/**
+ * DTO for user response data.
+ * Excludes sensitive information like password hash.
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class UserResponseDTO {
+
+    private UUID id;
+    private String username;
+    private Set<UserRole> roles = new HashSet<>();
+    private UserStatus status;
+    private Instant createdAt;
+    private Instant updatedAt;
+    private Instant lastLogin;
+}
+

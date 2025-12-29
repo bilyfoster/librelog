@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LibreLog - Admin Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0f0f1e;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            background: rgba(26, 26, 46, 0.95);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-section {
+            margin-top: 1rem;
+        }
+
+        .nav-section-title {
+            padding: 0.75rem 1.5rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #888;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1.5rem;
+            color: #b0b0b0;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+        }
+
+        .nav-item.active {
+            background: rgba(102, 126, 234, 0.1);
+            color: #8b9aff;
+            border-left-color: #667eea;
+        }
+
+        .nav-item i {
+            width: 20px;
+            display: inline-block;
+            margin-right: 0.75rem;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(26, 26, 46, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .header h2 {
+            font-size: 1.5rem;
+            color: #d0d0d0;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-badge {
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.5);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .logout-btn {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+            color: #ff6b6b;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(220, 53, 69, 0.3);
+        }
+
+        .content-area {
+            padding: 2rem;
+        }
+
+        /* Help/Context Panel */
+        .help-panel {
+            position: fixed;
+            right: -400px;
+            top: 0;
+            width: 400px;
+            height: 100vh;
+            background: rgba(26, 26, 46, 0.98);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            transition: right 0.3s ease;
+            z-index: 200;
+            overflow-y: auto;
+        }
+
+        .help-panel.open {
+            right: 0;
+        }
+
+        .help-panel-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .help-panel-content {
+            padding: 1.5rem;
+        }
+
+        .help-section {
+            margin-bottom: 2rem;
+        }
+
+        .help-section h3 {
+            color: #8b9aff;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .help-section p {
+            color: #b0b0b0;
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .help-toggle {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            z-index: 150;
+            transition: transform 0.3s ease;
+        }
+
+        .help-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        /* Tab Content Styles */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .table-container {
+            background: rgba(26, 26, 46, 0.95);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #d0d0d0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .badge-active {
+            background: rgba(40, 167, 69, 0.2);
+            color: #51cf66;
+            border: 1px solid rgba(40, 167, 69, 0.3);
+        }
+
+        .badge-inactive {
+            background: rgba(108, 117, 125, 0.2);
+            color: #adb5bd;
+            border: 1px solid rgba(108, 117, 125, 0.3);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-danger {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+            color: #ff6b6b;
+        }
+
+        .btn-danger:hover {
+            background: rgba(220, 53, 69, 0.3);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #888;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #888;
+        }
+
+        .error-message {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+            color: #ff6b6b;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: rgba(40, 167, 69, 0.2);
+            border: 1px solid rgba(40, 167, 69, 0.5);
+            color: #51cf66;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: rgba(26, 26, 46, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #a0a0a0;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+        }
+
+        .close-btn:hover {
+            color: #e0e0e0;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #d0d0d0;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #888;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h1>LibreLog</h1>
+        </div>
+        
+        <!-- Phase 1: Configuration & Orders -->
+        <div class="nav-section">
+            <div class="nav-section-title">Configuration</div>
+            <a href="#" class="nav-item active" data-tab="stations">
+                <i>📻</i> Stations
+            </a>
+            <a href="#" class="nav-item" data-tab="clocks">
+                <i>🕐</i> Clock Templates
+            </a>
+            <a href="#" class="nav-item" data-tab="dayparts">
+                <i>⏰</i> Dayparts
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Orders & CRM</div>
+            <a href="#" class="nav-item" data-tab="orders">
+                <i>📋</i> Orders
+            </a>
+            <a href="#" class="nav-item" data-tab="advertisers">
+                <i>🏢</i> Advertisers
+            </a>
+            <a href="#" class="nav-item" data-tab="agencies">
+                <i>🤝</i> Agencies
+            </a>
+            <a href="#" class="nav-item" data-tab="sales-reps">
+                <i>👤</i> Sales Reps
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Administration</div>
+            <a href="#" class="nav-item" data-tab="users">
+                <i>👥</i> Users
+            </a>
+        </div>
+
+        <!-- Future sections (commented for now) -->
+        <!--
+        <div class="nav-section">
+            <div class="nav-section-title">Logs & Placement</div>
+            <a href="#" class="nav-item" data-tab="logs">📊 Daily Logs</a>
+            <a href="#" class="nav-item" data-tab="placement">🎯 Spot Placement</a>
+            <a href="#" class="nav-item" data-tab="separation">🔄 Separation Rules</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Export & Reconciliation</div>
+            <a href="#" class="nav-item" data-tab="export">📤 Log Export</a>
+            <a href="#" class="nav-item" data-tab="reconciliation">✅ As-Run Reconciliation</a>
+            <a href="#" class="nav-item" data-tab="integrations">🔌 Integrations</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Billing & Analytics</div>
+            <a href="#" class="nav-item" data-tab="invoicing">💰 Invoicing</a>
+            <a href="#" class="nav-item" data-tab="affidavits">📄 Affidavits</a>
+            <a href="#" class="nav-item" data-tab="receivables">💳 Accounts Receivable</a>
+            <a href="#" class="nav-item" data-tab="analytics">📈 Revenue Analytics</a>
+        </div>
+        -->
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <h2 id="pageTitle">Station Management</h2>
+            <div class="user-info">
+                <span class="user-badge" id="userBadge">Loading...</span>
+                <a href="/" class="logout-btn" onclick="logout()">Logout</a>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+
+            <!-- Stations Tab -->
+            <div id="stationsTab" class="tab-content active">
+                <div class="toolbar">
+                    <h3 class="section-title">Stations</h3>
+                    <button class="btn btn-primary" onclick="openStationModal()">+ Create Station</button>
+                </div>
+                <div class="table-container">
+                    <div id="stationsLoadingState" class="loading">Loading stations...</div>
+                    <div id="stationsEmptyState" class="empty-state" style="display: none;">No stations found</div>
+                    <table id="stationsTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Call Sign</th>
+                                <th>Name</th>
+                                <th>Frequency</th>
+                                <th>Market</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stationsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Other tabs will be added here with similar structure -->
+            <div id="clocksTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Clock Templates</h3>
+                    <button class="btn btn-primary" onclick="openClockModal()">+ Create Clock Template</button>
+                </div>
+                <div class="table-container">
+                    <div id="clocksLoadingState" class="loading">Loading clock templates...</div>
+                    <div id="clocksEmptyState" class="empty-state" style="display: none;">No clock templates found</div>
+                    <table id="clocksTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Station</th>
+                                <th>Active</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clocksTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Users Tab -->
+            <div id="usersTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">User Management</h3>
+                    <button class="btn btn-primary" onclick="openCreateModal()">+ Create User</button>
+                </div>
+                <div class="table-container">
+                    <div id="usersLoadingState" class="loading">Loading users...</div>
+                    <div id="usersEmptyState" class="empty-state" style="display: none;">No users found</div>
+                    <table id="usersTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Placeholder tabs for other modules -->
+            <div id="daypartsTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Dayparts</h3>
+                    <button class="btn btn-primary" onclick="openDaypartModal()">+ Create Daypart</button>
+                </div>
+                <div class="table-container">
+                    <div id="daypartsLoadingState" class="loading">Loading dayparts...</div>
+                    <div id="daypartsEmptyState" class="empty-state" style="display: none;">No dayparts found</div>
+                    <table id="daypartsTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Start Time</th>
+                                <th>End Time</th>
+                                <th>Category</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="daypartsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="ordersTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Orders</h3>
+                    <button class="btn btn-primary" onclick="openOrderModal()">+ Create Order</button>
+                </div>
+                <div class="table-container">
+                    <div id="ordersLoadingState" class="loading">Loading orders...</div>
+                    <div id="ordersEmptyState" class="empty-state" style="display: none;">No orders found</div>
+                    <table id="ordersTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Order Number</th>
+                                <th>Station</th>
+                                <th>Advertiser</th>
+                                <th>Status</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="advertisersTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Advertisers</h3>
+                    <button class="btn btn-primary" onclick="openAdvertiserModal()">+ Create Advertiser</button>
+                </div>
+                <div class="table-container">
+                    <div id="advertisersLoadingState" class="loading">Loading advertisers...</div>
+                    <div id="advertisersEmptyState" class="empty-state" style="display: none;">No advertisers found</div>
+                    <table id="advertisersTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Agency</th>
+                                <th>Sales Rep</th>
+                                <th>Active</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="advertisersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="agenciesTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Agencies</h3>
+                    <button class="btn btn-primary" onclick="openAgencyModal()">+ Create Agency</button>
+                </div>
+                <div class="table-container">
+                    <div id="agenciesLoadingState" class="loading">Loading agencies...</div>
+                    <div id="agenciesEmptyState" class="empty-state" style="display: none;">No agencies found</div>
+                    <table id="agenciesTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Active</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agenciesTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="sales-repsTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Sales Representatives</h3>
+                    <button class="btn btn-primary" onclick="openSalesRepModal()">+ Create Sales Rep</button>
+                </div>
+                <div class="table-container">
+                    <div id="salesRepsLoadingState" class="loading">Loading sales reps...</div>
+                    <div id="salesRepsEmptyState" class="empty-state" style="display: none;">No sales reps found</div>
+                    <table id="salesRepsTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Active</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salesRepsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="footer">
+                <p>&copy; <span id="copyrightYear"></span> LibreLog. All rights reserved. | Version <span id="appVersion">Loading...</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help/Context Panel -->
+    <button class="help-toggle" onclick="toggleHelp()">?</button>
+    <div class="help-panel" id="helpPanel">
+        <div class="help-panel-header">
+            <h2>Help & Context</h2>
+            <button class="close-btn" onclick="toggleHelp()">&times;</button>
+        </div>
+        <div class="help-panel-content" id="helpContent">
+            <div class="help-section">
+                <h3>Station Management</h3>
+                <p>Stations represent broadcast stations in your system. Each station has a unique call sign, name, frequency, and market.</p>
+                <p><strong>Key Features:</strong></p>
+                <ul style="margin-left: 1.5rem; color: #b0b0b0;">
+                    <li>Create and manage broadcast stations</li>
+                    <li>Associate clock templates and channels</li>
+                    <li>Link to orders and logs</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Station Modal -->
+    <div id="stationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="stationModalTitle">Create Station</h2>
+                <button class="close-btn" onclick="closeStationModal()">&times;</button>
+            </div>
+            <form id="stationForm">
+                <input type="hidden" id="stationId">
+                <div class="form-group">
+                    <label for="stationCallSign">Call Sign *</label>
+                    <input type="text" id="stationCallSign" required>
+                </div>
+                <div class="form-group">
+                    <label for="stationName">Name *</label>
+                    <input type="text" id="stationName" required>
+                </div>
+                <div class="form-group">
+                    <label for="stationFrequency">Frequency</label>
+                    <input type="text" id="stationFrequency">
+                </div>
+                <div class="form-group">
+                    <label for="stationMarket">Market</label>
+                    <input type="text" id="stationMarket">
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeStationModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Modal (existing) -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Create User</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="error-message" id="modalErrorMessage"></div>
+            <form id="userForm">
+                <input type="hidden" id="userId">
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password <span id="passwordRequired">*</span></label>
+                    <input type="password" id="password" placeholder="Leave empty to keep current password">
+                </div>
+                <div class="form-group">
+                    <label for="role">Role *</label>
+                    <select id="role" required>
+                        <option value="ADMIN">Admin</option>
+                        <option value="TRAFFIC_MANAGER">Traffic Manager</option>
+                        <option value="SALES_REP">Sales Representative</option>
+                        <option value="PROGRAMMING">Programming</option>
+                        <option value="ACCOUNTING">Accounting</option>
+                        <option value="OPERATIONS">Operations</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="status">Status *</label>
+                    <select id="status" required>
+                        <option value="ACTIVE">Active</option>
+                        <option value="INACTIVE">Inactive</option>
+                        <option value="BANNED">Banned</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let authToken = localStorage.getItem('authToken');
+        let currentUser = null;
+        let currentTab = 'stations';
+
+        // Check authentication
+        if (!authToken) {
+            window.location.href = '/';
+        }
+
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tab = e.currentTarget.dataset.tab;
+                switchTab(tab);
+            });
+        });
+
+        function switchTab(tabName) {
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabName + 'Tab').classList.add('active');
+
+            // Update page title
+            const titles = {
+                'stations': 'Station Management',
+                'clocks': 'Clock Template Management',
+                'dayparts': 'Daypart Management',
+                'orders': 'Order Management',
+                'advertisers': 'Advertiser Management',
+                'agencies': 'Agency Management',
+                'sales-reps': 'Sales Representative Management',
+                'users': 'User Management'
+            };
+            document.getElementById('pageTitle').textContent = titles[tabName] || 'Dashboard';
+
+            // Update help content
+            updateHelpContent(tabName);
+
+            // Load data for the tab
+            currentTab = tabName;
+            loadTabData(tabName);
+        }
+
+        function updateHelpContent(tabName) {
+            const helpContent = document.getElementById('helpContent');
+            const helpTexts = {
+                'stations': {
+                    title: 'Station Management',
+                    description: 'Stations represent broadcast stations in your system. Each station has a unique call sign, name, frequency, and market.',
+                    features: [
+                        'Create and manage broadcast stations',
+                        'Associate clock templates and channels',
+                        'Link to orders and logs'
+                    ]
+                },
+                'clocks': {
+                    title: 'Clock Template Management',
+                    description: 'Clock templates define the 24-hour broadcast structure for a station, including where commercial breaks can occur.',
+                    features: [
+                        'Define clock templates for each station',
+                        'Configure break structures',
+                        'Set active/inactive templates'
+                    ]
+                },
+                'dayparts': {
+                    title: 'Daypart Management',
+                    description: 'Dayparts represent time periods during the broadcast day (e.g., morning drive, afternoon drive, evening).',
+                    features: [
+                        'Create dayparts with start and end times',
+                        'Organize by categories',
+                        'Use in order line requirements'
+                    ]
+                },
+                'orders': {
+                    title: 'Order Management',
+                    description: 'Orders represent advertising contracts. Each order contains order lines that specify spot requirements.',
+                    features: [
+                        'Create and manage advertising orders',
+                        'Track order status through workflow',
+                        'Associate with stations, advertisers, and sales reps'
+                    ]
+                },
+                'advertisers': {
+                    title: 'Advertiser Management',
+                    description: 'Advertisers are clients who purchase advertising. Track credit limits, payment terms, and contact information.',
+                    features: [
+                        'Manage advertiser information',
+                        'Track credit limits and payment terms',
+                        'Link to agencies and sales reps'
+                    ]
+                },
+                'agencies': {
+                    title: 'Agency Management',
+                    description: 'Agencies represent advertising agencies that place orders on behalf of advertisers.',
+                    features: [
+                        'Manage agency information',
+                        'Link advertisers to agencies',
+                        'Track agency contacts'
+                    ]
+                },
+                'sales-reps': {
+                    title: 'Sales Representative Management',
+                    description: 'Sales representatives are staff members responsible for selling advertising and managing client relationships.',
+                    features: [
+                        'Manage sales rep information',
+                        'Organize by teams, offices, and regions',
+                        'Track commission rates'
+                    ]
+                },
+                'users': {
+                    title: 'User Management',
+                    description: 'Manage system users, their roles, and permissions. Users can have different roles with varying access levels.',
+                    features: [
+                        'Create and manage user accounts',
+                        'Assign roles (Admin, Traffic Manager, Sales Rep, etc.)',
+                        'Control user status (Active, Inactive, Banned)'
+                    ]
+                }
+            };
+
+            const help = helpTexts[tabName] || helpTexts['stations'];
+            helpContent.innerHTML = `
+                <div class="help-section">
+                    <h3>${help.title}</h3>
+                    <p>${help.description}</p>
+                    <p><strong>Key Features:</strong></p>
+                    <ul style="margin-left: 1.5rem; color: #b0b0b0; line-height: 1.8;">
+                        ${help.features.map(f => `<li>${f}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        function loadTabData(tabName) {
+            switch(tabName) {
+                case 'stations':
+                    loadStations();
+                    break;
+                case 'clocks':
+                    loadClocks();
+                    break;
+                case 'dayparts':
+                    loadDayparts();
+                    break;
+                case 'orders':
+                    loadOrders();
+                    break;
+                case 'advertisers':
+                    loadAdvertisers();
+                    break;
+                case 'agencies':
+                    loadAgencies();
+                    break;
+                case 'sales-reps':
+                    loadSalesReps();
+                    break;
+                case 'users':
+                    loadUsers();
+                    break;
+            }
+        }
+
+        // Help panel toggle
+        function toggleHelp() {
+            document.getElementById('helpPanel').classList.toggle('open');
+        }
+
+        // Load user info
+        async function loadUserInfo() {
+            try {
+                const payload = JSON.parse(atob(authToken.split('.')[1]));
+                currentUser = payload;
+                document.getElementById('userBadge').textContent = `${payload.email} (${payload.role})`;
+            } catch (error) {
+                console.error('Error loading user info:', error);
+                logout();
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userRole');
+            window.location.href = '/';
+        }
+
+        // Station Management Functions
+        async function loadStations() {
+            try {
+                const response = await fetch('/api/stations', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load stations');
+                const stations = await response.json();
+                displayStations(stations);
+            } catch (error) {
+                console.error('Error loading stations:', error);
+                showError('Failed to load stations');
+            }
+        }
+
+        function displayStations(stations) {
+            const tableBody = document.getElementById('stationsTableBody');
+            const loadingState = document.getElementById('stationsLoadingState');
+            const emptyState = document.getElementById('stationsEmptyState');
+            const table = document.getElementById('stationsTable');
+
+            loadingState.style.display = 'none';
+            if (stations.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = stations.map(s => `
+                <tr>
+                    <td><strong>${s.callSign}</strong></td>
+                    <td>${s.name}</td>
+                    <td>${s.frequency || '-'}</td>
+                    <td>${s.market || '-'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editStation('${s.id}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteStation('${s.id}', '${s.callSign}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openStationModal() {
+            document.getElementById('stationModalTitle').textContent = 'Create Station';
+            document.getElementById('stationForm').reset();
+            document.getElementById('stationId').value = '';
+            document.getElementById('stationModal').classList.add('show');
+        }
+
+        async function editStation(id) {
+            try {
+                const response = await fetch(`/api/stations/${id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load station');
+                const station = await response.json();
+                document.getElementById('stationModalTitle').textContent = 'Edit Station';
+                document.getElementById('stationId').value = station.id;
+                document.getElementById('stationCallSign').value = station.callSign;
+                document.getElementById('stationName').value = station.name;
+                document.getElementById('stationFrequency').value = station.frequency || '';
+                document.getElementById('stationMarket').value = station.market || '';
+                document.getElementById('stationModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading station:', error);
+                showError('Failed to load station');
+            }
+        }
+
+        function closeStationModal() {
+            document.getElementById('stationModal').classList.remove('show');
+        }
+
+        async function deleteStation(id, callSign) {
+            if (!confirm(`Are you sure you want to delete station "${callSign}"?`)) return;
+            try {
+                const response = await fetch(`/api/stations/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete station');
+                showSuccess('Station deleted successfully');
+                loadStations();
+            } catch (error) {
+                console.error('Error deleting station:', error);
+                showError('Failed to delete station');
+            }
+        }
+
+        document.getElementById('stationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('modalErrorMessage');
+            errorMsg.classList.remove('show');
+
+            const stationId = document.getElementById('stationId').value;
+            const stationData = {
+                callSign: document.getElementById('stationCallSign').value,
+                name: document.getElementById('stationName').value,
+                frequency: document.getElementById('stationFrequency').value || null,
+                market: document.getElementById('stationMarket').value || null
+            };
+
+            try {
+                const url = stationId ? `/api/stations/${stationId}` : '/api/stations';
+                const method = stationId ? 'PUT' : 'POST';
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(stationData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to save station');
+                }
+
+                closeStationModal();
+                showSuccess(stationId ? 'Station updated successfully' : 'Station created successfully');
+                loadStations();
+            } catch (error) {
+                console.error('Error saving station:', error);
+                errorMsg.textContent = error.message || 'Failed to save station';
+                errorMsg.classList.add('show');
+            }
+        });
+
+        // Placeholder functions for other tabs
+        function loadClocks() {
+            document.getElementById('clocksLoadingState').textContent = 'Clock template management coming soon...';
+        }
+        function loadDayparts() {
+            document.getElementById('daypartsLoadingState').textContent = 'Daypart management coming soon...';
+        }
+        function loadOrders() {
+            document.getElementById('ordersLoadingState').textContent = 'Order management coming soon...';
+        }
+        function loadAdvertisers() {
+            document.getElementById('advertisersLoadingState').textContent = 'Advertiser management coming soon...';
+        }
+        function loadAgencies() {
+            document.getElementById('agenciesLoadingState').textContent = 'Agency management coming soon...';
+        }
+        function loadSalesReps() {
+            document.getElementById('salesRepsLoadingState').textContent = 'Sales rep management coming soon...';
+        }
+
+        // User management (existing functions)
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load users');
+                const users = await response.json();
+                displayUsers(users);
+            } catch (error) {
+                console.error('Error loading users:', error);
+                showError('Failed to load users');
+            }
+        }
+
+        function displayUsers(users) {
+            const tableBody = document.getElementById('usersTableBody');
+            const loadingState = document.getElementById('usersLoadingState');
+            const emptyState = document.getElementById('usersEmptyState');
+            const table = document.getElementById('usersTable');
+
+            loadingState.style.display = 'none';
+            if (users.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = users.map(u => `
+                <tr>
+                    <td>${u.email}</td>
+                    <td><span class="badge badge-${u.role.toLowerCase()}">${u.role}</span></td>
+                    <td><span class="badge badge-${u.status.toLowerCase()}">${u.status}</span></td>
+                    <td>${new Date(u.createdAt).toLocaleDateString()}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editUser('${u.id}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}', '${u.email}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openCreateModal() {
+            document.getElementById('modalTitle').textContent = 'Create User';
+            document.getElementById('userForm').reset();
+            document.getElementById('userId').value = '';
+            document.getElementById('passwordRequired').style.display = 'inline';
+            document.getElementById('password').required = true;
+            document.getElementById('userModal').classList.add('show');
+        }
+
+        async function editUser(userId) {
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load user');
+                const user = await response.json();
+                document.getElementById('modalTitle').textContent = 'Edit User';
+                document.getElementById('userId').value = user.id;
+                document.getElementById('email').value = user.email;
+                document.getElementById('role').value = user.role;
+                document.getElementById('status').value = user.status;
+                document.getElementById('password').value = '';
+                document.getElementById('passwordRequired').style.display = 'none';
+                document.getElementById('password').required = false;
+                document.getElementById('userModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading user:', error);
+                showError('Failed to load user');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('userModal').classList.remove('show');
+            document.getElementById('modalErrorMessage').classList.remove('show');
+        }
+
+        async function deleteUser(userId, email) {
+            if (!confirm(`Are you sure you want to delete user "${email}"?`)) return;
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete user');
+                showSuccess('User deleted successfully');
+                loadUsers();
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                showError('Failed to delete user');
+            }
+        }
+
+        document.getElementById('userForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('modalErrorMessage');
+            errorMsg.classList.remove('show');
+
+            const userId = document.getElementById('userId').value;
+            const userData = {
+                email: document.getElementById('email').value,
+                role: document.getElementById('role').value,
+                status: document.getElementById('status').value
+            };
+
+            const password = document.getElementById('password').value;
+            if (password) {
+                userData.password = password;
+            } else if (!userId) {
+                errorMsg.textContent = 'Password is required for new users';
+                errorMsg.classList.add('show');
+                return;
+            }
+
+            try {
+                const url = userId ? `/api/users/${userId}` : '/api/users';
+                const method = userId ? 'PUT' : 'POST';
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to save user');
+                }
+
+                closeModal();
+                showSuccess(userId ? 'User updated successfully' : 'User created successfully');
+                loadUsers();
+            } catch (error) {
+                console.error('Error saving user:', error);
+                errorMsg.textContent = error.message || 'Failed to save user';
+                errorMsg.classList.add('show');
+            }
+        });
+
+        // Placeholder modal functions
+        function openClockModal() { showError('Clock template creation - Coming soon'); }
+        function openDaypartModal() { showError('Daypart creation - Coming soon'); }
+        function openOrderModal() { showError('Order creation - Coming soon'); }
+        function openAdvertiserModal() { showError('Advertiser creation - Coming soon'); }
+        function openAgencyModal() { showError('Agency creation - Coming soon'); }
+        function openSalesRepModal() { showError('Sales rep creation - Coming soon'); }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            setTimeout(() => errorDiv.classList.remove('show'), 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.classList.add('show');
+            setTimeout(() => successDiv.classList.remove('show'), 5000);
+        }
+
+        // Set copyright year and load version
+        document.getElementById('copyrightYear').textContent = new Date().getFullYear();
+        fetch('/actuator/info')
+            .then(r => r.ok ? r.json() : null)
+            .then(info => {
+                if (info && info.app && info.app.version) {
+                    document.getElementById('appVersion').textContent = info.app.version;
+                } else {
+                    document.getElementById('appVersion').textContent = 'Unknown';
+                }
+            })
+            .catch(() => {
+                document.getElementById('appVersion').textContent = 'Unknown';
+            });
+
+        // Initialize
+        loadUserInfo();
+        loadStations();
+    </script>
+</body>
+</html>
+

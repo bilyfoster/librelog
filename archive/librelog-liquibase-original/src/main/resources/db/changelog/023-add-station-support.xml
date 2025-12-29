@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="023-add-station-support" author="migration">
+        <comment>Add station support: user_stations association table and station_id columns to various tables</comment>
+
+        <!-- Create user_stations association table -->
+        <createTable tableName="user_stations">
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="station_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="user_stations" columnNames="user_id,station_id"/>
+        <addForeignKeyConstraint
+            baseTableName="user_stations"
+            baseColumnNames="user_id"
+            constraintName="fk_user_stations_user_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="user_stations"
+            baseColumnNames="station_id"
+            constraintName="fk_user_stations_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <createIndex tableName="user_stations" indexName="ix_user_stations_user_id">
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex tableName="user_stations" indexName="ix_user_stations_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+        <!-- Add station_id to spots (NOT NULL) -->
+        <addColumn tableName="spots">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <sql>
+            UPDATE spots SET station_id = (SELECT id FROM stations LIMIT 1) WHERE station_id IS NULL;
+        </sql>
+
+        <addNotNullConstraint tableName="spots" columnName="station_id" columnDataType="UUID"/>
+        <addForeignKeyConstraint
+            baseTableName="spots"
+            baseColumnNames="station_id"
+            constraintName="fk_spots_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="spots" indexName="ix_spots_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+        <!-- Add station_id to daily_logs (NOT NULL) -->
+        <addColumn tableName="daily_logs">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <sql>
+            UPDATE daily_logs SET station_id = (SELECT id FROM stations LIMIT 1) WHERE station_id IS NULL;
+        </sql>
+
+        <addNotNullConstraint tableName="daily_logs" columnName="station_id" columnDataType="UUID"/>
+        <addForeignKeyConstraint
+            baseTableName="daily_logs"
+            baseColumnNames="station_id"
+            constraintName="fk_daily_logs_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="daily_logs" indexName="ix_daily_logs_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+        <!-- Add unique constraint on daily_logs (date, station_id) -->
+        <addUniqueConstraint tableName="daily_logs" columnNames="date,station_id" constraintName="uq_daily_logs_date_station"/>
+
+        <!-- Add station_id to order_lines (NOT NULL) -->
+        <addColumn tableName="order_lines">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <sql>
+            UPDATE order_lines SET station_id = (SELECT id FROM stations LIMIT 1) WHERE station_id IS NULL;
+        </sql>
+
+        <addNotNullConstraint tableName="order_lines" columnName="station_id" columnDataType="UUID"/>
+        <addForeignKeyConstraint
+            baseTableName="order_lines"
+            baseColumnNames="station_id"
+            constraintName="fk_order_lines_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="order_lines" indexName="ix_order_lines_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+        <!-- Add station_id to invoice_lines (NOT NULL) -->
+        <addColumn tableName="invoice_lines">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <sql>
+            UPDATE invoice_lines SET station_id = (SELECT id FROM stations LIMIT 1) WHERE station_id IS NULL;
+        </sql>
+
+        <addNotNullConstraint tableName="invoice_lines" columnName="station_id" columnDataType="UUID"/>
+        <addForeignKeyConstraint
+            baseTableName="invoice_lines"
+            baseColumnNames="station_id"
+            constraintName="fk_invoice_lines_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="invoice_lines" indexName="ix_invoice_lines_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+        <!-- Add station_id to clock_templates (NOT NULL) -->
+        <addColumn tableName="clock_templates">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <sql>
+            UPDATE clock_templates SET station_id = (SELECT id FROM stations LIMIT 1) WHERE station_id IS NULL;
+        </sql>
+
+        <addNotNullConstraint tableName="clock_templates" columnName="station_id" columnDataType="UUID"/>
+        <addForeignKeyConstraint
+            baseTableName="clock_templates"
+            baseColumnNames="station_id"
+            constraintName="fk_clock_templates_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="clock_templates" indexName="ix_clock_templates_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+        <!-- Add station_id to dayparts (NOT NULL) -->
+        <addColumn tableName="dayparts">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <sql>
+            UPDATE dayparts SET station_id = (SELECT id FROM stations LIMIT 1) WHERE station_id IS NULL;
+        </sql>
+
+        <addNotNullConstraint tableName="dayparts" columnName="station_id" columnDataType="UUID"/>
+        <addForeignKeyConstraint
+            baseTableName="dayparts"
+            baseColumnNames="station_id"
+            constraintName="fk_dayparts_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="dayparts" indexName="ix_dayparts_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+        <!-- Add station_id to break_structures (NOT NULL) -->
+        <addColumn tableName="break_structures">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <sql>
+            UPDATE break_structures SET station_id = (SELECT id FROM stations LIMIT 1) WHERE station_id IS NULL;
+        </sql>
+
+        <addNotNullConstraint tableName="break_structures" columnName="station_id" columnDataType="UUID"/>
+        <addForeignKeyConstraint
+            baseTableName="break_structures"
+            baseColumnNames="station_id"
+            constraintName="fk_break_structures_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="break_structures" indexName="ix_break_structures_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+        <!-- Add station_id to tracks (nullable - shared tracks) -->
+        <addColumn tableName="tracks">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+            baseTableName="tracks"
+            baseColumnNames="station_id"
+            constraintName="fk_tracks_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="tracks" indexName="ix_tracks_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+        <!-- Add station_id to voice_tracks (NOT NULL) -->
+        <addColumn tableName="voice_tracks">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <sql>
+            UPDATE voice_tracks SET station_id = (SELECT id FROM stations LIMIT 1) WHERE station_id IS NULL;
+        </sql>
+
+        <addNotNullConstraint tableName="voice_tracks" columnName="station_id" columnDataType="UUID"/>
+        <addForeignKeyConstraint
+            baseTableName="voice_tracks"
+            baseColumnNames="station_id"
+            constraintName="fk_voice_tracks_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="voice_tracks" indexName="ix_voice_tracks_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+        <!-- Add station_id to inventory_slots (NOT NULL) -->
+        <addColumn tableName="inventory_slots">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <sql>
+            UPDATE inventory_slots SET station_id = (SELECT id FROM stations LIMIT 1) WHERE station_id IS NULL;
+        </sql>
+
+        <addNotNullConstraint tableName="inventory_slots" columnName="station_id" columnDataType="UUID"/>
+        <addForeignKeyConstraint
+            baseTableName="inventory_slots"
+            baseColumnNames="station_id"
+            constraintName="fk_inventory_slots_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="inventory_slots" indexName="ix_inventory_slots_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+        <!-- Add unique constraint on inventory_slots (date, hour, station_id) -->
+        <addUniqueConstraint tableName="inventory_slots" columnNames="date,hour,station_id" constraintName="uq_inventory_slots_date_hour_station"/>
+
+        <!-- Add station_id to rotation_rules (NOT NULL) -->
+        <addColumn tableName="rotation_rules">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <sql>
+            UPDATE rotation_rules SET station_id = (SELECT id FROM stations LIMIT 1) WHERE station_id IS NULL;
+        </sql>
+
+        <addNotNullConstraint tableName="rotation_rules" columnName="station_id" columnDataType="UUID"/>
+        <addForeignKeyConstraint
+            baseTableName="rotation_rules"
+            baseColumnNames="station_id"
+            constraintName="fk_rotation_rules_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="rotation_rules" indexName="ix_rotation_rules_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+        <!-- Add station_id to live_reads (NOT NULL) -->
+        <addColumn tableName="live_reads">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <sql>
+            UPDATE live_reads SET station_id = (SELECT id FROM stations LIMIT 1) WHERE station_id IS NULL;
+        </sql>
+
+        <addNotNullConstraint tableName="live_reads" columnName="station_id" columnDataType="UUID"/>
+        <addForeignKeyConstraint
+            baseTableName="live_reads"
+            baseColumnNames="station_id"
+            constraintName="fk_live_reads_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="live_reads" indexName="ix_live_reads_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+        <!-- Add station_id to traffic_logs (nullable) -->
+        <addColumn tableName="traffic_logs">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+            baseTableName="traffic_logs"
+            baseColumnNames="station_id"
+            constraintName="fk_traffic_logs_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="traffic_logs" indexName="ix_traffic_logs_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+        <!-- Add station_id to copy (nullable - shared or station-specific) -->
+        <addColumn tableName="copy">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+            baseTableName="copy"
+            baseColumnNames="station_id"
+            constraintName="fk_copy_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="copy" indexName="ix_copy_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+        <!-- Add station_id to settings (nullable) -->
+        <addColumn tableName="settings">
+            <column name="station_id" type="UUID"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+            baseTableName="settings"
+            baseColumnNames="station_id"
+            constraintName="fk_settings_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"/>
+        <createIndex tableName="settings" indexName="ix_settings_station_id">
+            <column name="station_id"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
+
+

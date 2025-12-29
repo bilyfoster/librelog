@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="007-add-inventory-revenue-tables" author="migration">
+        <comment>Add inventory slots and sales goals tables</comment>
+
+        <!-- Create enum type -->
+        <sql>
+            CREATE TYPE periodtype AS ENUM ('DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY');
+        </sql>
+
+        <!-- Create inventory_slots table -->
+        <createTable tableName="inventory_slots">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="hour" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="break_position" type="VARCHAR(10)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="daypart" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="available" type="INTEGER" defaultValueNumeric="3600">
+                <constraints nullable="true"/>
+            </column>
+            <column name="booked" type="INTEGER" defaultValueNumeric="0">
+                <constraints nullable="true"/>
+            </column>
+            <column name="sold_out" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="true"/>
+            </column>
+            <column name="revenue" type="NUMERIC(10,2)" defaultValueNumeric="0">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <sql>
+            <![CDATA[
+            ALTER TABLE inventory_slots ADD CONSTRAINT inventory_slots_hour_check CHECK (hour >= 0 AND hour <= 23);
+            ]]>
+        </sql>
+
+        <createIndex tableName="inventory_slots" indexName="ix_inventory_slots_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="inventory_slots" indexName="ix_inventory_slots_date">
+            <column name="date"/>
+        </createIndex>
+        <createIndex tableName="inventory_slots" indexName="ix_inventory_slots_hour">
+            <column name="hour"/>
+        </createIndex>
+        <createIndex tableName="inventory_slots" indexName="ix_inventory_slots_sold_out">
+            <column name="sold_out"/>
+        </createIndex>
+
+        <!-- Create sales_goals table -->
+        <createTable tableName="sales_goals">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="sales_rep_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="period" type="periodtype">
+                <constraints nullable="false"/>
+            </column>
+            <column name="target_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="goal_amount" type="NUMERIC(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="actual_amount" type="NUMERIC(10,2)" defaultValueNumeric="0">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="sales_goals"
+            baseColumnNames="sales_rep_id"
+            constraintName="fk_sales_goals_sales_rep_id"
+            referencedTableName="sales_reps"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="sales_goals" indexName="ix_sales_goals_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="sales_goals" indexName="ix_sales_goals_sales_rep_id">
+            <column name="sales_rep_id"/>
+        </createIndex>
+        <createIndex tableName="sales_goals" indexName="ix_sales_goals_period">
+            <column name="period"/>
+        </createIndex>
+        <createIndex tableName="sales_goals" indexName="ix_sales_goals_target_date">
+            <column name="target_date"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
+
+

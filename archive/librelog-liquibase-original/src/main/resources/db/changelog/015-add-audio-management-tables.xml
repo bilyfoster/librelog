@@ -1,0 +1,639 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="015-add-audio-management-tables" author="migration">
+        <comment>Add audio management tables: audio_cuts, audio_versions, live_reads, political_records, audio_deliveries, audio_qc_results, and extend copy and rotation_rules tables</comment>
+
+        <!-- Create audio_cuts table -->
+        <createTable tableName="audio_cuts">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="copy_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cut_id" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cut_name" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="audio_file_path" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="audio_file_url" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="file_checksum" type="VARCHAR(64)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="version" type="INTEGER" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rotation_weight" type="DOUBLE PRECISION" defaultValueNumeric="1.0">
+                <constraints nullable="true"/>
+            </column>
+            <column name="daypart_restrictions" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="program_associations" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="expires_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="true"/>
+            </column>
+            <column name="qc_results" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="notes" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="tags" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_by" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="audio_cuts"
+            baseColumnNames="copy_id"
+            constraintName="fk_audio_cuts_copy_id"
+            referencedTableName="copy"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="audio_cuts"
+            baseColumnNames="created_by"
+            constraintName="fk_audio_cuts_created_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <sql>
+            <![CDATA[
+            ALTER TABLE audio_cuts ADD CONSTRAINT check_rotation_weight_positive CHECK (rotation_weight >= 0);
+            ]]>
+        </sql>
+
+        <createIndex tableName="audio_cuts" indexName="ix_audio_cuts_copy_id">
+            <column name="copy_id"/>
+        </createIndex>
+        <createIndex tableName="audio_cuts" indexName="ix_audio_cuts_cut_id">
+            <column name="cut_id"/>
+        </createIndex>
+        <createIndex tableName="audio_cuts" indexName="ix_audio_cuts_expires_at">
+            <column name="expires_at"/>
+        </createIndex>
+        <createIndex tableName="audio_cuts" indexName="ix_audio_cuts_active">
+            <column name="active"/>
+        </createIndex>
+
+        <!-- Create audio_versions table -->
+        <createTable tableName="audio_versions">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="cut_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version_number" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="audio_file_path" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="audio_file_url" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="file_checksum" type="VARCHAR(64)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="version_notes" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="changed_by" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="audio_versions"
+            baseColumnNames="cut_id"
+            constraintName="fk_audio_versions_cut_id"
+            referencedTableName="audio_cuts"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="audio_versions"
+            baseColumnNames="changed_by"
+            constraintName="fk_audio_versions_changed_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="audio_versions" indexName="ix_audio_versions_cut_id">
+            <column name="cut_id"/>
+        </createIndex>
+
+        <!-- Create live_reads table -->
+        <createTable tableName="live_reads">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="copy_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="order_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="advertiser_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="script_text" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="script_title" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="scheduled_time" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="scheduled_date" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="performed_time" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="performed_by" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="confirmed" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="true"/>
+            </column>
+            <column name="proof_of_performance" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="confirmation_timestamp" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="status" type="VARCHAR(50)" defaultValue="scheduled">
+                <constraints nullable="true"/>
+            </column>
+            <column name="makegood_required" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="true"/>
+            </column>
+            <column name="makegood_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="notes" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="live_reads"
+            baseColumnNames="advertiser_id"
+            constraintName="fk_live_reads_advertiser_id"
+            referencedTableName="advertisers"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="live_reads"
+            baseColumnNames="copy_id"
+            constraintName="fk_live_reads_copy_id"
+            referencedTableName="copy"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="live_reads"
+            baseColumnNames="makegood_id"
+            constraintName="fk_live_reads_makegood_id"
+            referencedTableName="makegoods"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="live_reads"
+            baseColumnNames="order_id"
+            constraintName="fk_live_reads_order_id"
+            referencedTableName="orders"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="live_reads"
+            baseColumnNames="performed_by"
+            constraintName="fk_live_reads_performed_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="live_reads" indexName="ix_live_reads_copy_id">
+            <column name="copy_id"/>
+        </createIndex>
+        <createIndex tableName="live_reads" indexName="ix_live_reads_order_id">
+            <column name="order_id"/>
+        </createIndex>
+        <createIndex tableName="live_reads" indexName="ix_live_reads_advertiser_id">
+            <column name="advertiser_id"/>
+        </createIndex>
+        <createIndex tableName="live_reads" indexName="ix_live_reads_scheduled_time">
+            <column name="scheduled_time"/>
+        </createIndex>
+        <createIndex tableName="live_reads" indexName="ix_live_reads_scheduled_date">
+            <column name="scheduled_date"/>
+        </createIndex>
+        <createIndex tableName="live_reads" indexName="ix_live_reads_performed_time">
+            <column name="performed_time"/>
+        </createIndex>
+        <createIndex tableName="live_reads" indexName="ix_live_reads_confirmed">
+            <column name="confirmed"/>
+        </createIndex>
+        <createIndex tableName="live_reads" indexName="ix_live_reads_status">
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="live_reads" indexName="ix_live_reads_makegood_required">
+            <column name="makegood_required"/>
+        </createIndex>
+
+        <!-- Create political_records table -->
+        <createTable tableName="political_records">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="copy_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="order_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="advertiser_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="advertiser_category" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sponsor_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sponsor_id" type="VARCHAR(100)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="office_sought" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="disclaimers_required" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="disclaimers_included" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="true"/>
+            </column>
+            <column name="compliance_status" type="VARCHAR(50)" defaultValue="pending">
+                <constraints nullable="true"/>
+            </column>
+            <column name="no_substitution_allowed" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="true"/>
+            </column>
+            <column name="archived" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="true"/>
+            </column>
+            <column name="archive_date" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="archive_location" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="political_window_start" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="political_window_end" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="no_preemptions" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="true"/>
+            </column>
+            <column name="priority_scheduling" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="true"/>
+            </column>
+            <column name="notes" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="political_records"
+            baseColumnNames="advertiser_id"
+            constraintName="fk_political_records_advertiser_id"
+            referencedTableName="advertisers"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="political_records"
+            baseColumnNames="copy_id"
+            constraintName="fk_political_records_copy_id"
+            referencedTableName="copy"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="political_records"
+            baseColumnNames="order_id"
+            constraintName="fk_political_records_order_id"
+            referencedTableName="orders"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="political_records" indexName="ix_political_records_copy_id">
+            <column name="copy_id"/>
+        </createIndex>
+        <createIndex tableName="political_records" indexName="ix_political_records_order_id">
+            <column name="order_id"/>
+        </createIndex>
+        <createIndex tableName="political_records" indexName="ix_political_records_advertiser_id">
+            <column name="advertiser_id"/>
+        </createIndex>
+        <createIndex tableName="political_records" indexName="ix_political_records_sponsor_name">
+            <column name="sponsor_name"/>
+        </createIndex>
+        <createIndex tableName="political_records" indexName="ix_political_records_compliance_status">
+            <column name="compliance_status"/>
+        </createIndex>
+        <createIndex tableName="political_records" indexName="ix_political_records_archived">
+            <column name="archived"/>
+        </createIndex>
+
+        <!-- Create audio_deliveries table -->
+        <createTable tableName="audio_deliveries">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="cut_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="copy_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="delivery_method" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="target_server" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="target_path" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="pending">
+                <constraints nullable="true"/>
+            </column>
+            <column name="retry_count" type="INTEGER" defaultValueNumeric="0">
+                <constraints nullable="true"/>
+            </column>
+            <column name="max_retries" type="INTEGER" defaultValueNumeric="3">
+                <constraints nullable="true"/>
+            </column>
+            <column name="source_checksum" type="VARCHAR(64)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="delivered_checksum" type="VARCHAR(64)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="checksum_verified" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="true"/>
+            </column>
+            <column name="delivery_started_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="delivery_completed_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="last_retry_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="error_message" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="error_details" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="audio_deliveries"
+            baseColumnNames="cut_id"
+            constraintName="fk_audio_deliveries_cut_id"
+            referencedTableName="audio_cuts"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="audio_deliveries"
+            baseColumnNames="copy_id"
+            constraintName="fk_audio_deliveries_copy_id"
+            referencedTableName="copy"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="audio_deliveries" indexName="ix_audio_deliveries_cut_id">
+            <column name="cut_id"/>
+        </createIndex>
+        <createIndex tableName="audio_deliveries" indexName="ix_audio_deliveries_copy_id">
+            <column name="copy_id"/>
+        </createIndex>
+        <createIndex tableName="audio_deliveries" indexName="ix_audio_deliveries_status">
+            <column name="status"/>
+        </createIndex>
+
+        <!-- Create audio_qc_results table -->
+        <createTable tableName="audio_qc_results">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="cut_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="qc_data" type="JSONB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="duration_seconds" type="DOUBLE PRECISION">
+                <constraints nullable="true"/>
+            </column>
+            <column name="sample_rate" type="INTEGER">
+                <constraints nullable="true"/>
+            </column>
+            <column name="bitrate" type="INTEGER">
+                <constraints nullable="true"/>
+            </column>
+            <column name="channels" type="INTEGER">
+                <constraints nullable="true"/>
+            </column>
+            <column name="silence_at_head" type="DOUBLE PRECISION">
+                <constraints nullable="true"/>
+            </column>
+            <column name="silence_at_tail" type="DOUBLE PRECISION">
+                <constraints nullable="true"/>
+            </column>
+            <column name="silence_detected" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="true"/>
+            </column>
+            <column name="peak_level" type="DOUBLE PRECISION">
+                <constraints nullable="true"/>
+            </column>
+            <column name="rms_level" type="DOUBLE PRECISION">
+                <constraints nullable="true"/>
+            </column>
+            <column name="lufs_level" type="DOUBLE PRECISION">
+                <constraints nullable="true"/>
+            </column>
+            <column name="normalization_applied" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="true"/>
+            </column>
+            <column name="normalization_method" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="clipping_detected" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="true"/>
+            </column>
+            <column name="clipping_samples" type="INTEGER">
+                <constraints nullable="true"/>
+            </column>
+            <column name="volume_threshold_passed" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="true"/>
+            </column>
+            <column name="minimum_volume" type="DOUBLE PRECISION">
+                <constraints nullable="true"/>
+            </column>
+            <column name="format_valid" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="true"/>
+            </column>
+            <column name="format_type" type="VARCHAR(20)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="format_errors" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="file_corrupted" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="true"/>
+            </column>
+            <column name="corruption_details" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="qc_passed" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="true"/>
+            </column>
+            <column name="qc_warnings" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="qc_errors" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="overridden" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="true"/>
+            </column>
+            <column name="overridden_by" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="override_reason" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="override_timestamp" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="audio_qc_results"
+            baseColumnNames="cut_id"
+            constraintName="fk_audio_qc_results_cut_id"
+            referencedTableName="audio_cuts"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="audio_qc_results"
+            baseColumnNames="version_id"
+            constraintName="fk_audio_qc_results_version_id"
+            referencedTableName="audio_versions"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="audio_qc_results"
+            baseColumnNames="overridden_by"
+            constraintName="fk_audio_qc_results_overridden_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="audio_qc_results" indexName="ix_audio_qc_results_cut_id">
+            <column name="cut_id"/>
+        </createIndex>
+        <createIndex tableName="audio_qc_results" indexName="ix_audio_qc_results_version_id">
+            <column name="version_id"/>
+        </createIndex>
+        <createIndex tableName="audio_qc_results" indexName="ix_audio_qc_results_silence_detected">
+            <column name="silence_detected"/>
+        </createIndex>
+        <createIndex tableName="audio_qc_results" indexName="ix_audio_qc_results_clipping_detected">
+            <column name="clipping_detected"/>
+        </createIndex>
+        <createIndex tableName="audio_qc_results" indexName="ix_audio_qc_results_format_valid">
+            <column name="format_valid"/>
+        </createIndex>
+        <createIndex tableName="audio_qc_results" indexName="ix_audio_qc_results_file_corrupted">
+            <column name="file_corrupted"/>
+        </createIndex>
+        <createIndex tableName="audio_qc_results" indexName="ix_audio_qc_results_qc_passed">
+            <column name="qc_passed"/>
+        </createIndex>
+
+        <!-- Extend copy table -->
+        <addColumn tableName="copy">
+            <column name="cut_count" type="INTEGER" defaultValueNumeric="0"/>
+            <column name="rotation_mode" type="VARCHAR(50)"/>
+            <column name="political_flag" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="live_read_enabled" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="copy_instructions" type="TEXT"/>
+            <column name="instruction_attachments" type="TEXT"/>
+        </addColumn>
+
+        <createIndex tableName="copy" indexName="ix_copy_political_flag">
+            <column name="political_flag"/>
+        </createIndex>
+        <createIndex tableName="copy" indexName="ix_copy_live_read_enabled">
+            <column name="live_read_enabled"/>
+        </createIndex>
+
+        <!-- Extend rotation_rules table -->
+        <addColumn tableName="rotation_rules">
+            <column name="cut_specific" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="cut_weights" type="JSONB"/>
+            <column name="program_specific" type="BOOLEAN" defaultValueBoolean="false"/>
+        </addColumn>
+
+    </changeSet>
+
+</databaseChangeLog>
+
+

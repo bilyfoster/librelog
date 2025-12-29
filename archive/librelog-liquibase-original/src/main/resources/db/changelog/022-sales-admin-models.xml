@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="022-sales-admin-models" author="migration">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="stations"/>
+            </not>
+        </preConditions>
+        <comment>Add sales admin models: sales_teams, sales_regions, sales_offices, stations (if not exists), clusters, and association tables</comment>
+
+        <!-- Create sales_teams table -->
+        <createTable tableName="sales_teams">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <createIndex tableName="sales_teams" indexName="ix_sales_teams_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="sales_teams" indexName="ix_sales_teams_name" unique="true">
+            <column name="name"/>
+        </createIndex>
+
+        <!-- Create sales_regions table -->
+        <createTable tableName="sales_regions">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <createIndex tableName="sales_regions" indexName="ix_sales_regions_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="sales_regions" indexName="ix_sales_regions_name" unique="true">
+            <column name="name"/>
+        </createIndex>
+
+        <!-- Create sales_offices table -->
+        <createTable tableName="sales_offices">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="address" type="TEXT"/>
+            <column name="region_id" type="UUID"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="sales_offices"
+            baseColumnNames="region_id"
+            constraintName="fk_sales_offices_region_id"
+            referencedTableName="sales_regions"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="sales_offices" indexName="ix_sales_offices_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="sales_offices" indexName="ix_sales_offices_region_id">
+            <column name="region_id"/>
+        </createIndex>
+
+        <createTable tableName="stations">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="call_letters" type="VARCHAR(10)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="frequency" type="VARCHAR(20)"/>
+            <column name="market" type="VARCHAR(255)"/>
+            <column name="format" type="VARCHAR(100)"/>
+            <column name="ownership" type="VARCHAR(255)"/>
+            <column name="contacts" type="JSONB"/>
+            <column name="rates" type="JSONB"/>
+            <column name="inventory_class" type="VARCHAR(50)"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <createIndex tableName="stations" indexName="ix_stations_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="stations" indexName="ix_stations_call_letters" unique="true">
+            <column name="call_letters"/>
+        </createIndex>
+        <createIndex tableName="stations" indexName="ix_stations_frequency">
+            <column name="frequency"/>
+        </createIndex>
+        <createIndex tableName="stations" indexName="ix_stations_market">
+            <column name="market"/>
+        </createIndex>
+        <createIndex tableName="stations" indexName="ix_stations_inventory_class">
+            <column name="inventory_class"/>
+        </createIndex>
+
+        <!-- Create clusters table -->
+        <createTable tableName="clusters">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <createIndex tableName="clusters" indexName="ix_clusters_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="clusters" indexName="ix_clusters_name" unique="true">
+            <column name="name"/>
+        </createIndex>
+
+        <!-- Create association tables -->
+        <createTable tableName="sales_rep_teams">
+            <column name="sales_rep_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sales_team_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="sales_rep_teams" columnNames="sales_rep_id,sales_team_id"/>
+        <addForeignKeyConstraint
+            baseTableName="sales_rep_teams"
+            baseColumnNames="sales_rep_id"
+            constraintName="fk_sales_rep_teams_sales_rep_id"
+            referencedTableName="sales_reps"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="sales_rep_teams"
+            baseColumnNames="sales_team_id"
+            constraintName="fk_sales_rep_teams_sales_team_id"
+            referencedTableName="sales_teams"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <createTable tableName="sales_rep_offices">
+            <column name="sales_rep_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sales_office_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="sales_rep_offices" columnNames="sales_rep_id,sales_office_id"/>
+        <addForeignKeyConstraint
+            baseTableName="sales_rep_offices"
+            baseColumnNames="sales_rep_id"
+            constraintName="fk_sales_rep_offices_sales_rep_id"
+            referencedTableName="sales_reps"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="sales_rep_offices"
+            baseColumnNames="sales_office_id"
+            constraintName="fk_sales_rep_offices_sales_office_id"
+            referencedTableName="sales_offices"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <createTable tableName="sales_rep_regions">
+            <column name="sales_rep_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sales_region_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="sales_rep_regions" columnNames="sales_rep_id,sales_region_id"/>
+        <addForeignKeyConstraint
+            baseTableName="sales_rep_regions"
+            baseColumnNames="sales_rep_id"
+            constraintName="fk_sales_rep_regions_sales_rep_id"
+            referencedTableName="sales_reps"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="sales_rep_regions"
+            baseColumnNames="sales_region_id"
+            constraintName="fk_sales_rep_regions_sales_region_id"
+            referencedTableName="sales_regions"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <createTable tableName="station_clusters">
+            <column name="station_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cluster_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="station_clusters" columnNames="station_id,cluster_id"/>
+        <addForeignKeyConstraint
+            baseTableName="station_clusters"
+            baseColumnNames="station_id"
+            constraintName="fk_station_clusters_station_id"
+            referencedTableName="stations"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="station_clusters"
+            baseColumnNames="cluster_id"
+            constraintName="fk_station_clusters_cluster_id"
+            referencedTableName="clusters"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Add foreign keys to orders table -->
+        <addColumn tableName="orders">
+            <column name="sales_team_id" type="UUID"/>
+            <column name="sales_office_id" type="UUID"/>
+            <column name="sales_region_id" type="UUID"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+            baseTableName="orders"
+            baseColumnNames="sales_team_id"
+            constraintName="fk_orders_sales_team_id"
+            referencedTableName="sales_teams"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="orders"
+            baseColumnNames="sales_office_id"
+            constraintName="fk_orders_sales_office_id"
+            referencedTableName="sales_offices"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="orders"
+            baseColumnNames="sales_region_id"
+            constraintName="fk_orders_sales_region_id"
+            referencedTableName="sales_regions"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="orders" indexName="ix_orders_sales_team_id">
+            <column name="sales_team_id"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_sales_office_id">
+            <column name="sales_office_id"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_sales_region_id">
+            <column name="sales_region_id"/>
+        </createIndex>
+
+        <!-- Enhance agencies table -->
+        <addColumn tableName="agencies">
+            <column name="website" type="VARCHAR(255)"/>
+            <column name="tax_id" type="VARCHAR(50)"/>
+            <column name="notes" type="TEXT"/>
+            <column name="account_manager_id" type="UUID"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+            baseTableName="agencies"
+            baseColumnNames="account_manager_id"
+            constraintName="fk_agencies_account_manager_id"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="agencies" indexName="ix_agencies_tax_id">
+            <column name="tax_id"/>
+        </createIndex>
+        <createIndex tableName="agencies" indexName="ix_agencies_account_manager_id">
+            <column name="account_manager_id"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
+
+

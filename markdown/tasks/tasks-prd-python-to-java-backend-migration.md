@@ -110,26 +110,26 @@ Based on PRD: `prd-python-to-java-backend-migration.md`
   - [x] 3.11 Create utility classes for common operations (DateUtils, StringUtils, ValidationUtils)
   - [x] 3.12 Write unit tests for utility classes (80%+ coverage) - 99 tests passing
 
-- [ ] 4.0 Migrate Authentication and Authorization System
-  - [ ] 4.1 Create User entity with JPA annotations, UUID primary key, and Lombok annotations
-  - [ ] 4.2 Create UserStatus enum in enums package with @Enumerated(EnumType.STRING)
-  - [ ] 4.3 Create UserRole enum in enums package
-  - [ ] 4.4 Create FailedLoginAttempt entity
-  - [ ] 4.5 Create UserRepository interface extending JpaRepository
-  - [ ] 4.6 Create FailedLoginAttemptRepository interface
-  - [ ] 4.7 Create PasswordValidator utility class with validation logic
-  - [ ] 4.8 Create JwtTokenService for JWT token generation and validation
-  - [ ] 4.9 Create TokenBlacklistService interface and implementation
-  - [ ] 4.10 Create AuthSecurityService interface and implementation
-  - [ ] 4.11 Create LoginRequestDTO, RegisterRequestDTO, AuthResponseDTO, UserResponseDTO
-  - [ ] 4.12 Create AuthService interface and AuthServiceImpl with login, register, refresh token methods
-  - [ ] 4.13 Create JwtAuthenticationFilter extending OncePerRequestFilter
-  - [ ] 4.14 Create SecurityConfig class with Spring Security configuration, password encoder, and JWT filter
-  - [ ] 4.15 Create AuthController with login, register, logout, refresh endpoints
-  - [ ] 4.16 Write unit tests for AuthService (80%+ coverage)
-  - [ ] 4.17 Write unit tests for JwtTokenService
-  - [ ] 4.18 Write integration tests for AuthController endpoints
-  - [ ] 4.19 Write unit tests for PasswordValidator
+- [x] 4.0 Migrate Authentication and Authorization System
+  - [x] 4.1 Create User entity with JPA annotations, UUID primary key, and Lombok annotations
+  - [x] 4.2 Create UserStatus enum in enums package with @Enumerated(EnumType.STRING)
+  - [x] 4.3 Create UserRole enum in enums package
+  - [x] 4.4 Create FailedLoginAttempt entity
+  - [x] 4.5 Create UserRepository interface extending JpaRepository
+  - [x] 4.6 Create FailedLoginAttemptRepository interface
+  - [x] 4.7 Create PasswordValidator utility class with validation logic
+  - [x] 4.8 Create JwtTokenService for JWT token generation and validation
+  - [x] 4.9 Create TokenBlacklistService interface and implementation
+  - [x] 4.10 Create AuthSecurityService interface and implementation
+  - [x] 4.11 Create LoginRequestDTO, RegisterRequestDTO, AuthResponseDTO, UserResponseDTO
+  - [x] 4.12 Create AuthService interface and AuthServiceImpl with login, register, refresh token methods
+  - [x] 4.13 Create JwtAuthenticationFilter extending OncePerRequestFilter
+  - [x] 4.14 Create SecurityConfig class with Spring Security configuration, password encoder, and JWT filter
+  - [x] 4.15 Create AuthController with login, register, logout, refresh endpoints
+  - [x] 4.16 Write unit tests for AuthService (80%+ coverage) - 13 tests
+  - [x] 4.17 Write unit tests for JwtTokenService - 18 tests
+  - [x] 4.18 Write integration tests for AuthController endpoints - 8 tests
+  - [x] 4.19 Write unit tests for PasswordValidator - 13 tests
 
 - [ ] 5.0 Migrate Domain Models (JPA Entities)
   - [ ] 5.1 Create Advertiser entity with UUID primary key, Lombok annotations, and JPA relationships

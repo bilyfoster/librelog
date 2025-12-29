@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="001-initial-schema" author="migration">
+        <comment>Initial database schema - creates users, tracks, campaigns, clock_templates, daily_logs, voice_tracks, and playback_history tables</comment>
+
+        <!-- Create users table -->
+        <createTable tableName="users">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="username" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="password_hash" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="last_login" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <sql>
+            <![CDATA[
+            ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'producer', 'dj', 'sales'));
+            ]]>
+        </sql>
+
+        <createIndex tableName="users" indexName="ix_users_id">
+            <column name="id"/>
+        </createIndex>
+
+        <createIndex tableName="users" indexName="ix_users_username" unique="true">
+            <column name="username"/>
+        </createIndex>
+
+        <!-- Create tracks table -->
+        <createTable tableName="tracks">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="title" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="artist" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="album" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="type" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="genre" type="VARCHAR(100)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="duration" type="INTEGER">
+                <constraints nullable="true"/>
+            </column>
+            <column name="filepath" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="libretime_id" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="last_played" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <sql>
+            <![CDATA[
+            ALTER TABLE tracks ADD CONSTRAINT tracks_type_check CHECK (type IN ('MUS', 'ADV', 'PSA', 'LIN', 'INT', 'PRO', 'BED'));
+            ]]>
+        </sql>
+
+        <createIndex tableName="tracks" indexName="ix_tracks_id">
+            <column name="id"/>
+        </createIndex>
+
+        <createIndex tableName="tracks" indexName="ix_tracks_title">
+            <column name="title"/>
+        </createIndex>
+
+        <createIndex tableName="tracks" indexName="ix_tracks_artist">
+            <column name="artist"/>
+        </createIndex>
+
+        <createIndex tableName="tracks" indexName="ix_tracks_type">
+            <column name="type"/>
+        </createIndex>
+
+        <createIndex tableName="tracks" indexName="ix_tracks_genre">
+            <column name="genre"/>
+        </createIndex>
+
+        <createIndex tableName="tracks" indexName="ix_tracks_libretime_id" unique="true">
+            <column name="libretime_id"/>
+        </createIndex>
+
+        <!-- Create campaigns table -->
+        <createTable tableName="campaigns">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="advertiser" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="priority" type="INTEGER">
+                <constraints nullable="true"/>
+            </column>
+            <column name="file_url" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="active" type="BOOLEAN">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="campaigns" indexName="ix_campaigns_id">
+            <column name="id"/>
+        </createIndex>
+
+        <createIndex tableName="campaigns" indexName="ix_campaigns_advertiser">
+            <column name="advertiser"/>
+        </createIndex>
+
+        <createIndex tableName="campaigns" indexName="ix_campaigns_start_date">
+            <column name="start_date"/>
+        </createIndex>
+
+        <createIndex tableName="campaigns" indexName="ix_campaigns_end_date">
+            <column name="end_date"/>
+        </createIndex>
+
+        <createIndex tableName="campaigns" indexName="ix_campaigns_priority">
+            <column name="priority"/>
+        </createIndex>
+
+        <createIndex tableName="campaigns" indexName="ix_campaigns_active">
+            <column name="active"/>
+        </createIndex>
+
+        <!-- Create clock_templates table -->
+        <createTable tableName="clock_templates">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="json_layout" type="JSONB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="clock_templates" indexName="ix_clock_templates_id">
+            <column name="id"/>
+        </createIndex>
+
+        <createIndex tableName="clock_templates" indexName="ix_clock_templates_name">
+            <column name="name"/>
+        </createIndex>
+
+        <!-- Create daily_logs table -->
+        <createTable tableName="daily_logs">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="generated_by" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="json_data" type="JSONB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="published" type="BOOLEAN">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="daily_logs"
+            baseColumnNames="generated_by"
+            constraintName="fk_daily_logs_generated_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="daily_logs" indexName="ix_daily_logs_id">
+            <column name="id"/>
+        </createIndex>
+
+        <createIndex tableName="daily_logs" indexName="ix_daily_logs_date">
+            <column name="date"/>
+        </createIndex>
+
+        <createIndex tableName="daily_logs" indexName="ix_daily_logs_published">
+            <column name="published"/>
+        </createIndex>
+
+        <!-- Create voice_tracks table -->
+        <createTable tableName="voice_tracks">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="show_name" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="file_url" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="scheduled_time" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="uploaded_by" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="voice_tracks"
+            baseColumnNames="uploaded_by"
+            constraintName="fk_voice_tracks_uploaded_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="voice_tracks" indexName="ix_voice_tracks_id">
+            <column name="id"/>
+        </createIndex>
+
+        <createIndex tableName="voice_tracks" indexName="ix_voice_tracks_show_name">
+            <column name="show_name"/>
+        </createIndex>
+
+        <createIndex tableName="voice_tracks" indexName="ix_voice_tracks_scheduled_time">
+            <column name="scheduled_time"/>
+        </createIndex>
+
+        <!-- Create playback_history table -->
+        <createTable tableName="playback_history">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="track_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="log_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="played_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="duration_played" type="INTEGER">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="playback_history"
+            baseColumnNames="track_id"
+            constraintName="fk_playback_history_track_id"
+            referencedTableName="tracks"
+            referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint
+            baseTableName="playback_history"
+            baseColumnNames="log_id"
+            constraintName="fk_playback_history_log_id"
+            referencedTableName="daily_logs"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="playback_history" indexName="ix_playback_history_id">
+            <column name="id"/>
+        </createIndex>
+
+        <createIndex tableName="playback_history" indexName="ix_playback_history_played_at">
+            <column name="played_at"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
+

@@ -11,19 +11,8 @@
 
 	<artifactId>librelog-liquibase</artifactId>
 	<name>librelog-liquibase</name>
-	<description>LibreLog Liquibase - Database migration module</description>
-
-	<dependencies>
-		<!-- Liquibase -->
-		<dependency>
-			<groupId>org.liquibase</groupId>
-			<artifactId>liquibase-core</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.postgresql</groupId>
-			<artifactId>postgresql</artifactId>
-		</dependency>
-	</dependencies>
+	<description>LibreLog Liquibase - Database migration module (resources-only)</description>
+	<packaging>jar</packaging>
 
 	<build>
 		<resources>
@@ -36,7 +25,16 @@
 				</includes>
 			</resource>
 		</resources>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.3.0</version>
+				<configuration>
+					<forceCreation>true</forceCreation>
+				</configuration>
+			</plugin>
+		</plugins>
 	</build>
 
 </project>
-

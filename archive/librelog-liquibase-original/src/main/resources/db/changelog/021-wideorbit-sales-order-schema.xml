@@ -1,0 +1,473 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="021-wideorbit-sales-order-schema" author="migration">
+        <comment>Add WideOrbit sales order schema enhancements: order_lines, order_attachments, order_revisions, order_workflow_states, and extend orders, copy, invoices, political_records tables</comment>
+
+        <!-- Create enum types (if not exist) -->
+        <sql>
+            DO $$ BEGIN
+                CREATE TYPE ordertype AS ENUM ('LOCAL', 'NATIONAL', 'NETWORK', 'DIGITAL', 'NTR');
+            EXCEPTION WHEN duplicate_object THEN null; END $$;
+            DO $$ BEGIN
+                CREATE TYPE billingcycle AS ENUM ('WEEKLY', 'MONTHLY', 'ONE_SHOT', 'BIWEEKLY', 'QUARTERLY');
+            EXCEPTION WHEN duplicate_object THEN null; END $$;
+            DO $$ BEGIN
+                CREATE TYPE invoicetype AS ENUM ('STANDARD', 'COOP', 'POLITICAL');
+            EXCEPTION WHEN duplicate_object THEN null; END $$;
+            DO $$ BEGIN
+                CREATE TYPE politicalclass AS ENUM ('FEDERAL', 'STATE', 'LOCAL', 'ISSUE');
+            EXCEPTION WHEN duplicate_object THEN null; END $$;
+            DO $$ BEGIN
+                CREATE TYPE revenuetype AS ENUM ('SPOT', 'DIGITAL', 'TRADE', 'PROMOTION', 'NTR');
+            EXCEPTION WHEN duplicate_object THEN null; END $$;
+            DO $$ BEGIN
+                CREATE TYPE selloutclass AS ENUM ('ROS', 'FIXED_POSITION', 'BONUS', 'GUARANTEED');
+            EXCEPTION WHEN duplicate_object THEN null; END $$;
+            DO $$ BEGIN
+                CREATE TYPE attachmenttype AS ENUM ('CONTRACT', 'AUDIO', 'SCRIPT', 'CREATIVE', 'LEGAL', 'IO', 'EMAIL', 'OTHER');
+            EXCEPTION WHEN duplicate_object THEN null; END $$;
+            DO $$ BEGIN
+                CREATE TYPE revisionreasoncode AS ENUM ('PRICE_CHANGE', 'EXTENSION', 'CANCELLATION', 'LINE_ADDED', 'LINE_REMOVED', 'COPY_CHANGE', 'DATE_CHANGE', 'OTHER');
+            EXCEPTION WHEN duplicate_object THEN null; END $$;
+            DO $$ BEGIN
+                CREATE TYPE workflowstate AS ENUM ('DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'TRAFFIC_READY', 'BILLING_READY', 'LOCKED', 'CANCELLED');
+            EXCEPTION WHEN duplicate_object THEN null; END $$;
+            DO $$ BEGIN
+                CREATE TYPE copytype AS ENUM ('NEW', 'TAG_UPDATE', 'RENEWAL', 'SEASONAL');
+            EXCEPTION WHEN duplicate_object THEN null; END $$;
+            DO $$ BEGIN
+                CREATE TYPE revenuebucket AS ENUM ('SPOT', 'DIGITAL', 'TRADE', 'PROMOTIONS');
+            EXCEPTION WHEN duplicate_object THEN null; END $$;
+        </sql>
+
+        <!-- Enhance orders table -->
+        <addColumn tableName="orders">
+            <column name="order_name" type="VARCHAR(255)"/>
+            <column name="sales_team" type="VARCHAR(100)"/>
+            <column name="sales_office" type="VARCHAR(100)"/>
+            <column name="sales_region" type="VARCHAR(100)"/>
+            <column name="stations" type="JSONB"/>
+            <column name="cluster" type="VARCHAR(100)"/>
+            <column name="order_type" type="ordertype"/>
+            <column name="gross_amount" type="NUMERIC(12,2)" defaultValueNumeric="0"/>
+            <column name="net_amount" type="NUMERIC(12,2)" defaultValueNumeric="0"/>
+            <column name="agency_commission_percent" type="NUMERIC(5,2)"/>
+            <column name="agency_commission_amount" type="NUMERIC(12,2)"/>
+            <column name="agency_discount" type="NUMERIC(12,2)"/>
+            <column name="cash_discount" type="NUMERIC(12,2)"/>
+            <column name="trade_barter" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="trade_value" type="NUMERIC(12,2)"/>
+            <column name="taxable" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="billing_cycle" type="billingcycle"/>
+            <column name="invoice_type" type="invoicetype"/>
+            <column name="coop_sponsor" type="VARCHAR(255)"/>
+            <column name="coop_percent" type="NUMERIC(5,2)"/>
+            <column name="client_po_number" type="VARCHAR(100)"/>
+            <column name="billing_address" type="TEXT"/>
+            <column name="billing_contact" type="VARCHAR(255)"/>
+            <column name="billing_contact_email" type="VARCHAR(255)"/>
+            <column name="billing_contact_phone" type="VARCHAR(50)"/>
+            <column name="political_class" type="politicalclass"/>
+            <column name="political_window_flag" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="contract_reference" type="VARCHAR(100)"/>
+            <column name="insertion_order_number" type="VARCHAR(100)"/>
+            <column name="regulatory_notes" type="TEXT"/>
+            <column name="fcc_id" type="VARCHAR(100)"/>
+            <column name="required_disclaimers" type="TEXT"/>
+            <column name="traffic_ready" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="billing_ready" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="locked" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="revision_number" type="INTEGER" defaultValueNumeric="1"/>
+            <column name="created_by" type="UUID"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+            baseTableName="orders"
+            baseColumnNames="created_by"
+            constraintName="fk_orders_created_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="orders" indexName="ix_orders_order_name">
+            <column name="order_name"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_order_type">
+            <column name="order_type"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_trade_barter">
+            <column name="trade_barter"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_taxable">
+            <column name="taxable"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_client_po_number">
+            <column name="client_po_number"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_political_class">
+            <column name="political_class"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_political_window_flag">
+            <column name="political_window_flag"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_contract_reference">
+            <column name="contract_reference"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_insertion_order_number">
+            <column name="insertion_order_number"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_traffic_ready">
+            <column name="traffic_ready"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_billing_ready">
+            <column name="billing_ready"/>
+        </createIndex>
+        <createIndex tableName="orders" indexName="ix_orders_locked">
+            <column name="locked"/>
+        </createIndex>
+
+        <!-- Create order_lines table -->
+        <createTable tableName="order_lines">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="order_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="line_number" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="station" type="VARCHAR(100)"/>
+            <column name="product" type="VARCHAR(255)"/>
+            <column name="revenue_type" type="revenuetype"/>
+            <column name="length" type="INTEGER"/>
+            <column name="daypart" type="VARCHAR(50)"/>
+            <column name="days_of_week" type="VARCHAR(7)"/>
+            <column name="rate" type="NUMERIC(12,2)"/>
+            <column name="rate_type" type="VARCHAR(50)"/>
+            <column name="sellout_class" type="selloutclass"/>
+            <column name="priority_code" type="VARCHAR(50)"/>
+            <column name="spot_frequency" type="INTEGER"/>
+            <column name="estimated_impressions" type="INTEGER"/>
+            <column name="cpm" type="NUMERIC(10,2)"/>
+            <column name="cpp" type="NUMERIC(10,2)"/>
+            <column name="makegood_eligible" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="guaranteed_position" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="preemptible" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="inventory_class" type="VARCHAR(100)"/>
+            <column name="product_code" type="VARCHAR(100)"/>
+            <column name="deal_points" type="TEXT"/>
+            <column name="notes" type="TEXT"/>
+            <column name="platform" type="VARCHAR(100)"/>
+            <column name="impressions_booked" type="INTEGER"/>
+            <column name="delivery_window" type="VARCHAR(100)"/>
+            <column name="targeting_parameters" type="JSONB"/>
+            <column name="companion_banners" type="JSONB"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="order_lines"
+            baseColumnNames="order_id"
+            constraintName="fk_order_lines_order_id"
+            referencedTableName="orders"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="order_lines" indexName="ix_order_lines_order_id">
+            <column name="order_id"/>
+        </createIndex>
+        <createIndex tableName="order_lines" indexName="ix_order_lines_start_date">
+            <column name="start_date"/>
+        </createIndex>
+        <createIndex tableName="order_lines" indexName="ix_order_lines_end_date">
+            <column name="end_date"/>
+        </createIndex>
+        <createIndex tableName="order_lines" indexName="ix_order_lines_station">
+            <column name="station"/>
+        </createIndex>
+        <createIndex tableName="order_lines" indexName="ix_order_lines_revenue_type">
+            <column name="revenue_type"/>
+        </createIndex>
+        <createIndex tableName="order_lines" indexName="ix_order_lines_daypart">
+            <column name="daypart"/>
+        </createIndex>
+        <createIndex tableName="order_lines" indexName="ix_order_lines_priority_code">
+            <column name="priority_code"/>
+        </createIndex>
+        <createIndex tableName="order_lines" indexName="ix_order_lines_makegood_eligible">
+            <column name="makegood_eligible"/>
+        </createIndex>
+        <createIndex tableName="order_lines" indexName="ix_order_lines_guaranteed_position">
+            <column name="guaranteed_position"/>
+        </createIndex>
+        <createIndex tableName="order_lines" indexName="ix_order_lines_preemptible">
+            <column name="preemptible"/>
+        </createIndex>
+        <createIndex tableName="order_lines" indexName="ix_order_lines_product_code">
+            <column name="product_code"/>
+        </createIndex>
+
+        <!-- Create order_attachments table -->
+        <createTable tableName="order_attachments">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="order_id" type="UUID"/>
+            <column name="order_line_id" type="UUID"/>
+            <column name="copy_id" type="UUID"/>
+            <column name="file_path" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="file_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="mime_type" type="VARCHAR(100)"/>
+            <column name="file_size" type="BIGINT"/>
+            <column name="attachment_type" type="attachmenttype">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="notes" type="TEXT"/>
+            <column name="uploaded_by" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uploaded_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="order_attachments"
+            baseColumnNames="order_id"
+            constraintName="fk_order_attachments_order_id"
+            referencedTableName="orders"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="order_attachments"
+            baseColumnNames="order_line_id"
+            constraintName="fk_order_attachments_order_line_id"
+            referencedTableName="order_lines"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="order_attachments"
+            baseColumnNames="copy_id"
+            constraintName="fk_order_attachments_copy_id"
+            referencedTableName="copy"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="order_attachments"
+            baseColumnNames="uploaded_by"
+            constraintName="fk_order_attachments_uploaded_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="order_attachments" indexName="ix_order_attachments_order_id">
+            <column name="order_id"/>
+        </createIndex>
+        <createIndex tableName="order_attachments" indexName="ix_order_attachments_order_line_id">
+            <column name="order_line_id"/>
+        </createIndex>
+        <createIndex tableName="order_attachments" indexName="ix_order_attachments_copy_id">
+            <column name="copy_id"/>
+        </createIndex>
+        <createIndex tableName="order_attachments" indexName="ix_order_attachments_attachment_type">
+            <column name="attachment_type"/>
+        </createIndex>
+        <createIndex tableName="order_attachments" indexName="ix_order_attachments_uploaded_at">
+            <column name="uploaded_at"/>
+        </createIndex>
+
+        <!-- Create order_revisions table -->
+        <createTable tableName="order_revisions">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="order_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revision_number" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_fields" type="JSONB"/>
+            <column name="reason_code" type="revisionreasoncode"/>
+            <column name="reason_notes" type="TEXT"/>
+            <column name="approval_status_at_revision" type="VARCHAR(50)"/>
+            <column name="changed_by" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="order_revisions"
+            baseColumnNames="order_id"
+            constraintName="fk_order_revisions_order_id"
+            referencedTableName="orders"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="order_revisions"
+            baseColumnNames="changed_by"
+            constraintName="fk_order_revisions_changed_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="order_revisions" indexName="ix_order_revisions_order_id">
+            <column name="order_id"/>
+        </createIndex>
+        <createIndex tableName="order_revisions" indexName="ix_order_revisions_revision_number">
+            <column name="revision_number"/>
+        </createIndex>
+        <createIndex tableName="order_revisions" indexName="ix_order_revisions_reason_code">
+            <column name="reason_code"/>
+        </createIndex>
+        <createIndex tableName="order_revisions" indexName="ix_order_revisions_changed_at">
+            <column name="changed_at"/>
+        </createIndex>
+
+        <!-- Create order_workflow_states table -->
+        <createTable tableName="order_workflow_states">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="order_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="state" type="workflowstate">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="TEXT"/>
+            <column name="state_changed_by" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="state_changed_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="order_workflow_states"
+            baseColumnNames="order_id"
+            constraintName="fk_order_workflow_states_order_id"
+            referencedTableName="orders"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="order_workflow_states"
+            baseColumnNames="state_changed_by"
+            constraintName="fk_order_workflow_states_state_changed_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="order_workflow_states" indexName="ix_order_workflow_states_order_id">
+            <column name="order_id"/>
+        </createIndex>
+        <createIndex tableName="order_workflow_states" indexName="ix_order_workflow_states_state">
+            <column name="state"/>
+        </createIndex>
+        <createIndex tableName="order_workflow_states" indexName="ix_order_workflow_states_state_changed_at">
+            <column name="state_changed_at"/>
+        </createIndex>
+
+        <!-- Enhance copy table -->
+        <addColumn tableName="copy">
+            <column name="copy_code" type="VARCHAR(100)"/>
+            <column name="isci_code" type="VARCHAR(100)"/>
+            <column name="copy_type" type="copytype"/>
+            <column name="client_provided_audio" type="TEXT"/>
+            <column name="effective_date" type="DATE"/>
+            <column name="expiration_date" type="DATE"/>
+            <column name="priority" type="INTEGER"/>
+            <column name="production_notes" type="TEXT"/>
+            <column name="legal_copy" type="TEXT"/>
+            <column name="required_disclaimers" type="TEXT"/>
+            <column name="talent_restrictions" type="TEXT"/>
+            <column name="aqh_reconciliation" type="JSONB"/>
+            <column name="audio_format" type="VARCHAR(50)"/>
+            <column name="audio_source" type="VARCHAR(100)"/>
+            <column name="loudness_check" type="BOOLEAN" defaultValueBoolean="false"/>
+        </addColumn>
+
+        <createIndex tableName="copy" indexName="ix_copy_copy_code">
+            <column name="copy_code"/>
+        </createIndex>
+        <createIndex tableName="copy" indexName="ix_copy_isci_code">
+            <column name="isci_code"/>
+        </createIndex>
+        <createIndex tableName="copy" indexName="ix_copy_copy_type">
+            <column name="copy_type"/>
+        </createIndex>
+        <createIndex tableName="copy" indexName="ix_copy_effective_date">
+            <column name="effective_date"/>
+        </createIndex>
+        <createIndex tableName="copy" indexName="ix_copy_expiration_date">
+            <column name="expiration_date"/>
+        </createIndex>
+        <createIndex tableName="copy" indexName="ix_copy_loudness_check">
+            <column name="loudness_check"/>
+        </createIndex>
+
+        <!-- Enhance invoices table -->
+        <addColumn tableName="invoices">
+            <column name="billing_start" type="DATE"/>
+            <column name="billing_end" type="DATE"/>
+            <column name="billing_schedule" type="TEXT"/>
+            <column name="billing_notes" type="TEXT"/>
+            <column name="invoice_grouping_code" type="VARCHAR(100)"/>
+            <column name="revenue_class" type="VARCHAR(100)"/>
+            <column name="gl_account" type="VARCHAR(100)"/>
+            <column name="revenue_bucket" type="revenuebucket"/>
+            <column name="prepaid" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="credits_issued" type="NUMERIC(10,2)" defaultValueNumeric="0"/>
+            <column name="adjustments" type="NUMERIC(10,2)" defaultValueNumeric="0"/>
+            <column name="sponsorship_fee" type="NUMERIC(10,2)"/>
+            <column name="election_cycle" type="VARCHAR(100)"/>
+            <column name="lowest_unit_rate_record" type="TEXT"/>
+            <column name="class_comparison" type="TEXT"/>
+            <column name="window_dates" type="TEXT"/>
+            <column name="substantiation_docs" type="TEXT"/>
+        </addColumn>
+
+        <createIndex tableName="invoices" indexName="ix_invoices_billing_start">
+            <column name="billing_start"/>
+        </createIndex>
+        <createIndex tableName="invoices" indexName="ix_invoices_billing_end">
+            <column name="billing_end"/>
+        </createIndex>
+        <createIndex tableName="invoices" indexName="ix_invoices_invoice_grouping_code">
+            <column name="invoice_grouping_code"/>
+        </createIndex>
+        <createIndex tableName="invoices" indexName="ix_invoices_revenue_bucket">
+            <column name="revenue_bucket"/>
+        </createIndex>
+        <createIndex tableName="invoices" indexName="ix_invoices_prepaid">
+            <column name="prepaid"/>
+        </createIndex>
+
+        <!-- Enhance political_records table -->
+        <addColumn tableName="political_records">
+            <column name="election_cycle" type="VARCHAR(100)"/>
+            <column name="lowest_unit_rate_record" type="TEXT"/>
+            <column name="class_comparison" type="TEXT"/>
+            <column name="window_dates" type="TEXT"/>
+            <column name="substantiation_documentation" type="TEXT"/>
+        </addColumn>
+
+        <createIndex tableName="political_records" indexName="ix_political_records_election_cycle">
+            <column name="election_cycle"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
+
+

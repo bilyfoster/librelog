@@ -668,5 +668,11 @@
 	<include file="db/changelog/010-create-daypart-assignments-table.xml"/>
 	<include file="db/changelog/011-create-grids-table.xml"/>
 	<include file="db/changelog/012-create-grid-daypart-mappings-table.xml"/>
+	<include file="db/changelog/013-create-user-station-assignments-table.xml"/>
+	<include file="db/changelog/014-create-custom-roles-table.xml"/>
+	<include file="db/changelog/015-create-audit-logs-table.xml"/>
+	<include file="db/changelog/016-create-user-sessions-table.xml"/>
+	<include file="db/changelog/017-create-user-market-assignments-table.xml"/>
+	<include file="db/changelog/018-create-user-cluster-assignments-table.xml"/>
 
 </databaseChangeLog>

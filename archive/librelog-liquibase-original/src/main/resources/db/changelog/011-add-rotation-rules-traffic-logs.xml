@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="011-add-rotation-rules-traffic-logs" author="migration">
+        <comment>Add daypart_categories, rotation_rules, and traffic_logs tables</comment>
+
+        <!-- Create daypart_categories table -->
+        <createTable tableName="daypart_categories">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="color" type="VARCHAR(7)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="icon" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="sort_order" type="INTEGER" defaultValueNumeric="0">
+                <constraints nullable="true"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="daypart_categories" indexName="ix_daypart_categories_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="daypart_categories" indexName="ix_daypart_categories_name" unique="true">
+            <column name="name"/>
+        </createIndex>
+        <createIndex tableName="daypart_categories" indexName="ix_daypart_categories_sort_order">
+            <column name="sort_order"/>
+        </createIndex>
+        <createIndex tableName="daypart_categories" indexName="ix_daypart_categories_active">
+            <column name="active"/>
+        </createIndex>
+
+        <!-- Create rotation_rules table -->
+        <createTable tableName="rotation_rules">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="rotation_type" type="VARCHAR(20)" defaultValue="SEQUENTIAL">
+                <constraints nullable="false"/>
+            </column>
+            <column name="daypart_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="campaign_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="min_separation" type="INTEGER" defaultValueNumeric="0">
+                <constraints nullable="true"/>
+            </column>
+            <column name="max_per_hour" type="INTEGER">
+                <constraints nullable="true"/>
+            </column>
+            <column name="max_per_day" type="INTEGER">
+                <constraints nullable="true"/>
+            </column>
+            <column name="weights" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="exclude_days" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="exclude_times" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="priority" type="INTEGER" defaultValueNumeric="0">
+                <constraints nullable="true"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="rotation_rules"
+            baseColumnNames="campaign_id"
+            constraintName="fk_rotation_rules_campaign_id"
+            referencedTableName="campaigns"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="rotation_rules"
+            baseColumnNames="daypart_id"
+            constraintName="fk_rotation_rules_daypart_id"
+            referencedTableName="dayparts"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="rotation_rules" indexName="ix_rotation_rules_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="rotation_rules" indexName="ix_rotation_rules_name">
+            <column name="name"/>
+        </createIndex>
+        <createIndex tableName="rotation_rules" indexName="ix_rotation_rules_daypart_id">
+            <column name="daypart_id"/>
+        </createIndex>
+        <createIndex tableName="rotation_rules" indexName="ix_rotation_rules_campaign_id">
+            <column name="campaign_id"/>
+        </createIndex>
+        <createIndex tableName="rotation_rules" indexName="ix_rotation_rules_active">
+            <column name="active"/>
+        </createIndex>
+
+        <!-- Create traffic_logs table -->
+        <createTable tableName="traffic_logs">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="log_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="log_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="spot_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="order_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="campaign_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="copy_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="message" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="meta_data" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="ip_address" type="VARCHAR(45)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="user_agent" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="traffic_logs"
+            baseColumnNames="campaign_id"
+            constraintName="fk_traffic_logs_campaign_id"
+            referencedTableName="campaigns"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="traffic_logs"
+            baseColumnNames="copy_id"
+            constraintName="fk_traffic_logs_copy_id"
+            referencedTableName="copy"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="traffic_logs"
+            baseColumnNames="log_id"
+            constraintName="fk_traffic_logs_log_id"
+            referencedTableName="daily_logs"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="traffic_logs"
+            baseColumnNames="order_id"
+            constraintName="fk_traffic_logs_order_id"
+            referencedTableName="orders"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="traffic_logs"
+            baseColumnNames="spot_id"
+            constraintName="fk_traffic_logs_spot_id"
+            referencedTableName="spots"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="traffic_logs"
+            baseColumnNames="user_id"
+            constraintName="fk_traffic_logs_user_id"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="traffic_logs" indexName="ix_traffic_logs_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="traffic_logs" indexName="ix_traffic_logs_log_type">
+            <column name="log_type"/>
+        </createIndex>
+        <createIndex tableName="traffic_logs" indexName="ix_traffic_logs_log_id">
+            <column name="log_id"/>
+        </createIndex>
+        <createIndex tableName="traffic_logs" indexName="ix_traffic_logs_spot_id">
+            <column name="spot_id"/>
+        </createIndex>
+        <createIndex tableName="traffic_logs" indexName="ix_traffic_logs_order_id">
+            <column name="order_id"/>
+        </createIndex>
+        <createIndex tableName="traffic_logs" indexName="ix_traffic_logs_campaign_id">
+            <column name="campaign_id"/>
+        </createIndex>
+        <createIndex tableName="traffic_logs" indexName="ix_traffic_logs_copy_id">
+            <column name="copy_id"/>
+        </createIndex>
+        <createIndex tableName="traffic_logs" indexName="ix_traffic_logs_user_id">
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex tableName="traffic_logs" indexName="ix_traffic_logs_created_at">
+            <column name="created_at"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
+
+

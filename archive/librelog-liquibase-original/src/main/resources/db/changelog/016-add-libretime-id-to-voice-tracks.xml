@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="016-add-libretime-id-to-voice-tracks" author="migration">
+        <comment>Add libretime_id to voice_tracks and add VOT track type</comment>
+
+        <!-- Add libretime_id column to voice_tracks table -->
+        <addColumn tableName="voice_tracks">
+            <column name="libretime_id" type="VARCHAR(50)"/>
+        </addColumn>
+
+        <createIndex tableName="voice_tracks" indexName="ix_voice_tracks_libretime_id">
+            <column name="libretime_id"/>
+        </createIndex>
+
+        <!-- Update tracks table check constraint to include VOT -->
+        <sql>
+            <![CDATA[
+            ALTER TABLE tracks DROP CONSTRAINT IF EXISTS tracks_type_check;
+            ALTER TABLE tracks ADD CONSTRAINT tracks_type_check CHECK (type IN ('MUS', 'ADV', 'PSA', 'LIN', 'INT', 'PRO', 'SHO', 'IDS', 'COM', 'NEW', 'VOT'));
+            ]]>
+        </sql>
+
+    </changeSet>
+
+</databaseChangeLog>
+
+

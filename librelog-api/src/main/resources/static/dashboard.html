@@ -1,0 +1,3582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LibreLog - Admin Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0f0f1e;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            background: rgba(26, 26, 46, 0.95);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-section {
+            margin-top: 1rem;
+        }
+
+        .nav-section-title {
+            padding: 0.75rem 1.5rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #888;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1.5rem;
+            color: #b0b0b0;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+        }
+
+        .nav-item.active {
+            background: rgba(102, 126, 234, 0.1);
+            color: #8b9aff;
+            border-left-color: #667eea;
+        }
+
+        .nav-item i {
+            width: 20px;
+            display: inline-block;
+            margin-right: 0.75rem;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(26, 26, 46, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .header h2 {
+            font-size: 1.5rem;
+            color: #d0d0d0;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-badge {
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.5);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .logout-btn {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+            color: #ff6b6b;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(220, 53, 69, 0.3);
+        }
+
+        .content-area {
+            padding: 2rem;
+        }
+
+        /* Help/Context Panel */
+        .help-panel {
+            position: fixed;
+            right: -400px;
+            top: 0;
+            width: 400px;
+            height: 100vh;
+            background: rgba(26, 26, 46, 0.98);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            transition: right 0.3s ease;
+            z-index: 200;
+            overflow-y: auto;
+        }
+
+        .help-panel.open {
+            right: 0;
+        }
+
+        .help-panel-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .help-panel-content {
+            padding: 1.5rem;
+        }
+
+        .help-section {
+            margin-bottom: 2rem;
+        }
+
+        .help-section h3 {
+            color: #8b9aff;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .help-section p {
+            color: #b0b0b0;
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .help-toggle {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            z-index: 150;
+            transition: transform 0.3s ease;
+        }
+
+        .help-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        /* Tab Content Styles */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .table-container {
+            background: rgba(26, 26, 46, 0.95);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #d0d0d0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .badge-active {
+            background: rgba(40, 167, 69, 0.2);
+            color: #51cf66;
+            border: 1px solid rgba(40, 167, 69, 0.3);
+        }
+
+        .badge-inactive {
+            background: rgba(108, 117, 125, 0.2);
+            color: #adb5bd;
+            border: 1px solid rgba(108, 117, 125, 0.3);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-danger {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+            color: #ff6b6b;
+        }
+
+        .btn-danger:hover {
+            background: rgba(220, 53, 69, 0.3);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #888;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #888;
+        }
+
+        .error-message {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+            color: #ff6b6b;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: rgba(40, 167, 69, 0.2);
+            border: 1px solid rgba(40, 167, 69, 0.5);
+            color: #51cf66;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: rgba(26, 26, 46, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #a0a0a0;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+        }
+
+        .close-btn:hover {
+            color: #e0e0e0;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #d0d0d0;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Checkbox styling - left align */
+        .form-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 0.5rem;
+            cursor: pointer;
+        }
+
+        .form-group label:has(input[type="checkbox"]) {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            cursor: pointer;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #888;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h1>LibreLog</h1>
+        </div>
+        
+        <!-- Phase 1: Configuration & Orders -->
+        <div class="nav-section">
+            <div class="nav-section-title">Configuration</div>
+            <a href="#" class="nav-item" data-tab="organizations">
+                <i>🏛️</i> Organizations
+            </a>
+            <a href="#" class="nav-item" data-tab="markets">
+                <i>🌍</i> Markets
+            </a>
+            <a href="#" class="nav-item" data-tab="clusters">
+                <i>🔗</i> Clusters
+            </a>
+            <a href="#" class="nav-item active" data-tab="stations">
+                <i>📻</i> Stations
+            </a>
+            <a href="#" class="nav-item" data-tab="channels">
+                <i>📡</i> Channels
+            </a>
+            <a href="#" class="nav-item" data-tab="clocks">
+                <i>🕐</i> Clock Templates
+            </a>
+            <a href="#" class="nav-item" data-tab="dayparts">
+                <i>⏰</i> Dayparts
+            </a>
+            <a href="#" class="nav-item" data-tab="daypartCategories">
+                <i>📂</i> Daypart Categories
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Orders & CRM</div>
+            <a href="#" class="nav-item" data-tab="orders">
+                <i>📋</i> Orders
+            </a>
+            <a href="#" class="nav-item" data-tab="advertisers">
+                <i>🏢</i> Advertisers
+            </a>
+            <a href="#" class="nav-item" data-tab="agencies">
+                <i>🤝</i> Agencies
+            </a>
+            <a href="#" class="nav-item" data-tab="sales-reps">
+                <i>👤</i> Sales Reps
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Administration</div>
+            <a href="#" class="nav-item" data-tab="users">
+                <i>👥</i> Users
+            </a>
+        </div>
+
+        <!-- Future sections (commented for now) -->
+        <!--
+        <div class="nav-section">
+            <div class="nav-section-title">Logs & Placement</div>
+            <a href="#" class="nav-item" data-tab="logs">📊 Daily Logs</a>
+            <a href="#" class="nav-item" data-tab="placement">🎯 Spot Placement</a>
+            <a href="#" class="nav-item" data-tab="separation">🔄 Separation Rules</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Export & Reconciliation</div>
+            <a href="#" class="nav-item" data-tab="export">📤 Log Export</a>
+            <a href="#" class="nav-item" data-tab="reconciliation">✅ As-Run Reconciliation</a>
+            <a href="#" class="nav-item" data-tab="integrations">🔌 Integrations</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Billing & Analytics</div>
+            <a href="#" class="nav-item" data-tab="invoicing">💰 Invoicing</a>
+            <a href="#" class="nav-item" data-tab="affidavits">📄 Affidavits</a>
+            <a href="#" class="nav-item" data-tab="receivables">💳 Accounts Receivable</a>
+            <a href="#" class="nav-item" data-tab="analytics">📈 Revenue Analytics</a>
+        </div>
+        -->
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <h2 id="pageTitle">Station Management</h2>
+            <div class="user-info">
+                <span class="user-badge" id="userBadge">Loading...</span>
+                <a href="/" class="logout-btn" onclick="logout()">Logout</a>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+
+            <!-- Organizations Tab -->
+            <div id="organizationsTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Organizations</h3>
+                    <button class="btn btn-primary" onclick="openOrganizationModal()">+ Create Organization</button>
+                </div>
+                <div class="table-container">
+                    <div id="organizationsLoadingState" class="loading">Loading organizations...</div>
+                    <div id="organizationsEmptyState" class="empty-state" style="display: none;">No organizations found</div>
+                    <table id="organizationsTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Legal Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="organizationsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Markets Tab -->
+            <div id="marketsTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Markets</h3>
+                    <button class="btn btn-primary" onclick="openMarketModal()">+ Create Market</button>
+                </div>
+                <div class="table-container">
+                    <div id="marketsLoadingState" class="loading">Loading markets...</div>
+                    <div id="marketsEmptyState" class="empty-state" style="display: none;">No markets found</div>
+                    <table id="marketsTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Organization</th>
+                                <th>City</th>
+                                <th>State</th>
+                                <th>Country</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="marketsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Clusters Tab -->
+            <div id="clustersTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Clusters</h3>
+                    <button class="btn btn-primary" onclick="openClusterModal()">+ Create Cluster</button>
+                </div>
+                <div class="table-container">
+                    <div id="clustersLoadingState" class="loading">Loading clusters...</div>
+                    <div id="clustersEmptyState" class="empty-state" style="display: none;">No clusters found</div>
+                    <table id="clustersTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Organization</th>
+                                <th>Market</th>
+                                <th>Description</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clustersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Stations Tab -->
+            <div id="stationsTab" class="tab-content active">
+                <div class="toolbar">
+                    <h3 class="section-title">Stations</h3>
+                    <button class="btn btn-primary" onclick="openStationModal()">+ Create Station</button>
+                </div>
+                <div class="table-container">
+                    <div id="stationsLoadingState" class="loading">Loading stations...</div>
+                    <div id="stationsEmptyState" class="empty-state" style="display: none;">No stations found</div>
+                    <table id="stationsTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Call Sign</th>
+                                <th>Name</th>
+                                <th>Frequency</th>
+                                <th>Organization</th>
+                                <th>Market</th>
+                                <th>Cluster</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stationsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Channels Tab -->
+            <div id="channelsTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Channels</h3>
+                    <button class="btn btn-primary" onclick="openChannelModal()">+ Create Channel</button>
+                </div>
+                <div class="table-container">
+                    <div id="channelsLoadingState" class="loading">Loading channels...</div>
+                    <div id="channelsEmptyState" class="empty-state" style="display: none;">No channels found</div>
+                    <table id="channelsTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Station</th>
+                                <th>Channel #</th>
+                                <th>Format Type</th>
+                                <th>Status</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="channelsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Clock Templates Tab -->
+            <div id="clocksTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Clock Templates</h3>
+                    <button class="btn btn-primary" onclick="openClockModal()">+ Create Clock Template</button>
+                </div>
+                <div class="table-container">
+                    <div id="clocksLoadingState" class="loading">Loading clock templates...</div>
+                    <div id="clocksEmptyState" class="empty-state" style="display: none;">No clock templates found</div>
+                    <table id="clocksTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Channel</th>
+                                <th>Status</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clocksTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Users Tab -->
+            <div id="usersTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">User Management</h3>
+                    <button class="btn btn-primary" onclick="openCreateModal()">+ Create User</button>
+                </div>
+                <div class="table-container">
+                    <div id="usersLoadingState" class="loading">Loading users...</div>
+                    <div id="usersEmptyState" class="empty-state" style="display: none;">No users found</div>
+                    <table id="usersTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Dayparts Tab -->
+            <div id="daypartsTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Dayparts</h3>
+                    <button class="btn btn-primary" onclick="openDaypartModal()">+ Create Daypart</button>
+                </div>
+                <div class="table-container">
+                    <div id="daypartsLoadingState" class="loading">Loading dayparts...</div>
+                    <div id="daypartsEmptyState" class="empty-state" style="display: none;">No dayparts found</div>
+                    <table id="daypartsTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Start Time</th>
+                                <th>End Time</th>
+                                <th>Category</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="daypartsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Daypart Categories Tab -->
+            <div id="daypartCategoriesTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Daypart Categories</h3>
+                    <button class="btn btn-primary" onclick="openDaypartCategoryModal()">+ Create Category</button>
+                </div>
+                <div class="table-container">
+                    <div id="daypartCategoriesLoadingState" class="loading">Loading daypart categories...</div>
+                    <div id="daypartCategoriesEmptyState" class="empty-state" style="display: none;">No daypart categories found</div>
+                    <table id="daypartCategoriesTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="daypartCategoriesTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="ordersTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Orders</h3>
+                    <button class="btn btn-primary" onclick="openOrderModal()">+ Create Order</button>
+                </div>
+                <div class="table-container">
+                    <div id="ordersLoadingState" class="loading">Loading orders...</div>
+                    <div id="ordersEmptyState" class="empty-state" style="display: none;">No orders found</div>
+                    <table id="ordersTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Order Number</th>
+                                <th>Station</th>
+                                <th>Advertiser</th>
+                                <th>Status</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="advertisersTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Advertisers</h3>
+                    <button class="btn btn-primary" onclick="openAdvertiserModal()">+ Create Advertiser</button>
+                </div>
+                <div class="table-container">
+                    <div id="advertisersLoadingState" class="loading">Loading advertisers...</div>
+                    <div id="advertisersEmptyState" class="empty-state" style="display: none;">No advertisers found</div>
+                    <table id="advertisersTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Agency</th>
+                                <th>Sales Rep</th>
+                                <th>Active</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="advertisersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="agenciesTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Agencies</h3>
+                    <button class="btn btn-primary" onclick="openAgencyModal()">+ Create Agency</button>
+                </div>
+                <div class="table-container">
+                    <div id="agenciesLoadingState" class="loading">Loading agencies...</div>
+                    <div id="agenciesEmptyState" class="empty-state" style="display: none;">No agencies found</div>
+                    <table id="agenciesTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Active</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agenciesTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="sales-repsTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Sales Representatives</h3>
+                    <button class="btn btn-primary" onclick="openSalesRepModal()">+ Create Sales Rep</button>
+                </div>
+                <div class="table-container">
+                    <div id="salesRepsLoadingState" class="loading">Loading sales reps...</div>
+                    <div id="salesRepsEmptyState" class="empty-state" style="display: none;">No sales reps found</div>
+                    <table id="salesRepsTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Active</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salesRepsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="footer">
+                <p>&copy; <span id="copyrightYear"></span> LibreLog. All rights reserved. | Version <span id="appVersion">Loading...</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help/Context Panel -->
+    <button class="help-toggle" onclick="toggleHelp()">?</button>
+    <div class="help-panel" id="helpPanel">
+        <div class="help-panel-header">
+            <h2>Help & Context</h2>
+            <button class="close-btn" onclick="toggleHelp()">&times;</button>
+        </div>
+        <div class="help-panel-content" id="helpContent">
+            <div class="help-section">
+                <h3>Station Management</h3>
+                <p>Stations represent broadcast stations in your system. Each station has a unique call sign, name, frequency, and market.</p>
+                <p><strong>Key Features:</strong></p>
+                <ul style="margin-left: 1.5rem; color: #b0b0b0;">
+                    <li>Create and manage broadcast stations</li>
+                    <li>Associate clock templates and channels</li>
+                    <li>Link to orders and logs</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Organization Modal -->
+    <div id="organizationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="organizationModalTitle">Create Organization</h2>
+                <button class="close-btn" onclick="closeOrganizationModal()">&times;</button>
+            </div>
+            <div class="error-message" id="organizationModalErrorMessage"></div>
+            <form id="organizationForm">
+                <input type="hidden" id="organizationId">
+                <div class="form-group">
+                    <label for="organizationName">Name *</label>
+                    <input type="text" id="organizationName" required>
+                </div>
+                <div class="form-group">
+                    <label for="organizationLegalName">Legal Name</label>
+                    <input type="text" id="organizationLegalName">
+                </div>
+                <div class="form-group">
+                    <label for="organizationEmail">Email</label>
+                    <input type="email" id="organizationEmail">
+                </div>
+                <div class="form-group">
+                    <label for="organizationPhone">Phone</label>
+                    <input type="text" id="organizationPhone">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="organizationIsActive" checked> Active
+                    </label>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeOrganizationModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Market Modal -->
+    <div id="marketModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="marketModalTitle">Create Market</h2>
+                <button class="close-btn" onclick="closeMarketModal()">&times;</button>
+            </div>
+            <div class="error-message" id="marketModalErrorMessage"></div>
+            <form id="marketForm">
+                <input type="hidden" id="marketId">
+                <div class="form-group">
+                    <label for="marketOrganizationId">Organization *</label>
+                    <select id="marketOrganizationId" required>
+                        <option value="">Select an organization...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="marketName">Name *</label>
+                    <input type="text" id="marketName" required>
+                </div>
+                <div class="form-group">
+                    <label for="marketDescription">Description</label>
+                    <textarea id="marketDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="marketCity">City</label>
+                    <input type="text" id="marketCity">
+                </div>
+                <div class="form-group">
+                    <label for="marketState">State</label>
+                    <input type="text" id="marketState">
+                </div>
+                <div class="form-group">
+                    <label for="marketCountry">Country</label>
+                    <input type="text" id="marketCountry">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="marketIsActive" checked> Active
+                    </label>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeMarketModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cluster Modal -->
+    <div id="clusterModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="clusterModalTitle">Create Cluster</h2>
+                <button class="close-btn" onclick="closeClusterModal()">&times;</button>
+            </div>
+            <div class="error-message" id="clusterModalErrorMessage"></div>
+            <form id="clusterForm">
+                <input type="hidden" id="clusterId">
+                <div class="form-group">
+                    <label for="clusterOrganizationId">Organization *</label>
+                    <select id="clusterOrganizationId" required>
+                        <option value="">Select an organization...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="clusterMarketId">Market</label>
+                    <select id="clusterMarketId">
+                        <option value="">None</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="clusterName">Name *</label>
+                    <input type="text" id="clusterName" required>
+                </div>
+                <div class="form-group">
+                    <label for="clusterDescription">Description</label>
+                    <textarea id="clusterDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="clusterIsActive" checked> Active
+                    </label>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeClusterModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Station Modal -->
+    <div id="stationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="stationModalTitle">Create Station</h2>
+                <button class="close-btn" onclick="closeStationModal()">&times;</button>
+            </div>
+            <div class="error-message" id="stationModalErrorMessage"></div>
+            <form id="stationForm">
+                <input type="hidden" id="stationId">
+                <div class="form-group">
+                    <label for="stationOrganizationId">Organization *</label>
+                    <select id="stationOrganizationId" required>
+                        <option value="">Select an organization...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="stationMarketId">Market</label>
+                    <select id="stationMarketId">
+                        <option value="">None</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="stationClusterId">Cluster</label>
+                    <select id="stationClusterId">
+                        <option value="">None</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="stationCallSign">Call Sign *</label>
+                    <input type="text" id="stationCallSign" required>
+                </div>
+                <div class="form-group">
+                    <label for="stationName">Name *</label>
+                    <input type="text" id="stationName" required>
+                </div>
+                <div class="form-group">
+                    <label for="stationFrequency">Frequency</label>
+                    <input type="text" id="stationFrequency">
+                </div>
+                <div class="form-group">
+                    <label for="stationType">Station Type *</label>
+                    <select id="stationType" required>
+                        <option value="">Select a type...</option>
+                        <option value="AM">AM (Amplitude Modulation)</option>
+                        <option value="FM">FM (Frequency Modulation)</option>
+                        <option value="HD_RADIO">HD Radio (Hybrid Digital)</option>
+                        <option value="DIGITAL">Digital/Streaming</option>
+                        <option value="SATELLITE">Satellite</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="stationIsActive" checked> Active
+                    </label>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeStationModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Channel Modal -->
+    <div id="channelModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="channelModalTitle">Create Channel</h2>
+                <button class="close-btn" onclick="closeChannelModal()">&times;</button>
+            </div>
+            <div class="error-message" id="channelModalErrorMessage"></div>
+            <form id="channelForm">
+                <input type="hidden" id="channelId">
+                <div class="form-group">
+                    <label for="channelStationId">Station *</label>
+                    <select id="channelStationId" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="channelName">Name *</label>
+                    <input type="text" id="channelName" required>
+                </div>
+                <div class="form-group">
+                    <label for="channelNumber">Channel Number</label>
+                    <input type="number" id="channelNumber" min="1">
+                </div>
+                <div class="form-group">
+                    <label for="channelFormatType">Format Type *</label>
+                    <select id="channelFormatType" required>
+                        <option value="">Select format type...</option>
+                        <option value="LINEAR">Linear (Broadcast)</option>
+                        <option value="DIGITAL">Digital (Online/OTT)</option>
+                        <option value="PODCAST">Podcast</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="channelDescription">Description</label>
+                    <textarea id="channelDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="channelIsActive" checked> Active
+                    </label>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeChannelModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Clock Template Modal -->
+    <div id="clockModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="clockModalTitle">Create Clock Template</h2>
+                <button class="close-btn" onclick="closeClockModal()">&times;</button>
+            </div>
+            <div class="error-message" id="clockModalErrorMessage"></div>
+            <form id="clockForm">
+                <input type="hidden" id="clockId">
+                <div class="form-group">
+                    <label for="clockChannelId">Channel *</label>
+                    <select id="clockChannelId" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="clockName">Name *</label>
+                    <input type="text" id="clockName" required>
+                </div>
+                <div class="form-group">
+                    <label for="clockDescription">Description</label>
+                    <textarea id="clockDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="clockIsActive" checked> Active
+                    </label>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeClockModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Daypart Modal -->
+    <div id="daypartModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="daypartModalTitle">Create Daypart</h2>
+                <button class="close-btn" onclick="closeDaypartModal()">&times;</button>
+            </div>
+            <div class="error-message" id="daypartModalErrorMessage"></div>
+            <form id="daypartForm">
+                <input type="hidden" id="daypartId">
+                <div class="form-group">
+                    <label for="daypartName">Name *</label>
+                    <input type="text" id="daypartName" required>
+                </div>
+                <div class="form-group">
+                    <label for="daypartStartTime">Start Time *</label>
+                    <input type="time" id="daypartStartTime" required>
+                </div>
+                <div class="form-group">
+                    <label for="daypartEndTime">End Time *</label>
+                    <input type="time" id="daypartEndTime" required>
+                </div>
+                <div class="form-group">
+                    <label for="daypartCategoryId">Category</label>
+                    <select id="daypartCategoryId">
+                        <option value="">None</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeDaypartModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Order Modal -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 id="orderModalTitle">Create Order</h2>
+                <button class="close-btn" onclick="closeOrderModal()">&times;</button>
+            </div>
+            <div class="error-message" id="orderModalErrorMessage"></div>
+            <form id="orderForm">
+                <input type="hidden" id="orderId">
+                <div class="form-group">
+                    <label for="orderStationId">Station *</label>
+                    <select id="orderStationId" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="orderAdvertiserName">Advertiser Name *</label>
+                    <input type="text" id="orderAdvertiserName" required>
+                </div>
+                <div class="form-group">
+                    <label for="orderAgencyName">Agency Name</label>
+                    <input type="text" id="orderAgencyName">
+                </div>
+                <div class="form-group">
+                    <label for="orderSalesRepName">Sales Rep Name</label>
+                    <input type="text" id="orderSalesRepName">
+                </div>
+                <div class="form-group">
+                    <label for="orderStartDate">Start Date *</label>
+                    <input type="date" id="orderStartDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="orderEndDate">End Date *</label>
+                    <input type="date" id="orderEndDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="orderTotalSpots">Total Spots</label>
+                    <input type="number" id="orderTotalSpots" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="orderTotalAmount">Total Amount</label>
+                    <input type="number" id="orderTotalAmount" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="orderNotes">Notes</label>
+                    <textarea id="orderNotes" rows="3"></textarea>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeOrderModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Advertiser Modal -->
+    <div id="advertiserModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 id="advertiserModalTitle">Create Advertiser</h2>
+                <button class="close-btn" onclick="closeAdvertiserModal()">&times;</button>
+            </div>
+            <div class="error-message" id="advertiserModalErrorMessage"></div>
+            <form id="advertiserForm">
+                <input type="hidden" id="advertiserId">
+                <div class="form-group">
+                    <label for="advertiserName">Name *</label>
+                    <input type="text" id="advertiserName" required>
+                </div>
+                <div class="form-group">
+                    <label for="advertiserLegalName">Legal Name</label>
+                    <input type="text" id="advertiserLegalName">
+                </div>
+                <div class="form-group">
+                    <label for="advertiserEmail">Email</label>
+                    <input type="email" id="advertiserEmail">
+                </div>
+                <div class="form-group">
+                    <label for="advertiserPhone">Phone</label>
+                    <input type="text" id="advertiserPhone">
+                </div>
+                <div class="form-group">
+                    <label for="advertiserAgencyId">Agency</label>
+                    <select id="advertiserAgencyId">
+                        <option value="">None</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="advertiserSalesRepId">Sales Rep</label>
+                    <select id="advertiserSalesRepId">
+                        <option value="">None</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="advertiserCreditLimit">Credit Limit</label>
+                    <input type="number" id="advertiserCreditLimit" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="advertiserIsActive">Active</label>
+                    <select id="advertiserIsActive">
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAdvertiserModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Agency Modal -->
+    <div id="agencyModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 id="agencyModalTitle">Create Agency</h2>
+                <button class="close-btn" onclick="closeAgencyModal()">&times;</button>
+            </div>
+            <div class="error-message" id="agencyModalErrorMessage"></div>
+            <form id="agencyForm">
+                <input type="hidden" id="agencyId">
+                <div class="form-group">
+                    <label for="agencyName">Name *</label>
+                    <input type="text" id="agencyName" required>
+                </div>
+                <div class="form-group">
+                    <label for="agencyLegalName">Legal Name</label>
+                    <input type="text" id="agencyLegalName">
+                </div>
+                <div class="form-group">
+                    <label for="agencyEmail">Email</label>
+                    <input type="email" id="agencyEmail">
+                </div>
+                <div class="form-group">
+                    <label for="agencyPhone">Phone</label>
+                    <input type="text" id="agencyPhone">
+                </div>
+                <div class="form-group">
+                    <label for="agencyIsActive">Active</label>
+                    <select id="agencyIsActive">
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAgencyModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sales Rep Modal -->
+    <div id="salesRepModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 id="salesRepModalTitle">Create Sales Representative</h2>
+                <button class="close-btn" onclick="closeSalesRepModal()">&times;</button>
+            </div>
+            <div class="error-message" id="salesRepModalErrorMessage"></div>
+            <form id="salesRepForm">
+                <input type="hidden" id="salesRepId">
+                <div class="form-group">
+                    <label for="salesRepFirstName">First Name *</label>
+                    <input type="text" id="salesRepFirstName" required>
+                </div>
+                <div class="form-group">
+                    <label for="salesRepLastName">Last Name *</label>
+                    <input type="text" id="salesRepLastName" required>
+                </div>
+                <div class="form-group">
+                    <label for="salesRepEmail">Email *</label>
+                    <input type="email" id="salesRepEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="salesRepPhone">Phone</label>
+                    <input type="text" id="salesRepPhone">
+                </div>
+                <div class="form-group">
+                    <label for="salesRepIsActive">Active</label>
+                    <select id="salesRepIsActive">
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeSalesRepModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Modal (existing) -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Create User</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="error-message" id="modalErrorMessage"></div>
+            <form id="userForm">
+                <input type="hidden" id="userId">
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password <span id="passwordRequired">*</span></label>
+                    <input type="password" id="password" placeholder="Leave empty to keep current password">
+                </div>
+                <div class="form-group">
+                    <label for="role">Role *</label>
+                    <select id="role" required>
+                        <option value="ADMIN">Admin</option>
+                        <option value="TRAFFIC_MANAGER">Traffic Manager</option>
+                        <option value="SALES_REP">Sales Representative</option>
+                        <option value="PROGRAMMING">Programming</option>
+                        <option value="ACCOUNTING">Accounting</option>
+                        <option value="OPERATIONS">Operations</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="status">Status *</label>
+                    <select id="status" required>
+                        <option value="ACTIVE">Active</option>
+                        <option value="INACTIVE">Inactive</option>
+                        <option value="BANNED">Banned</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Daypart Category Modal -->
+    <div id="daypartCategoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="daypartCategoryModalTitle">Create Daypart Category</h2>
+                <button class="close-btn" onclick="closeDaypartCategoryModal()">&times;</button>
+            </div>
+            <div class="error-message" id="daypartCategoryModalErrorMessage"></div>
+            <form id="daypartCategoryForm">
+                <input type="hidden" id="daypartCategoryFormId">
+                <div class="form-group">
+                    <label for="daypartCategoryName">Name *</label>
+                    <input type="text" id="daypartCategoryName" required placeholder="e.g., Drive Time, Prime Time, Overnight">
+                </div>
+                <div class="form-group">
+                    <label for="daypartCategoryDescription">Description</label>
+                    <textarea id="daypartCategoryDescription" rows="3" placeholder="Optional description of this category"></textarea>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeDaypartCategoryModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let authToken = localStorage.getItem('authToken');
+        let currentUser = null;
+        let currentTab = 'stations';
+
+        // Check authentication
+        if (!authToken) {
+            window.location.href = '/';
+        }
+
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tab = e.currentTarget.dataset.tab;
+                switchTab(tab);
+            });
+        });
+
+        function switchTab(tabName) {
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabName + 'Tab').classList.add('active');
+
+            // Update page title
+            const titles = {
+                'stations': 'Station Management',
+                'clocks': 'Clock Template Management',
+                'dayparts': 'Daypart Management',
+                'orders': 'Order Management',
+                'advertisers': 'Advertiser Management',
+                'agencies': 'Agency Management',
+                'sales-reps': 'Sales Representative Management',
+                'users': 'User Management'
+            };
+            document.getElementById('pageTitle').textContent = titles[tabName] || 'Dashboard';
+
+            // Update help content
+            updateHelpContent(tabName);
+
+            // Load data for the tab
+            currentTab = tabName;
+            loadTabData(tabName);
+        }
+
+        function updateHelpContent(tabName) {
+            const helpContent = document.getElementById('helpContent');
+            const helpTexts = {
+                'stations': {
+                    title: 'Station Management',
+                    description: 'Stations represent broadcast stations in your system. Each station has a unique call sign, name, frequency, and market.',
+                    features: [
+                        'Create and manage broadcast stations',
+                        'Associate clock templates and channels',
+                        'Link to orders and logs'
+                    ]
+                },
+                'clocks': {
+                    title: 'Clock Template Management',
+                    description: 'Clock templates define the 24-hour broadcast structure for a station, including where commercial breaks can occur.',
+                    features: [
+                        'Define clock templates for each station',
+                        'Configure break structures',
+                        'Set active/inactive templates'
+                    ]
+                },
+                'dayparts': {
+                    title: 'Daypart Management',
+                    description: 'Dayparts represent time periods during the broadcast day (e.g., morning drive, afternoon drive, evening).',
+                    features: [
+                        'Create dayparts with start and end times',
+                        'Organize by categories',
+                        'Use in order line requirements'
+                    ]
+                },
+                'orders': {
+                    title: 'Order Management',
+                    description: 'Orders represent advertising contracts. Each order contains order lines that specify spot requirements.',
+                    features: [
+                        'Create and manage advertising orders',
+                        'Track order status through workflow',
+                        'Associate with stations, advertisers, and sales reps'
+                    ]
+                },
+                'advertisers': {
+                    title: 'Advertiser Management',
+                    description: 'Advertisers are clients who purchase advertising. Track credit limits, payment terms, and contact information.',
+                    features: [
+                        'Manage advertiser information',
+                        'Track credit limits and payment terms',
+                        'Link to agencies and sales reps'
+                    ]
+                },
+                'agencies': {
+                    title: 'Agency Management',
+                    description: 'Agencies represent advertising agencies that place orders on behalf of advertisers.',
+                    features: [
+                        'Manage agency information',
+                        'Link advertisers to agencies',
+                        'Track agency contacts'
+                    ]
+                },
+                'sales-reps': {
+                    title: 'Sales Representative Management',
+                    description: 'Sales representatives are staff members responsible for selling advertising and managing client relationships.',
+                    features: [
+                        'Manage sales rep information',
+                        'Organize by teams, offices, and regions',
+                        'Track commission rates'
+                    ]
+                },
+                'users': {
+                    title: 'User Management',
+                    description: 'Manage system users, their roles, and permissions. Users can have different roles with varying access levels.',
+                    features: [
+                        'Create and manage user accounts',
+                        'Assign roles (Admin, Traffic Manager, Sales Rep, etc.)',
+                        'Control user status (Active, Inactive, Banned)'
+                    ]
+                }
+            };
+
+            const help = helpTexts[tabName] || helpTexts['stations'];
+            helpContent.innerHTML = `
+                <div class="help-section">
+                    <h3>${help.title}</h3>
+                    <p>${help.description}</p>
+                    <p><strong>Key Features:</strong></p>
+                    <ul style="margin-left: 1.5rem; color: #b0b0b0; line-height: 1.8;">
+                        ${help.features.map(f => `<li>${f}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        function loadTabData(tabName) {
+            switch(tabName) {
+                case 'organizations':
+                    document.getElementById('pageTitle').textContent = 'Organization Management';
+                    loadOrganizationsForTable();
+                    break;
+                case 'markets':
+                    document.getElementById('pageTitle').textContent = 'Market Management';
+                    loadMarketsForTable();
+                    break;
+                case 'clusters':
+                    document.getElementById('pageTitle').textContent = 'Cluster Management';
+                    loadClustersForTable();
+                    break;
+                case 'stations':
+                    loadStations();
+                    break;
+                case 'channels':
+                    document.getElementById('pageTitle').textContent = 'Channel Management';
+                    loadChannelsForTable();
+                    break;
+                case 'clocks':
+                    loadClocks();
+                    break;
+                case 'dayparts':
+                    loadDayparts();
+                    break;
+                case 'daypartCategories':
+                    document.getElementById('pageTitle').textContent = 'Daypart Category Management';
+                    loadDaypartCategoriesForTable();
+                    break;
+                case 'orders':
+                    loadOrders();
+                    break;
+                case 'advertisers':
+                    loadAdvertisers();
+                    break;
+                case 'agencies':
+                    loadAgencies();
+                    break;
+                case 'sales-reps':
+                    loadSalesReps();
+                    break;
+                case 'users':
+                    loadUsers();
+                    break;
+            }
+        }
+
+        // Help panel toggle
+        function toggleHelp() {
+            document.getElementById('helpPanel').classList.toggle('open');
+        }
+
+        // Load user info
+        async function loadUserInfo() {
+            try {
+                const payload = JSON.parse(atob(authToken.split('.')[1]));
+                currentUser = payload;
+                document.getElementById('userBadge').textContent = `${payload.email} (${payload.role})`;
+            } catch (error) {
+                console.error('Error loading user info:', error);
+                logout();
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userRole');
+            window.location.href = '/';
+        }
+
+        // Station Management Functions
+        async function loadStations() {
+            try {
+                const response = await fetch('/api/stations', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load stations');
+                const stations = await response.json();
+                displayStations(stations);
+            } catch (error) {
+                console.error('Error loading stations:', error);
+                showError('Failed to load stations');
+            }
+        }
+
+        function displayStations(stations) {
+            const tableBody = document.getElementById('stationsTableBody');
+            const loadingState = document.getElementById('stationsLoadingState');
+            const emptyState = document.getElementById('stationsEmptyState');
+            const table = document.getElementById('stationsTable');
+
+            loadingState.style.display = 'none';
+            if (stations.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = stations.map(s => `
+                <tr>
+                    <td><strong>${s.callSign}</strong></td>
+                    <td>${s.name}</td>
+                    <td>${s.frequency || '-'}</td>
+                    <td>${s.organizationName || '-'}</td>
+                    <td>${s.marketName || '-'}</td>
+                    <td>${s.clusterName || '-'}</td>
+                    <td><span class="badge badge-active">${s.stationType || '-'}</span></td>
+                    <td><span class="badge ${s.isActive ? 'badge-active' : 'badge-inactive'}">${s.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editStation('${s.id}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteStation('${s.id}', '${s.callSign}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        let organizationsList = [];
+        let marketsList = [];
+        let clustersList = [];
+
+        async function loadOrganizations() {
+            if (organizationsList.length === 0) {
+                try {
+                    const response = await fetch('/api/organizations', {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    if (response.ok) {
+                        organizationsList = await response.json();
+                    }
+                } catch (error) {
+                    console.error('Error loading organizations:', error);
+                }
+            }
+            return organizationsList;
+        }
+
+        async function loadMarkets(organizationId) {
+            try {
+                const response = await fetch(`/api/markets${organizationId ? '?organizationId=' + organizationId : ''}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (response.ok) {
+                    marketsList = await response.json();
+                }
+            } catch (error) {
+                console.error('Error loading markets:', error);
+            }
+            return marketsList;
+        }
+
+        async function loadClusters(organizationId) {
+            try {
+                const response = await fetch(`/api/clusters${organizationId ? '?organizationId=' + organizationId : ''}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (response.ok) {
+                    clustersList = await response.json();
+                }
+            } catch (error) {
+                console.error('Error loading clusters:', error);
+            }
+            return clustersList;
+        }
+
+        async function populateStationDropdowns(organizationId = null) {
+            const orgSelect = document.getElementById('stationOrganizationId');
+            const marketSelect = document.getElementById('stationMarketId');
+            const clusterSelect = document.getElementById('stationClusterId');
+
+            // Only populate organizations dropdown if it's empty (initial load)
+            if (orgSelect.options.length <= 1) {
+                const orgs = await loadOrganizations();
+                const currentValue = orgSelect.value; // Save current selection
+                orgSelect.innerHTML = '<option value="">Select an organization...</option>' +
+                    orgs.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+                // Restore selection if it was set
+                if (currentValue) {
+                    orgSelect.value = currentValue;
+                    organizationId = currentValue; // Use saved value
+                }
+            } else if (organizationId) {
+                // If dropdown already populated, just ensure the value is set
+                orgSelect.value = organizationId;
+            }
+
+            // Update markets and clusters dropdowns based on selected organization
+            if (organizationId) {
+                const markets = await loadMarkets(organizationId);
+                const currentMarketValue = marketSelect.value; // Save current market selection
+                marketSelect.innerHTML = '<option value="">None</option>' +
+                    markets.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+                // Restore market selection if it was set and still valid
+                if (currentMarketValue && markets.some(m => m.id === currentMarketValue)) {
+                    marketSelect.value = currentMarketValue;
+                }
+
+                const clusters = await loadClusters(organizationId);
+                const currentClusterValue = clusterSelect.value; // Save current cluster selection
+                clusterSelect.innerHTML = '<option value="">None</option>' +
+                    clusters.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                // Restore cluster selection if it was set and still valid
+                if (currentClusterValue && clusters.some(c => c.id === currentClusterValue)) {
+                    clusterSelect.value = currentClusterValue;
+                }
+            } else {
+                marketSelect.innerHTML = '<option value="">None</option>';
+                clusterSelect.innerHTML = '<option value="">None</option>';
+            }
+        }
+
+        // Set up event listener for station organization change - only update markets/clusters, NOT organizations
+        let stationOrgChangeHandler = null;
+        function setupStationOrgChangeHandler() {
+            const orgSelect = document.getElementById('stationOrganizationId');
+            if (orgSelect && !stationOrgChangeHandler) {
+                stationOrgChangeHandler = async (e) => {
+                    const selectedOrgId = e.target.value || null;
+                    const marketSelect = document.getElementById('stationMarketId');
+                    const clusterSelect = document.getElementById('stationClusterId');
+                    
+                    if (selectedOrgId) {
+                        const markets = await loadMarkets(selectedOrgId);
+                        const currentMarketValue = marketSelect.value; // Save current selection
+                        marketSelect.innerHTML = '<option value="">None</option>' +
+                            markets.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+                        // Restore market selection if it was set and still valid
+                        if (currentMarketValue && markets.some(m => m.id === currentMarketValue)) {
+                            marketSelect.value = currentMarketValue;
+                        }
+
+                        const clusters = await loadClusters(selectedOrgId);
+                        const currentClusterValue = clusterSelect.value; // Save current selection
+                        clusterSelect.innerHTML = '<option value="">None</option>' +
+                            clusters.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                        // Restore cluster selection if it was set and still valid
+                        if (currentClusterValue && clusters.some(c => c.id === currentClusterValue)) {
+                            clusterSelect.value = currentClusterValue;
+                        }
+                    } else {
+                        marketSelect.innerHTML = '<option value="">None</option>';
+                        clusterSelect.innerHTML = '<option value="">None</option>';
+                    }
+                };
+                orgSelect.addEventListener('change', stationOrgChangeHandler);
+            }
+        }
+        
+        // Initialize the handler when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupStationOrgChangeHandler);
+        } else {
+            setupStationOrgChangeHandler();
+        }
+
+        async function openStationModal() {
+            document.getElementById('stationModalTitle').textContent = 'Create Station';
+            document.getElementById('stationForm').reset();
+            document.getElementById('stationId').value = '';
+            document.getElementById('stationIsActive').checked = true;
+            await populateStationDropdowns();
+            setupStationOrgChangeHandler(); // Ensure handler is set up
+            document.getElementById('stationModal').classList.add('show');
+        }
+
+        async function editStation(id) {
+            try {
+                const response = await fetch(`/api/stations/${id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load station');
+                const station = await response.json();
+                document.getElementById('stationModalTitle').textContent = 'Edit Station';
+                document.getElementById('stationId').value = station.id;
+                await populateStationDropdowns(station.organizationId);
+                document.getElementById('stationOrganizationId').value = station.organizationId || '';
+                document.getElementById('stationMarketId').value = station.marketId || '';
+                document.getElementById('stationClusterId').value = station.clusterId || '';
+                document.getElementById('stationCallSign').value = station.callSign;
+                document.getElementById('stationName').value = station.name;
+                document.getElementById('stationFrequency').value = station.frequency || '';
+                document.getElementById('stationType').value = station.stationType || '';
+                document.getElementById('stationIsActive').checked = station.isActive !== false;
+                document.getElementById('stationModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading station:', error);
+                showError('Failed to load station');
+            }
+        }
+
+        function closeStationModal() {
+            document.getElementById('stationModal').classList.remove('show');
+        }
+
+        async function deleteStation(id, callSign) {
+            if (!confirm(`Are you sure you want to delete station "${callSign}"?`)) return;
+            try {
+                const response = await fetch(`/api/stations/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete station');
+                showSuccess('Station deleted successfully');
+                loadStations();
+            } catch (error) {
+                console.error('Error deleting station:', error);
+                showError('Failed to delete station');
+            }
+        }
+
+        document.getElementById('stationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('stationModalErrorMessage');
+            if (errorMsg) errorMsg.classList.remove('show');
+
+            const stationId = document.getElementById('stationId').value;
+            const orgId = document.getElementById('stationOrganizationId').value;
+            const marketId = document.getElementById('stationMarketId').value;
+            const clusterId = document.getElementById('stationClusterId').value;
+            
+            if (!orgId) {
+                if (errorMsg) {
+                    errorMsg.textContent = 'Organization is required';
+                    errorMsg.classList.add('show');
+                }
+                return;
+            }
+
+            const stationData = {
+                organizationId: orgId,
+                marketId: marketId || null,
+                clusterId: clusterId || null,
+                callSign: document.getElementById('stationCallSign').value,
+                name: document.getElementById('stationName').value,
+                frequency: document.getElementById('stationFrequency').value || null,
+                stationType: document.getElementById('stationType').value,
+                isActive: document.getElementById('stationIsActive').checked
+            };
+
+            try {
+                const url = stationId ? `/api/stations/${stationId}` : '/api/stations';
+                const method = stationId ? 'PUT' : 'POST';
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(stationData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Failed to save station' }));
+                    throw new Error(errorData.message || 'Failed to save station');
+                }
+
+                closeStationModal();
+                showSuccess(stationId ? 'Station updated successfully' : 'Station created successfully');
+                loadStations();
+            } catch (error) {
+                console.error('Error saving station:', error);
+                if (errorMsg) {
+                    errorMsg.textContent = error.message || 'Failed to save station';
+                    errorMsg.classList.add('show');
+                }
+            }
+        });
+
+        // Organization Management
+        async function loadOrganizationsForTable() {
+            try {
+                const response = await fetch('/api/organizations', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load organizations');
+                const organizations = await response.json();
+                displayOrganizations(organizations);
+            } catch (error) {
+                console.error('Error loading organizations:', error);
+                showError('Failed to load organizations');
+            }
+        }
+
+        function displayOrganizations(organizations) {
+            const tableBody = document.getElementById('organizationsTableBody');
+            const loadingState = document.getElementById('organizationsLoadingState');
+            const emptyState = document.getElementById('organizationsEmptyState');
+            const table = document.getElementById('organizationsTable');
+
+            loadingState.style.display = 'none';
+            if (organizations.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = organizations.map(o => `
+                <tr>
+                    <td><strong>${o.name}</strong></td>
+                    <td>${o.legalName || '-'}</td>
+                    <td>${o.email || '-'}</td>
+                    <td>${o.phone || '-'}</td>
+                    <td><span class="badge ${o.isActive ? 'badge-active' : 'badge-inactive'}">${o.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editOrganization('${o.id}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteOrganization('${o.id}', '${o.name}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function openOrganizationModal() {
+            document.getElementById('organizationModalTitle').textContent = 'Create Organization';
+            document.getElementById('organizationForm').reset();
+            document.getElementById('organizationId').value = '';
+            document.getElementById('organizationIsActive').checked = true;
+            document.getElementById('organizationModal').classList.add('show');
+        }
+
+        async function editOrganization(id) {
+            try {
+                const response = await fetch(`/api/organizations/${id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load organization');
+                const org = await response.json();
+                document.getElementById('organizationModalTitle').textContent = 'Edit Organization';
+                document.getElementById('organizationId').value = org.id;
+                document.getElementById('organizationName').value = org.name;
+                document.getElementById('organizationLegalName').value = org.legalName || '';
+                document.getElementById('organizationEmail').value = org.email || '';
+                document.getElementById('organizationPhone').value = org.phone || '';
+                document.getElementById('organizationIsActive').checked = org.isActive !== false;
+                document.getElementById('organizationModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading organization:', error);
+                showError('Failed to load organization');
+            }
+        }
+
+        function closeOrganizationModal() {
+            document.getElementById('organizationModal').classList.remove('show');
+        }
+
+        async function deleteOrganization(id, name) {
+            if (!confirm(`Are you sure you want to delete organization "${name}"?`)) return;
+            try {
+                const response = await fetch(`/api/organizations/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete organization');
+                showSuccess('Organization deleted successfully');
+                loadOrganizationsForTable();
+            } catch (error) {
+                console.error('Error deleting organization:', error);
+                showError('Failed to delete organization');
+            }
+        }
+
+        document.getElementById('organizationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('organizationModalErrorMessage');
+            if (errorMsg) errorMsg.classList.remove('show');
+
+            const orgId = document.getElementById('organizationId').value;
+            const orgData = {
+                name: document.getElementById('organizationName').value,
+                legalName: document.getElementById('organizationLegalName').value || null,
+                email: document.getElementById('organizationEmail').value || null,
+                phone: document.getElementById('organizationPhone').value || null,
+                isActive: document.getElementById('organizationIsActive').checked
+            };
+
+            try {
+                const url = orgId ? `/api/organizations/${orgId}` : '/api/organizations';
+                const method = orgId ? 'PUT' : 'POST';
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(orgData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Failed to save organization' }));
+                    throw new Error(errorData.message || 'Failed to save organization');
+                }
+
+                closeOrganizationModal();
+                showSuccess(orgId ? 'Organization updated successfully' : 'Organization created successfully');
+                loadOrganizationsForTable();
+                organizationsList = []; // Clear cache to reload
+            } catch (error) {
+                console.error('Error saving organization:', error);
+                if (errorMsg) {
+                    errorMsg.textContent = error.message || 'Failed to save organization';
+                    errorMsg.classList.add('show');
+                }
+            }
+        });
+
+        // Market Management
+        async function loadMarketsForTable() {
+            try {
+                const response = await fetch('/api/markets', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load markets');
+                const markets = await response.json();
+                displayMarkets(markets);
+            } catch (error) {
+                console.error('Error loading markets:', error);
+                showError('Failed to load markets');
+            }
+        }
+
+        function displayMarkets(markets) {
+            const tableBody = document.getElementById('marketsTableBody');
+            const loadingState = document.getElementById('marketsLoadingState');
+            const emptyState = document.getElementById('marketsEmptyState');
+            const table = document.getElementById('marketsTable');
+
+            loadingState.style.display = 'none';
+            if (markets.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = markets.map(m => `
+                <tr>
+                    <td><strong>${m.name}</strong></td>
+                    <td>${m.organization ? m.organization.name : '-'}</td>
+                    <td>${m.city || '-'}</td>
+                    <td>${m.state || '-'}</td>
+                    <td>${m.country || '-'}</td>
+                    <td><span class="badge ${m.isActive ? 'badge-active' : 'badge-inactive'}">${m.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editMarket('${m.id}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteMarket('${m.id}', '${m.name}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function openMarketModal() {
+            document.getElementById('marketModalTitle').textContent = 'Create Market';
+            document.getElementById('marketForm').reset();
+            document.getElementById('marketId').value = '';
+            document.getElementById('marketIsActive').checked = true;
+            await populateMarketOrganizationDropdown();
+            document.getElementById('marketModal').classList.add('show');
+        }
+
+        async function populateMarketOrganizationDropdown(organizationId = null) {
+            const select = document.getElementById('marketOrganizationId');
+            
+            // Only populate if dropdown is empty (initial load)
+            if (select.options.length <= 1) {
+                const orgs = await loadOrganizations();
+                const currentValue = select.value; // Save current selection
+                select.innerHTML = '<option value="">Select an organization...</option>' +
+                    orgs.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+                // Restore selection if it was set
+                if (currentValue) {
+                    select.value = currentValue;
+                } else if (organizationId) {
+                    select.value = organizationId;
+                }
+            } else if (organizationId) {
+                // If dropdown already populated, just set the value
+                select.value = organizationId;
+            }
+        }
+
+        async function editMarket(id) {
+            try {
+                const response = await fetch(`/api/markets/${id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load market');
+                const market = await response.json();
+                document.getElementById('marketModalTitle').textContent = 'Edit Market';
+                document.getElementById('marketId').value = market.id;
+                await populateMarketOrganizationDropdown();
+                document.getElementById('marketOrganizationId').value = market.organization ? market.organization.id : '';
+                document.getElementById('marketName').value = market.name;
+                document.getElementById('marketDescription').value = market.description || '';
+                document.getElementById('marketCity').value = market.city || '';
+                document.getElementById('marketState').value = market.state || '';
+                document.getElementById('marketCountry').value = market.country || '';
+                document.getElementById('marketIsActive').checked = market.isActive !== false;
+                document.getElementById('marketModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading market:', error);
+                showError('Failed to load market');
+            }
+        }
+
+        function closeMarketModal() {
+            document.getElementById('marketModal').classList.remove('show');
+        }
+
+        async function deleteMarket(id, name) {
+            if (!confirm(`Are you sure you want to delete market "${name}"?`)) return;
+            try {
+                const response = await fetch(`/api/markets/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete market');
+                showSuccess('Market deleted successfully');
+                loadMarketsForTable();
+            } catch (error) {
+                console.error('Error deleting market:', error);
+                showError('Failed to delete market');
+            }
+        }
+
+        document.getElementById('marketForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('marketModalErrorMessage');
+            if (errorMsg) errorMsg.classList.remove('show');
+
+            const marketId = document.getElementById('marketId').value;
+            const orgId = document.getElementById('marketOrganizationId').value;
+            
+            if (!orgId) {
+                if (errorMsg) {
+                    errorMsg.textContent = 'Organization is required';
+                    errorMsg.classList.add('show');
+                }
+                return;
+            }
+
+            const marketData = {
+                organizationId: orgId,
+                name: document.getElementById('marketName').value,
+                description: document.getElementById('marketDescription').value || null,
+                city: document.getElementById('marketCity').value || null,
+                state: document.getElementById('marketState').value || null,
+                country: document.getElementById('marketCountry').value || null,
+                isActive: document.getElementById('marketIsActive').checked
+            };
+
+            try {
+                const url = marketId ? `/api/markets/${marketId}` : '/api/markets';
+                const method = marketId ? 'PUT' : 'POST';
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(marketData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Failed to save market' }));
+                    throw new Error(errorData.message || 'Failed to save market');
+                }
+
+                closeMarketModal();
+                showSuccess(marketId ? 'Market updated successfully' : 'Market created successfully');
+                loadMarketsForTable();
+                marketsList = []; // Clear cache
+            } catch (error) {
+                console.error('Error saving market:', error);
+                if (errorMsg) {
+                    errorMsg.textContent = error.message || 'Failed to save market';
+                    errorMsg.classList.add('show');
+                }
+            }
+        });
+
+        // Cluster Management
+        async function loadClustersForTable() {
+            try {
+                const response = await fetch('/api/clusters', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load clusters');
+                const clusters = await response.json();
+                displayClusters(clusters);
+            } catch (error) {
+                console.error('Error loading clusters:', error);
+                showError('Failed to load clusters');
+            }
+        }
+
+        function displayClusters(clusters) {
+            const tableBody = document.getElementById('clustersTableBody');
+            const loadingState = document.getElementById('clustersLoadingState');
+            const emptyState = document.getElementById('clustersEmptyState');
+            const table = document.getElementById('clustersTable');
+
+            loadingState.style.display = 'none';
+            if (clusters.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = clusters.map(c => `
+                <tr>
+                    <td><strong>${c.name}</strong></td>
+                    <td>${c.organization ? c.organization.name : '-'}</td>
+                    <td>${c.market ? c.market.name : '-'}</td>
+                    <td>${c.description || '-'}</td>
+                    <td><span class="badge ${c.isActive ? 'badge-active' : 'badge-inactive'}">${c.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editCluster('${c.id}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteCluster('${c.id}', '${c.name}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function openClusterModal() {
+            document.getElementById('clusterModalTitle').textContent = 'Create Cluster';
+            document.getElementById('clusterForm').reset();
+            document.getElementById('clusterId').value = '';
+            document.getElementById('clusterIsActive').checked = true;
+            await populateClusterDropdowns();
+            setupClusterOrgChangeHandler(); // Ensure handler is set up
+            document.getElementById('clusterModal').classList.add('show');
+        }
+
+        async function populateClusterDropdowns(organizationId = null) {
+            const orgSelect = document.getElementById('clusterOrganizationId');
+            const marketSelect = document.getElementById('clusterMarketId');
+            
+            // Only populate organizations dropdown if it's empty (initial load)
+            if (orgSelect.options.length <= 1) {
+                const orgs = await loadOrganizations();
+                const currentValue = orgSelect.value; // Save current selection
+                orgSelect.innerHTML = '<option value="">Select an organization...</option>' +
+                    orgs.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+                // Restore selection if it was set
+                if (currentValue) {
+                    orgSelect.value = currentValue;
+                    organizationId = currentValue; // Use saved value
+                }
+            } else if (organizationId) {
+                // If dropdown already populated, just ensure the value is set
+                orgSelect.value = organizationId;
+            }
+
+            // Update markets dropdown based on selected organization
+            if (organizationId) {
+                const markets = await loadMarkets(organizationId);
+                const currentMarketValue = marketSelect.value; // Save current market selection
+                marketSelect.innerHTML = '<option value="">None</option>' +
+                    markets.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+                // Restore market selection if it was set and still valid
+                if (currentMarketValue && markets.some(m => m.id === currentMarketValue)) {
+                    marketSelect.value = currentMarketValue;
+                }
+            } else {
+                marketSelect.innerHTML = '<option value="">None</option>';
+            }
+        }
+
+        // Set up event listener for organization change - only update markets, NOT organizations
+        let clusterOrgChangeHandler = null;
+        function setupClusterOrgChangeHandler() {
+            const orgSelect = document.getElementById('clusterOrganizationId');
+            if (orgSelect && !clusterOrgChangeHandler) {
+                clusterOrgChangeHandler = async (e) => {
+                    const selectedOrgId = e.target.value || null;
+                    const marketSelect = document.getElementById('clusterMarketId');
+                    if (selectedOrgId) {
+                        const markets = await loadMarkets(selectedOrgId);
+                        const currentMarketValue = marketSelect.value; // Save current selection
+                        marketSelect.innerHTML = '<option value="">None</option>' +
+                            markets.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+                        // Restore market selection if it was set and still valid
+                        if (currentMarketValue && markets.some(m => m.id === currentMarketValue)) {
+                            marketSelect.value = currentMarketValue;
+                        }
+                    } else {
+                        marketSelect.innerHTML = '<option value="">None</option>';
+                    }
+                };
+                orgSelect.addEventListener('change', clusterOrgChangeHandler);
+            }
+        }
+        
+        // Initialize the handler when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupClusterOrgChangeHandler);
+        } else {
+            setupClusterOrgChangeHandler();
+        }
+
+        async function editCluster(id) {
+            try {
+                const response = await fetch(`/api/clusters/${id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load cluster');
+                const cluster = await response.json();
+                document.getElementById('clusterModalTitle').textContent = 'Edit Cluster';
+                document.getElementById('clusterId').value = cluster.id;
+                await populateClusterDropdowns(cluster.organization ? cluster.organization.id : null);
+                document.getElementById('clusterOrganizationId').value = cluster.organization ? cluster.organization.id : '';
+                document.getElementById('clusterMarketId').value = cluster.market ? cluster.market.id : '';
+                document.getElementById('clusterName').value = cluster.name;
+                document.getElementById('clusterDescription').value = cluster.description || '';
+                document.getElementById('clusterIsActive').checked = cluster.isActive !== false;
+                document.getElementById('clusterModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading cluster:', error);
+                showError('Failed to load cluster');
+            }
+        }
+
+        function closeClusterModal() {
+            document.getElementById('clusterModal').classList.remove('show');
+        }
+
+        async function deleteCluster(id, name) {
+            if (!confirm(`Are you sure you want to delete cluster "${name}"?`)) return;
+            try {
+                const response = await fetch(`/api/clusters/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete cluster');
+                showSuccess('Cluster deleted successfully');
+                loadClustersForTable();
+            } catch (error) {
+                console.error('Error deleting cluster:', error);
+                showError('Failed to delete cluster');
+            }
+        }
+
+        document.getElementById('clusterForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('clusterModalErrorMessage');
+            if (errorMsg) errorMsg.classList.remove('show');
+
+            const clusterId = document.getElementById('clusterId').value;
+            const orgId = document.getElementById('clusterOrganizationId').value;
+            const marketId = document.getElementById('clusterMarketId').value;
+            
+            if (!orgId) {
+                if (errorMsg) {
+                    errorMsg.textContent = 'Organization is required';
+                    errorMsg.classList.add('show');
+                }
+                return;
+            }
+
+            const clusterData = {
+                organizationId: orgId,
+                marketId: marketId || null,
+                name: document.getElementById('clusterName').value,
+                description: document.getElementById('clusterDescription').value || null,
+                isActive: document.getElementById('clusterIsActive').checked
+            };
+
+            try {
+                const url = clusterId ? `/api/clusters/${clusterId}` : '/api/clusters';
+                const method = clusterId ? 'PUT' : 'POST';
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(clusterData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Failed to save cluster' }));
+                    throw new Error(errorData.message || 'Failed to save cluster');
+                }
+
+                closeClusterModal();
+                showSuccess(clusterId ? 'Cluster updated successfully' : 'Cluster created successfully');
+                loadClustersForTable();
+                clustersList = []; // Clear cache
+            } catch (error) {
+                console.error('Error saving cluster:', error);
+                if (errorMsg) {
+                    errorMsg.textContent = error.message || 'Failed to save cluster';
+                    errorMsg.classList.add('show');
+                }
+            }
+        });
+
+        // Helper function to load stations for dropdowns
+        let stationsListForSelect = [];
+        async function loadStationsForSelect() {
+            if (stationsListForSelect.length === 0) {
+                try {
+                    const response = await fetch('/api/stations', {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    if (response.ok) {
+                        stationsListForSelect = await response.json();
+                    }
+                } catch (error) {
+                    console.error('Error loading stations:', error);
+                }
+            }
+            return stationsListForSelect;
+        }
+
+        // Channel Management
+        async function loadChannelsForTable() {
+            try {
+                const response = await fetch('/api/channels', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load channels');
+                const channels = await response.json();
+                displayChannels(channels);
+            } catch (error) {
+                console.error('Error loading channels:', error);
+                showError('Failed to load channels');
+            }
+        }
+
+        function displayChannels(channels) {
+            const tableBody = document.getElementById('channelsTableBody');
+            const loadingState = document.getElementById('channelsLoadingState');
+            const emptyState = document.getElementById('channelsEmptyState');
+            const table = document.getElementById('channelsTable');
+
+            loadingState.style.display = 'none';
+            if (channels.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = channels.map(c => `
+                <tr>
+                    <td><strong>${c.name}</strong></td>
+                    <td>${c.stationName || '-'} (${c.stationCallSign || '-'})</td>
+                    <td>${c.channelNumber || '-'}</td>
+                    <td><span class="badge badge-active">${c.formatType}</span></td>
+                    <td><span class="badge ${c.isActive ? 'badge-active' : 'badge-inactive'}">${c.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td>${c.description || '-'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editChannel('${c.id}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteChannel('${c.id}', '${c.name}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function openChannelModal() {
+            document.getElementById('channelModalTitle').textContent = 'Create Channel';
+            document.getElementById('channelForm').reset();
+            document.getElementById('channelId').value = '';
+            document.getElementById('channelIsActive').checked = true;
+            await populateChannelStationDropdown();
+            document.getElementById('channelModal').classList.add('show');
+        }
+
+        async function populateChannelStationDropdown() {
+            const stations = await loadStationsForSelect();
+            const select = document.getElementById('channelStationId');
+            select.innerHTML = '<option value="">Select a station...</option>' +
+                stations.map(s => `<option value="${s.id}">${s.callSign} - ${s.name}</option>`).join('');
+        }
+
+        async function editChannel(id) {
+            try {
+                const response = await fetch(`/api/channels/${id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load channel');
+                const channel = await response.json();
+                document.getElementById('channelModalTitle').textContent = 'Edit Channel';
+                document.getElementById('channelId').value = channel.id;
+                await populateChannelStationDropdown();
+                document.getElementById('channelStationId').value = channel.stationId || '';
+                document.getElementById('channelName').value = channel.name;
+                document.getElementById('channelNumber').value = channel.channelNumber || '';
+                document.getElementById('channelFormatType').value = channel.formatType || '';
+                document.getElementById('channelDescription').value = channel.description || '';
+                document.getElementById('channelIsActive').checked = channel.isActive !== false;
+                document.getElementById('channelModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading channel:', error);
+                showError('Failed to load channel');
+            }
+        }
+
+        async function deleteChannel(id, name) {
+            if (!confirm(`Are you sure you want to delete channel "${name}"?`)) return;
+            try {
+                const response = await fetch(`/api/channels/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete channel');
+                showSuccess('Channel deleted successfully');
+                loadChannelsForTable();
+                channelsList = []; // Clear cache
+            } catch (error) {
+                console.error('Error deleting channel:', error);
+                showError('Failed to delete channel');
+            }
+        }
+
+        function closeChannelModal() {
+            document.getElementById('channelModal').classList.remove('show');
+        }
+
+        // Channel Form Submission
+        document.getElementById('channelForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('channelModalErrorMessage');
+            if (errorMsg) errorMsg.classList.remove('show');
+
+            const channelId = document.getElementById('channelId').value;
+            const stationId = document.getElementById('channelStationId').value;
+            
+            if (!stationId) {
+                if (errorMsg) {
+                    errorMsg.textContent = 'Station is required';
+                    errorMsg.classList.add('show');
+                }
+                return;
+            }
+
+            const channelData = {
+                stationId: stationId,
+                name: document.getElementById('channelName').value,
+                channelNumber: document.getElementById('channelNumber').value ? parseInt(document.getElementById('channelNumber').value) : null,
+                formatType: document.getElementById('channelFormatType').value,
+                description: document.getElementById('channelDescription').value || null,
+                isActive: document.getElementById('channelIsActive').checked
+            };
+
+            try {
+                const url = channelId ? `/api/channels/${channelId}` : '/api/channels';
+                const method = channelId ? 'PUT' : 'POST';
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(channelData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Failed to save channel' }));
+                    throw new Error(errorData.message || 'Failed to save channel');
+                }
+
+                closeChannelModal();
+                showSuccess(channelId ? 'Channel updated successfully' : 'Channel created successfully');
+                loadChannelsForTable();
+                channelsList = []; // Clear cache
+            } catch (error) {
+                console.error('Error saving channel:', error);
+                if (errorMsg) {
+                    errorMsg.textContent = error.message || 'Failed to save channel';
+                    errorMsg.classList.add('show');
+                }
+            }
+        });
+
+        // Clock Template Management
+        let channelsList = [];
+        async function loadChannelsForSelect(stationId = null) {
+            try {
+                const url = stationId ? `/api/channels?stationId=${stationId}` : '/api/channels';
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (response.ok) {
+                    channelsList = await response.json();
+                }
+            } catch (error) {
+                console.error('Error loading channels:', error);
+            }
+            return channelsList;
+        }
+
+        async function loadClocks() {
+            try {
+                const response = await fetch('/api/clocks', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load clock templates');
+                const clocks = await response.json();
+                displayClocks(clocks);
+            } catch (error) {
+                console.error('Error loading clocks:', error);
+                showError('Failed to load clock templates');
+            }
+        }
+
+        function displayClocks(clocks) {
+            const tableBody = document.getElementById('clocksTableBody');
+            const loadingState = document.getElementById('clocksLoadingState');
+            const emptyState = document.getElementById('clocksEmptyState');
+            const table = document.getElementById('clocksTable');
+
+            loadingState.style.display = 'none';
+            if (clocks.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = clocks.map(c => `
+                <tr>
+                    <td><strong>${c.name}</strong></td>
+                    <td>${c.channelName || '-'}</td>
+                    <td><span class="badge ${c.isActive ? 'badge-active' : 'badge-inactive'}">${c.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td>${c.description || '-'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editClock('${c.id}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteClock('${c.id}', '${c.name}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadDayparts() {
+            try {
+                const response = await fetch('/api/dayparts', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load dayparts');
+                const dayparts = await response.json();
+                displayDayparts(dayparts);
+            } catch (error) {
+                console.error('Error loading dayparts:', error);
+                showError('Failed to load dayparts');
+            }
+        }
+
+        function displayDayparts(dayparts) {
+            const tableBody = document.getElementById('daypartsTableBody');
+            const loadingState = document.getElementById('daypartsLoadingState');
+            const emptyState = document.getElementById('daypartsEmptyState');
+            const table = document.getElementById('daypartsTable');
+
+            loadingState.style.display = 'none';
+            if (dayparts.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = dayparts.map(d => `
+                <tr>
+                    <td>${d.name}</td>
+                    <td>${d.startTime}</td>
+                    <td>${d.endTime}</td>
+                    <td>${d.categoryName || '-'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editDaypart('${d.id}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteDaypart('${d.id}', '${d.name}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadOrders() {
+            try {
+                const response = await fetch('/api/orders', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load orders');
+                const orders = await response.json();
+                displayOrders(orders);
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                showError('Failed to load orders');
+            }
+        }
+
+        function displayOrders(orders) {
+            const tableBody = document.getElementById('ordersTableBody');
+            const loadingState = document.getElementById('ordersLoadingState');
+            const emptyState = document.getElementById('ordersEmptyState');
+            const table = document.getElementById('ordersTable');
+
+            loadingState.style.display = 'none';
+            if (orders.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = orders.map(o => `
+                <tr>
+                    <td><strong>${o.orderNumber}</strong></td>
+                    <td>${o.stationCallSign}</td>
+                    <td>${o.advertiserName}</td>
+                    <td><span class="badge badge-active">${o.status}</span></td>
+                    <td>${new Date(o.startDate).toLocaleDateString()}</td>
+                    <td>${new Date(o.endDate).toLocaleDateString()}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editOrder('${o.id}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteOrder('${o.id}', '${o.orderNumber}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadAdvertisers() {
+            try {
+                const response = await fetch('/api/advertisers', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load advertisers');
+                const advertisers = await response.json();
+                displayAdvertisers(advertisers);
+            } catch (error) {
+                console.error('Error loading advertisers:', error);
+                showError('Failed to load advertisers');
+            }
+        }
+
+        function displayAdvertisers(advertisers) {
+            const tableBody = document.getElementById('advertisersTableBody');
+            const loadingState = document.getElementById('advertisersLoadingState');
+            const emptyState = document.getElementById('advertisersEmptyState');
+            const table = document.getElementById('advertisersTable');
+
+            loadingState.style.display = 'none';
+            if (advertisers.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = advertisers.map(a => `
+                <tr>
+                    <td>${a.name}</td>
+                    <td>${a.agencyName || '-'}</td>
+                    <td>${a.salesRepName || '-'}</td>
+                    <td><span class="badge ${a.isActive ? 'badge-active' : 'badge-inactive'}">${a.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editAdvertiser('${a.id}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteAdvertiser('${a.id}', '${a.name}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadAgencies() {
+            try {
+                const response = await fetch('/api/agencies', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load agencies');
+                const agencies = await response.json();
+                displayAgencies(agencies);
+            } catch (error) {
+                console.error('Error loading agencies:', error);
+                showError('Failed to load agencies');
+            }
+        }
+
+        function displayAgencies(agencies) {
+            const tableBody = document.getElementById('agenciesTableBody');
+            const loadingState = document.getElementById('agenciesLoadingState');
+            const emptyState = document.getElementById('agenciesEmptyState');
+            const table = document.getElementById('agenciesTable');
+
+            loadingState.style.display = 'none';
+            if (agencies.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = agencies.map(a => `
+                <tr>
+                    <td>${a.name}</td>
+                    <td>${a.email || '-'}</td>
+                    <td>${a.phone || '-'}</td>
+                    <td><span class="badge ${a.isActive ? 'badge-active' : 'badge-inactive'}">${a.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editAgency('${a.id}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteAgency('${a.id}', '${a.name}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadSalesReps() {
+            try {
+                const response = await fetch('/api/sales-reps', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load sales reps');
+                const salesReps = await response.json();
+                displaySalesReps(salesReps);
+            } catch (error) {
+                console.error('Error loading sales reps:', error);
+                showError('Failed to load sales reps');
+            }
+        }
+
+        function displaySalesReps(salesReps) {
+            const tableBody = document.getElementById('salesRepsTableBody');
+            const loadingState = document.getElementById('salesRepsLoadingState');
+            const emptyState = document.getElementById('salesRepsEmptyState');
+            const table = document.getElementById('salesRepsTable');
+
+            loadingState.style.display = 'none';
+            if (salesReps.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = salesReps.map(sr => `
+                <tr>
+                    <td>${sr.firstName} ${sr.lastName}</td>
+                    <td>${sr.email}</td>
+                    <td>${sr.phone || '-'}</td>
+                    <td><span class="badge ${sr.isActive ? 'badge-active' : 'badge-inactive'}">${sr.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editSalesRep('${sr.id}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteSalesRep('${sr.id}', '${sr.firstName} ${sr.lastName}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // User management (existing functions)
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load users');
+                const users = await response.json();
+                displayUsers(users);
+            } catch (error) {
+                console.error('Error loading users:', error);
+                showError('Failed to load users');
+            }
+        }
+
+        function displayUsers(users) {
+            const tableBody = document.getElementById('usersTableBody');
+            const loadingState = document.getElementById('usersLoadingState');
+            const emptyState = document.getElementById('usersEmptyState');
+            const table = document.getElementById('usersTable');
+
+            loadingState.style.display = 'none';
+            if (users.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = users.map(u => `
+                <tr>
+                    <td>${u.email}</td>
+                    <td><span class="badge badge-${u.role.toLowerCase()}">${u.role}</span></td>
+                    <td><span class="badge badge-${u.status.toLowerCase()}">${u.status}</span></td>
+                    <td>${new Date(u.createdAt).toLocaleDateString()}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editUser('${u.id}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}', '${u.email}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openCreateModal() {
+            document.getElementById('modalTitle').textContent = 'Create User';
+            document.getElementById('userForm').reset();
+            document.getElementById('userId').value = '';
+            document.getElementById('passwordRequired').style.display = 'inline';
+            document.getElementById('password').required = true;
+            document.getElementById('userModal').classList.add('show');
+        }
+
+        async function editUser(userId) {
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load user');
+                const user = await response.json();
+                document.getElementById('modalTitle').textContent = 'Edit User';
+                document.getElementById('userId').value = user.id;
+                document.getElementById('email').value = user.email;
+                document.getElementById('role').value = user.role;
+                document.getElementById('status').value = user.status;
+                document.getElementById('password').value = '';
+                document.getElementById('passwordRequired').style.display = 'none';
+                document.getElementById('password').required = false;
+                document.getElementById('userModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading user:', error);
+                showError('Failed to load user');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('userModal').classList.remove('show');
+            document.getElementById('modalErrorMessage').classList.remove('show');
+        }
+
+        async function deleteUser(userId, email) {
+            if (!confirm(`Are you sure you want to delete user "${email}"?`)) return;
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete user');
+                showSuccess('User deleted successfully');
+                loadUsers();
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                showError('Failed to delete user');
+            }
+        }
+
+        document.getElementById('userForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('modalErrorMessage');
+            errorMsg.classList.remove('show');
+
+            const userId = document.getElementById('userId').value;
+            const userData = {
+                email: document.getElementById('email').value,
+                role: document.getElementById('role').value,
+                status: document.getElementById('status').value
+            };
+
+            const password = document.getElementById('password').value;
+            if (password) {
+                userData.password = password;
+            } else if (!userId) {
+                errorMsg.textContent = 'Password is required for new users';
+                errorMsg.classList.add('show');
+                return;
+            }
+
+            try {
+                const url = userId ? `/api/users/${userId}` : '/api/users';
+                const method = userId ? 'PUT' : 'POST';
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to save user');
+                }
+
+                closeModal();
+                showSuccess(userId ? 'User updated successfully' : 'User created successfully');
+                loadUsers();
+            } catch (error) {
+                console.error('Error saving user:', error);
+                errorMsg.textContent = error.message || 'Failed to save user';
+                errorMsg.classList.add('show');
+            }
+        });
+
+        // Clock Template Modal Functions
+        async function openClockModal() {
+            document.getElementById('clockModalTitle').textContent = 'Create Clock Template';
+            document.getElementById('clockForm').reset();
+            document.getElementById('clockId').value = '';
+            document.getElementById('clockIsActive').checked = true;
+            await populateClockChannelDropdown();
+            document.getElementById('clockModal').classList.add('show');
+        }
+
+        async function populateClockChannelDropdown() {
+            const channels = await loadChannelsForSelect();
+            const select = document.getElementById('clockChannelId');
+            select.innerHTML = '<option value="">Select a channel...</option>' +
+                channels.map(c => `<option value="${c.id}">${c.station ? c.station.name + ' - ' : ''}${c.name} (${c.formatType})</option>`).join('');
+        }
+
+        async function editClock(id) {
+            try {
+                const response = await fetch(`/api/clocks/${id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load clock template');
+                const clock = await response.json();
+                document.getElementById('clockModalTitle').textContent = 'Edit Clock Template';
+                document.getElementById('clockId').value = clock.id;
+                await populateClockChannelDropdown();
+                document.getElementById('clockChannelId').value = clock.channelId || '';
+                document.getElementById('clockName').value = clock.name;
+                document.getElementById('clockDescription').value = clock.description || '';
+                document.getElementById('clockIsActive').checked = clock.isActive !== false;
+                document.getElementById('clockModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading clock template:', error);
+                showError('Failed to load clock template');
+            }
+        }
+
+        async function deleteClock(id, name) {
+            if (!confirm(`Are you sure you want to delete clock template "${name}"?`)) return;
+            try {
+                const response = await fetch(`/api/clocks/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete clock template');
+                showSuccess('Clock template deleted successfully');
+                loadClocks();
+            } catch (error) {
+                console.error('Error deleting clock template:', error);
+                showError('Failed to delete clock template');
+            }
+        }
+
+        function closeClockModal() {
+            document.getElementById('clockModal').classList.remove('show');
+        }
+
+        // Daypart Category Management
+        let daypartCategoriesList = [];
+        async function loadDaypartCategoriesForTable() {
+            try {
+                const response = await fetch('/api/daypart-categories', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load daypart categories');
+                const categories = await response.json();
+                displayDaypartCategories(categories);
+            } catch (error) {
+                console.error('Error loading daypart categories:', error);
+                showError('Failed to load daypart categories');
+            }
+        }
+
+        function displayDaypartCategories(categories) {
+            const tableBody = document.getElementById('daypartCategoriesTableBody');
+            const loadingState = document.getElementById('daypartCategoriesLoadingState');
+            const emptyState = document.getElementById('daypartCategoriesEmptyState');
+            const table = document.getElementById('daypartCategoriesTable');
+
+            loadingState.style.display = 'none';
+            if (categories.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = categories.map(c => `
+                <tr>
+                    <td><strong>${c.name}</strong></td>
+                    <td>${c.description || '-'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editDaypartCategory('${c.id}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteDaypartCategory('${c.id}', '${c.name}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function openDaypartCategoryModal() {
+            document.getElementById('daypartCategoryModalTitle').textContent = 'Create Daypart Category';
+            document.getElementById('daypartCategoryForm').reset();
+            document.getElementById('daypartCategoryFormId').value = '';
+            document.getElementById('daypartCategoryModal').classList.add('show');
+        }
+
+        async function editDaypartCategory(id) {
+            try {
+                const response = await fetch(`/api/daypart-categories/${id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load daypart category');
+                const category = await response.json();
+                document.getElementById('daypartCategoryModalTitle').textContent = 'Edit Daypart Category';
+                document.getElementById('daypartCategoryFormId').value = category.id;
+                document.getElementById('daypartCategoryName').value = category.name;
+                document.getElementById('daypartCategoryDescription').value = category.description || '';
+                document.getElementById('daypartCategoryModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading daypart category:', error);
+                showError('Failed to load daypart category');
+            }
+        }
+
+        async function deleteDaypartCategory(id, name) {
+            if (!confirm(`Are you sure you want to delete daypart category "${name}"?`)) return;
+            try {
+                const response = await fetch(`/api/daypart-categories/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete daypart category');
+                showSuccess('Daypart category deleted successfully');
+                loadDaypartCategoriesForTable();
+                daypartCategoriesList = []; // Clear cache
+            } catch (error) {
+                console.error('Error deleting daypart category:', error);
+                showError('Failed to delete daypart category');
+            }
+        }
+
+        function closeDaypartCategoryModal() {
+            document.getElementById('daypartCategoryModal').classList.remove('show');
+        }
+
+        // Daypart Category Form Submission
+        document.getElementById('daypartCategoryForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('daypartCategoryModalErrorMessage');
+            if (errorMsg) errorMsg.classList.remove('show');
+
+            const categoryId = document.getElementById('daypartCategoryFormId').value;
+
+            const categoryData = {
+                name: document.getElementById('daypartCategoryName').value,
+                description: document.getElementById('daypartCategoryDescription').value || null
+            };
+
+            try {
+                const url = categoryId ? `/api/daypart-categories/${categoryId}` : '/api/daypart-categories';
+                const method = categoryId ? 'PUT' : 'POST';
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(categoryData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Failed to save daypart category' }));
+                    throw new Error(errorData.message || 'Failed to save daypart category');
+                }
+
+                closeDaypartCategoryModal();
+                showSuccess(categoryId ? 'Daypart category updated successfully' : 'Daypart category created successfully');
+                loadDaypartCategoriesForTable();
+                daypartCategoriesList = []; // Clear cache
+            } catch (error) {
+                console.error('Error saving daypart category:', error);
+                if (errorMsg) {
+                    errorMsg.textContent = error.message || 'Failed to save daypart category';
+                    errorMsg.classList.add('show');
+                }
+            }
+        });
+
+        // Daypart Modal Functions
+        async function loadDaypartCategories() {
+            if (daypartCategoriesList.length === 0) {
+                try {
+                    const response = await fetch('/api/daypart-categories', {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    if (response.ok) {
+                        daypartCategoriesList = await response.json();
+                    }
+                } catch (error) {
+                    console.error('Error loading daypart categories:', error);
+                }
+            }
+            return daypartCategoriesList;
+        }
+
+        async function openDaypartModal() {
+            document.getElementById('daypartModalTitle').textContent = 'Create Daypart';
+            document.getElementById('daypartForm').reset();
+            document.getElementById('daypartId').value = '';
+            // Set default times to current hour at :00 minutes
+            const now = new Date();
+            const currentHour = String(now.getHours()).padStart(2, '0');
+            document.getElementById('daypartStartTime').value = `${currentHour}:00`;
+            document.getElementById('daypartEndTime').value = `${currentHour}:00`;
+            await populateDaypartCategoryDropdown();
+            document.getElementById('daypartModal').classList.add('show');
+        }
+
+        async function populateDaypartCategoryDropdown() {
+            const categories = await loadDaypartCategories();
+            const select = document.getElementById('daypartCategoryId');
+            select.innerHTML = '<option value="">None</option>' +
+                categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        }
+
+        async function editDaypart(id) {
+            try {
+                const response = await fetch(`/api/dayparts/${id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load daypart');
+                const daypart = await response.json();
+                document.getElementById('daypartModalTitle').textContent = 'Edit Daypart';
+                document.getElementById('daypartId').value = daypart.id;
+                document.getElementById('daypartName').value = daypart.name;
+                // Format time for input type="time" (HH:mm)
+                const startTime = daypart.startTime ? daypart.startTime.substring(0, 5) : '';
+                const endTime = daypart.endTime ? daypart.endTime.substring(0, 5) : '';
+                document.getElementById('daypartStartTime').value = startTime;
+                document.getElementById('daypartEndTime').value = endTime;
+                await populateDaypartCategoryDropdown();
+                document.getElementById('daypartCategoryId').value = daypart.categoryId || '';
+                document.getElementById('daypartModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading daypart:', error);
+                showError('Failed to load daypart');
+            }
+        }
+
+        async function deleteDaypart(id, name) {
+            if (!confirm(`Are you sure you want to delete daypart "${name}"?`)) return;
+            try {
+                const response = await fetch(`/api/dayparts/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete daypart');
+                showSuccess('Daypart deleted successfully');
+                loadDayparts();
+            } catch (error) {
+                console.error('Error deleting daypart:', error);
+                showError('Failed to delete daypart');
+            }
+        }
+
+        function closeDaypartModal() {
+            document.getElementById('daypartModal').classList.remove('show');
+        }
+
+        // Clock Template Form Submission
+        document.getElementById('clockForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('clockModalErrorMessage');
+            if (errorMsg) errorMsg.classList.remove('show');
+
+            const clockId = document.getElementById('clockId').value;
+            const channelId = document.getElementById('clockChannelId').value;
+            
+            if (!channelId) {
+                if (errorMsg) {
+                    errorMsg.textContent = 'Channel is required';
+                    errorMsg.classList.add('show');
+                }
+                return;
+            }
+
+            const clockData = {
+                channelId: channelId,
+                name: document.getElementById('clockName').value,
+                description: document.getElementById('clockDescription').value || null,
+                isActive: document.getElementById('clockIsActive').checked
+            };
+
+            try {
+                const url = clockId ? `/api/clocks/${clockId}` : '/api/clocks';
+                const method = clockId ? 'PUT' : 'POST';
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(clockData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Failed to save clock template' }));
+                    throw new Error(errorData.message || 'Failed to save clock template');
+                }
+
+                closeClockModal();
+                showSuccess(clockId ? 'Clock template updated successfully' : 'Clock template created successfully');
+                loadClocks();
+                channelsList = []; // Clear cache
+            } catch (error) {
+                console.error('Error saving clock template:', error);
+                if (errorMsg) {
+                    errorMsg.textContent = error.message || 'Failed to save clock template';
+                    errorMsg.classList.add('show');
+                }
+            }
+        });
+
+        // Daypart Form Submission
+        document.getElementById('daypartForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('daypartModalErrorMessage');
+            if (errorMsg) errorMsg.classList.remove('show');
+
+            const daypartId = document.getElementById('daypartId').value;
+            const categoryId = document.getElementById('daypartCategoryId').value;
+            
+            // Get time values
+            let startTime = document.getElementById('daypartStartTime').value;
+            let endTime = document.getElementById('daypartEndTime').value;
+            
+            // Handle midnight (24:00) - HTML time inputs use 00:00 for midnight
+            // If end time is 00:00 and start time is later in the day, it's valid (wraps to next day)
+            // The backend will handle this validation
+            
+            const daypartData = {
+                name: document.getElementById('daypartName').value,
+                startTime: startTime,
+                endTime: endTime,
+                categoryId: categoryId || null
+            };
+
+            try {
+                const url = daypartId ? `/api/dayparts/${daypartId}` : '/api/dayparts';
+                const method = daypartId ? 'PUT' : 'POST';
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(daypartData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Failed to save daypart' }));
+                    throw new Error(errorData.message || 'Failed to save daypart');
+                }
+
+                closeDaypartModal();
+                showSuccess(daypartId ? 'Daypart updated successfully' : 'Daypart created successfully');
+                loadDayparts();
+                daypartCategoriesList = []; // Clear cache
+            } catch (error) {
+                console.error('Error saving daypart:', error);
+                if (errorMsg) {
+                    errorMsg.textContent = error.message || 'Failed to save daypart';
+                    errorMsg.classList.add('show');
+                }
+            }
+        });
+        function openOrderModal() { showError('Order creation - Coming soon'); }
+        function openAdvertiserModal() { showError('Advertiser creation - Coming soon'); }
+        function openAgencyModal() { showError('Agency creation - Coming soon'); }
+        function openSalesRepModal() { showError('Sales rep creation - Coming soon'); }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            setTimeout(() => errorDiv.classList.remove('show'), 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.classList.add('show');
+            setTimeout(() => successDiv.classList.remove('show'), 5000);
+        }
+
+        // Set copyright year and load version
+        document.getElementById('copyrightYear').textContent = new Date().getFullYear();
+        fetch('/actuator/info')
+            .then(r => r.ok ? r.json() : null)
+            .then(info => {
+                if (info && info.app && info.app.version) {
+                    document.getElementById('appVersion').textContent = info.app.version;
+                } else {
+                    document.getElementById('appVersion').textContent = 'Unknown';
+                }
+            })
+            .catch(() => {
+                document.getElementById('appVersion').textContent = 'Unknown';
+            });
+
+        // Initialize
+        loadUserInfo();
+        loadStations();
+    </script>
+</body>
+</html>
+

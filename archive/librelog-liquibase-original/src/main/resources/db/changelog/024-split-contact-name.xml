@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="024-split-contact-name" author="migration">
+        <comment>Split contact_name into contact_first_name and contact_last_name for advertisers and agencies</comment>
+
+        <!-- Add new columns to advertisers table -->
+        <addColumn tableName="advertisers">
+            <column name="contact_first_name" type="VARCHAR(100)"/>
+            <column name="contact_last_name" type="VARCHAR(100)"/>
+        </addColumn>
+
+        <!-- Migrate existing contact_name data for advertisers -->
+        <sql>
+            UPDATE advertisers
+            SET contact_first_name = SPLIT_PART(contact_name, ' ', 1),
+                contact_last_name = CASE
+                    WHEN LENGTH(SPLIT_PART(contact_name, ' ', 2)) > 0
+                    THEN SUBSTRING(contact_name FROM POSITION(' ' IN contact_name) + 1)
+                    ELSE NULL
+                END
+            WHERE contact_name IS NOT NULL;
+        </sql>
+
+        <!-- Drop the old contact_name column from advertisers -->
+        <dropColumn tableName="advertisers" columnName="contact_name"/>
+
+        <!-- Add new columns to agencies table -->
+        <addColumn tableName="agencies">
+            <column name="contact_first_name" type="VARCHAR(100)"/>
+            <column name="contact_last_name" type="VARCHAR(100)"/>
+        </addColumn>
+
+        <!-- Migrate existing contact_name data for agencies -->
+        <sql>
+            UPDATE agencies
+            SET contact_first_name = SPLIT_PART(contact_name, ' ', 1),
+                contact_last_name = CASE
+                    WHEN LENGTH(SPLIT_PART(contact_name, ' ', 2)) > 0
+                    THEN SUBSTRING(contact_name FROM POSITION(' ' IN contact_name) + 1)
+                    ELSE NULL
+                END
+            WHERE contact_name IS NOT NULL;
+        </sql>
+
+        <!-- Drop the old contact_name column from agencies -->
+        <dropColumn tableName="agencies" columnName="contact_name"/>
+
+    </changeSet>
+
+</databaseChangeLog>
+
+

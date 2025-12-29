@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="016-create-user-sessions-table" author="librelog">
+		<comment>Create user_sessions table for session management and tracking active users</comment>
+		
+		<createTable tableName="user_sessions">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="user_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="session_token" type="VARCHAR(500)">
+				<constraints nullable="false" unique="true"/>
+			</column>
+			<column name="login_timestamp" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="last_activity_timestamp" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="ip_address" type="VARCHAR(255)">
+				<constraints nullable="true"/>
+			</column>
+			<column name="user_agent" type="VARCHAR(500)">
+				<constraints nullable="true"/>
+			</column>
+			<column name="current_station_id" type="UUID">
+				<constraints nullable="true"/>
+			</column>
+			<column name="current_resource_id" type="UUID">
+				<constraints nullable="true"/>
+			</column>
+			<column name="is_active" type="BOOLEAN" defaultValueBoolean="true">
+				<constraints nullable="false"/>
+			</column>
+			<column name="expires_at" type="TIMESTAMP WITH TIME ZONE">
+				<constraints nullable="false"/>
+			</column>
+		</createTable>
+		
+		<addForeignKeyConstraint
+			baseTableName="user_sessions"
+			baseColumnNames="user_id"
+			constraintName="fk_user_sessions_user"
+			referencedTableName="users"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		
+		<addForeignKeyConstraint
+			baseTableName="user_sessions"
+			baseColumnNames="current_station_id"
+			constraintName="fk_user_sessions_station"
+			referencedTableName="stations"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+		
+		<createIndex indexName="idx_user_sessions_user_id" tableName="user_sessions">
+			<column name="user_id"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_user_sessions_session_token" tableName="user_sessions">
+			<column name="session_token"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_user_sessions_is_active" tableName="user_sessions">
+			<column name="is_active"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_user_sessions_expires_at" tableName="user_sessions">
+			<column name="expires_at"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_user_sessions_user_active" tableName="user_sessions">
+			<column name="user_id"/>
+			<column name="is_active"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_user_sessions_current_station" tableName="user_sessions">
+			<column name="current_station_id"/>
+		</createIndex>
+	</changeSet>
+
+</databaseChangeLog>
+

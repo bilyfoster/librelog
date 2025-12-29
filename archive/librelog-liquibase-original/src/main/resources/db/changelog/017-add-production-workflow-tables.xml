@@ -1,0 +1,440 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="017-add-production-workflow-tables" author="migration">
+        <comment>Add production workflow tables: production_orders, production_assignments, voice_talent_requests, production_revisions, production_comments, and extend copy and users tables</comment>
+
+        <!-- Create production_orders table -->
+        <createTable tableName="production_orders">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="po_number" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="copy_id" type="UUID">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="order_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="campaign_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="advertiser_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="client_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="campaign_title" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="start_date" type="DATE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="end_date" type="DATE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="budget" type="NUMERIC(10,2)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="contract_number" type="VARCHAR(100)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="spot_lengths" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="deliverables" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="copy_requirements" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="talent_needs" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="audio_references" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="instructions" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="deadline" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="stations" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="version_count" type="INTEGER" defaultValueNumeric="1">
+                <constraints nullable="true"/>
+            </column>
+            <column name="order_type" type="VARCHAR(20)" defaultValue="new_spot">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="completed_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="delivered_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="production_orders"
+            baseColumnNames="copy_id"
+            constraintName="fk_production_orders_copy_id"
+            referencedTableName="copy"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="production_orders"
+            baseColumnNames="order_id"
+            constraintName="fk_production_orders_order_id"
+            referencedTableName="orders"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="production_orders"
+            baseColumnNames="campaign_id"
+            constraintName="fk_production_orders_campaign_id"
+            referencedTableName="campaigns"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="production_orders"
+            baseColumnNames="advertiser_id"
+            constraintName="fk_production_orders_advertiser_id"
+            referencedTableName="advertisers"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="production_orders" indexName="ix_production_orders_po_number" unique="true">
+            <column name="po_number"/>
+        </createIndex>
+        <createIndex tableName="production_orders" indexName="ix_production_orders_copy_id" unique="true">
+            <column name="copy_id"/>
+        </createIndex>
+        <createIndex tableName="production_orders" indexName="ix_production_orders_order_id">
+            <column name="order_id"/>
+        </createIndex>
+        <createIndex tableName="production_orders" indexName="ix_production_orders_campaign_id">
+            <column name="campaign_id"/>
+        </createIndex>
+        <createIndex tableName="production_orders" indexName="ix_production_orders_advertiser_id">
+            <column name="advertiser_id"/>
+        </createIndex>
+        <createIndex tableName="production_orders" indexName="ix_production_orders_status">
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="production_orders" indexName="ix_production_orders_deadline">
+            <column name="deadline"/>
+        </createIndex>
+
+        <!-- Create production_assignments table -->
+        <createTable tableName="production_assignments">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="production_order_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="assignment_type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="assigned_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="accepted_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="completed_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="production_assignments"
+            baseColumnNames="production_order_id"
+            constraintName="fk_production_assignments_production_order_id"
+            referencedTableName="production_orders"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="production_assignments"
+            baseColumnNames="user_id"
+            constraintName="fk_production_assignments_user_id"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="production_assignments" indexName="ix_production_assignments_production_order_id">
+            <column name="production_order_id"/>
+        </createIndex>
+        <createIndex tableName="production_assignments" indexName="ix_production_assignments_user_id">
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex tableName="production_assignments" indexName="ix_production_assignments_assignment_type">
+            <column name="assignment_type"/>
+        </createIndex>
+        <createIndex tableName="production_assignments" indexName="ix_production_assignments_status">
+            <column name="status"/>
+        </createIndex>
+
+        <!-- Create voice_talent_requests table -->
+        <createTable tableName="voice_talent_requests">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="production_order_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="talent_user_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="talent_type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="script" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="pronunciation_guides" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="talent_instructions" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="takes" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="assigned_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="deadline" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="completed_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="voice_talent_requests"
+            baseColumnNames="production_order_id"
+            constraintName="fk_voice_talent_requests_production_order_id"
+            referencedTableName="production_orders"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="voice_talent_requests"
+            baseColumnNames="talent_user_id"
+            constraintName="fk_voice_talent_requests_talent_user_id"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="voice_talent_requests" indexName="ix_voice_talent_requests_production_order_id">
+            <column name="production_order_id"/>
+        </createIndex>
+        <createIndex tableName="voice_talent_requests" indexName="ix_voice_talent_requests_talent_user_id">
+            <column name="talent_user_id"/>
+        </createIndex>
+        <createIndex tableName="voice_talent_requests" indexName="ix_voice_talent_requests_talent_type">
+            <column name="talent_type"/>
+        </createIndex>
+        <createIndex tableName="voice_talent_requests" indexName="ix_voice_talent_requests_status">
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="voice_talent_requests" indexName="ix_voice_talent_requests_deadline">
+            <column name="deadline"/>
+        </createIndex>
+
+        <!-- Create production_revisions table -->
+        <createTable tableName="production_revisions">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="production_order_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revision_number" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="requested_by" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reason" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="previous_revision_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="requested_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="completed_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="production_revisions"
+            baseColumnNames="production_order_id"
+            constraintName="fk_production_revisions_production_order_id"
+            referencedTableName="production_orders"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="production_revisions"
+            baseColumnNames="requested_by"
+            constraintName="fk_production_revisions_requested_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="production_revisions"
+            baseColumnNames="previous_revision_id"
+            constraintName="fk_production_revisions_previous_revision_id"
+            referencedTableName="production_revisions"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="production_revisions" indexName="ix_production_revisions_production_order_id">
+            <column name="production_order_id"/>
+        </createIndex>
+
+        <!-- Create production_comments table -->
+        <createTable tableName="production_comments">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="production_order_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="comment_text" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="author_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="parent_comment_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="attachments" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="is_internal" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="production_comments"
+            baseColumnNames="production_order_id"
+            constraintName="fk_production_comments_production_order_id"
+            referencedTableName="production_orders"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="production_comments"
+            baseColumnNames="author_id"
+            constraintName="fk_production_comments_author_id"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="production_comments"
+            baseColumnNames="parent_comment_id"
+            constraintName="fk_production_comments_parent_comment_id"
+            referencedTableName="production_comments"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="production_comments" indexName="ix_production_comments_production_order_id">
+            <column name="production_order_id"/>
+        </createIndex>
+
+        <!-- Extend copy table -->
+        <addColumn tableName="copy">
+            <column name="production_order_id" type="UUID"/>
+            <column name="copy_status" type="VARCHAR(20)" defaultValue="draft"/>
+            <column name="needs_production" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="copy_approval_status" type="VARCHAR(20)" defaultValue="pending"/>
+            <column name="script_approved_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="script_approved_by" type="UUID"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+            baseTableName="copy"
+            baseColumnNames="production_order_id"
+            constraintName="fk_copy_production_order"
+            referencedTableName="production_orders"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="copy"
+            baseColumnNames="script_approved_by"
+            constraintName="fk_copy_script_approver"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="copy" indexName="ix_copy_production_order_id" unique="true">
+            <column name="production_order_id"/>
+        </createIndex>
+        <createIndex tableName="copy" indexName="ix_copy_copy_status">
+            <column name="copy_status"/>
+        </createIndex>
+        <createIndex tableName="copy" indexName="ix_copy_needs_production">
+            <column name="needs_production"/>
+        </createIndex>
+        <createIndex tableName="copy" indexName="ix_copy_copy_approval_status">
+            <column name="copy_approval_status"/>
+        </createIndex>
+
+        <!-- Update users table constraint to allow new roles -->
+        <sql>
+            <![CDATA[
+            ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+            ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'producer', 'dj', 'sales', 'production_director', 'voice_talent'));
+            ]]>
+        </sql>
+
+    </changeSet>
+
+</databaseChangeLog>
+
+

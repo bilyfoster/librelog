@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="003-add-spot-scheduling-tables" author="migration">
+        <comment>Add spot scheduling tables: dayparts, break_structures, spots, and extend daily_logs</comment>
+
+        <!-- Create enum types -->
+        <sql>
+            CREATE TYPE breakposition AS ENUM ('A', 'B', 'C', 'D', 'E');
+            CREATE TYPE spotdaypart AS ENUM ('MORNING_DRIVE', 'MIDDAY', 'AFTERNOON_DRIVE', 'EVENING', 'OVERNIGHT');
+            CREATE TYPE spotstatus AS ENUM ('SCHEDULED', 'AIRED', 'MISSED', 'MAKEGOOD');
+        </sql>
+
+        <!-- Create dayparts table -->
+        <createTable tableName="dayparts">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_time" type="TIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_time" type="TIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="days_of_week" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="dayparts" indexName="ix_dayparts_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="dayparts" indexName="ix_dayparts_name">
+            <column name="name"/>
+        </createIndex>
+        <createIndex tableName="dayparts" indexName="ix_dayparts_active">
+            <column name="active"/>
+        </createIndex>
+
+        <!-- Create break_structures table -->
+        <createTable tableName="break_structures">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="hour" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="break_positions" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <sql>
+            <![CDATA[
+            ALTER TABLE break_structures ADD CONSTRAINT break_structures_hour_check CHECK (hour >= 0 AND hour <= 23);
+            ]]>
+        </sql>
+
+        <createIndex tableName="break_structures" indexName="ix_break_structures_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="break_structures" indexName="ix_break_structures_name">
+            <column name="name"/>
+        </createIndex>
+        <createIndex tableName="break_structures" indexName="ix_break_structures_hour">
+            <column name="hour"/>
+        </createIndex>
+        <createIndex tableName="break_structures" indexName="ix_break_structures_active">
+            <column name="active"/>
+        </createIndex>
+
+        <!-- Create spots table -->
+        <createTable tableName="spots">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="order_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="campaign_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="scheduled_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="scheduled_time" type="VARCHAR(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="spot_length" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="break_position" type="breakposition">
+                <constraints nullable="true"/>
+            </column>
+            <column name="daypart" type="spotdaypart">
+                <constraints nullable="true"/>
+            </column>
+            <column name="status" type="spotstatus" defaultValue="SCHEDULED">
+                <constraints nullable="false"/>
+            </column>
+            <column name="actual_air_time" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="makegood_of_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="conflict_resolved" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="spots"
+            baseColumnNames="order_id"
+            constraintName="fk_spots_order_id"
+            referencedTableName="orders"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="spots"
+            baseColumnNames="campaign_id"
+            constraintName="fk_spots_campaign_id"
+            referencedTableName="campaigns"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="spots"
+            baseColumnNames="makegood_of_id"
+            constraintName="fk_spots_makegood_of_id"
+            referencedTableName="spots"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="spots" indexName="ix_spots_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="spots" indexName="ix_spots_order_id">
+            <column name="order_id"/>
+        </createIndex>
+        <createIndex tableName="spots" indexName="ix_spots_campaign_id">
+            <column name="campaign_id"/>
+        </createIndex>
+        <createIndex tableName="spots" indexName="ix_spots_scheduled_date">
+            <column name="scheduled_date"/>
+        </createIndex>
+        <createIndex tableName="spots" indexName="ix_spots_daypart">
+            <column name="daypart"/>
+        </createIndex>
+        <createIndex tableName="spots" indexName="ix_spots_status">
+            <column name="status"/>
+        </createIndex>
+
+        <!-- Extend daily_logs table -->
+        <addColumn tableName="daily_logs">
+            <column name="locked" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="locked_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="locked_by" type="UUID"/>
+            <column name="conflicts" type="JSONB"/>
+            <column name="oversell_warnings" type="JSONB"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+            baseTableName="daily_logs"
+            baseColumnNames="locked_by"
+            constraintName="fk_daily_logs_locked_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="daily_logs" indexName="ix_daily_logs_locked">
+            <column name="locked"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
+

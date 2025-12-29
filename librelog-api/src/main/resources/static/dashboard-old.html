@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LibreLog - Admin Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0f0f1e;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(26, 26, 46, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-badge {
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.5);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .logout-btn {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+            color: #ff6b6b;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(220, 53, 69, 0.3);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #d0d0d0;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+            color: #ff6b6b;
+        }
+
+        .btn-danger:hover {
+            background: rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .table-container {
+            background: rgba(26, 26, 46, 0.95);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #d0d0d0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .badge-active {
+            background: rgba(40, 167, 69, 0.2);
+            color: #51cf66;
+            border: 1px solid rgba(40, 167, 69, 0.3);
+        }
+
+        .badge-inactive {
+            background: rgba(108, 117, 125, 0.2);
+            color: #adb5bd;
+            border: 1px solid rgba(108, 117, 125, 0.3);
+        }
+
+        .badge-banned {
+            background: rgba(220, 53, 69, 0.2);
+            color: #ff6b6b;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+
+        .badge-admin {
+            background: rgba(102, 126, 234, 0.2);
+            color: #8b9aff;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+
+        .badge-admin {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+
+        .badge-traffic_manager {
+            background: rgba(0, 123, 255, 0.2);
+            color: #007bff;
+            border: 1px solid rgba(0, 123, 255, 0.3);
+        }
+
+        .badge-sales_rep {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border: 1px solid rgba(40, 167, 69, 0.3);
+        }
+
+        .badge-programming {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .badge-accounting {
+            background: rgba(23, 162, 184, 0.2);
+            color: #17a2b8;
+            border: 1px solid rgba(23, 162, 184, 0.3);
+        }
+
+        .badge-operations {
+            background: rgba(108, 117, 125, 0.2);
+            color: #adb5bd;
+            border: 1px solid rgba(108, 117, 125, 0.3);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: rgba(26, 26, 46, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #a0a0a0;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+        }
+
+        .close-btn:hover {
+            color: #e0e0e0;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #d0d0d0;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .form-group input::placeholder {
+            color: #666;
+        }
+
+        .error-message {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+            color: #ff6b6b;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: rgba(40, 167, 69, 0.2);
+            border: 1px solid rgba(40, 167, 69, 0.5);
+            color: #51cf66;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #888;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #888;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #888;
+            font-size: 0.85rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-x: auto;
+        }
+
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: #a0a0a0;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .nav-tab:hover {
+            color: #e0e0e0;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .nav-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>LibreLog Admin Dashboard</h1>
+        <div class="user-info">
+            <span class="user-badge" id="userBadge">Loading...</span>
+            <a href="/" class="logout-btn" onclick="logout()">Logout</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('users')">Users</button>
+            <button class="nav-tab" onclick="switchTab('stations')">Stations</button>
+            <button class="nav-tab" onclick="switchTab('clocks')">Clock Templates</button>
+            <button class="nav-tab" onclick="switchTab('dayparts')">Dayparts</button>
+            <button class="nav-tab" onclick="switchTab('orders')">Orders</button>
+            <button class="nav-tab" onclick="switchTab('advertisers')">Advertisers</button>
+            <button class="nav-tab" onclick="switchTab('agencies')">Agencies</button>
+            <button class="nav-tab" onclick="switchTab('sales-reps')">Sales Reps</button>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+
+        <!-- Users Tab -->
+        <div id="usersTab" class="tab-content active">
+            <div class="toolbar">
+                <h2 class="section-title">User Management</h2>
+                <button class="btn btn-primary" onclick="openCreateModal()">+ Create User</button>
+            </div>
+            <div class="table-container">
+                <div id="usersLoadingState" class="loading">Loading users...</div>
+                <div id="usersEmptyState" class="empty-state" style="display: none;">No users found</div>
+                <table id="usersTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Stations Tab -->
+        <div id="stationsTab" class="tab-content">
+            <div class="toolbar">
+                <h2 class="section-title">Station Management</h2>
+                <button class="btn btn-primary" onclick="openStationModal()">+ Create Station</button>
+            </div>
+            <div class="table-container">
+                <div id="stationsLoadingState" class="loading">Loading stations...</div>
+                <div id="stationsEmptyState" class="empty-state" style="display: none;">No stations found</div>
+                <table id="stationsTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Call Sign</th>
+                            <th>Name</th>
+                            <th>Frequency</th>
+                            <th>Market</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stationsTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Clock Templates Tab -->
+        <div id="clocksTab" class="tab-content">
+            <div class="toolbar">
+                <h2 class="section-title">Clock Template Management</h2>
+                <button class="btn btn-primary" onclick="openClockModal()">+ Create Clock Template</button>
+            </div>
+            <div class="table-container">
+                <div id="clocksLoadingState" class="loading">Loading clock templates...</div>
+                <div id="clocksEmptyState" class="empty-state" style="display: none;">No clock templates found</div>
+                <table id="clocksTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Station</th>
+                            <th>Active</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clocksTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Dayparts Tab -->
+        <div id="daypartsTab" class="tab-content">
+            <div class="toolbar">
+                <h2 class="section-title">Daypart Management</h2>
+                <button class="btn btn-primary" onclick="openDaypartModal()">+ Create Daypart</button>
+            </div>
+            <div class="table-container">
+                <div id="daypartsLoadingState" class="loading">Loading dayparts...</div>
+                <div id="daypartsEmptyState" class="empty-state" style="display: none;">No dayparts found</div>
+                <table id="daypartsTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Category</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="daypartsTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Orders Tab -->
+        <div id="ordersTab" class="tab-content">
+            <div class="toolbar">
+                <h2 class="section-title">Order Management</h2>
+                <button class="btn btn-primary" onclick="openOrderModal()">+ Create Order</button>
+            </div>
+            <div class="table-container">
+                <div id="ordersLoadingState" class="loading">Loading orders...</div>
+                <div id="ordersEmptyState" class="empty-state" style="display: none;">No orders found</div>
+                <table id="ordersTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Order Number</th>
+                            <th>Station</th>
+                            <th>Advertiser</th>
+                            <th>Status</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Advertisers Tab -->
+        <div id="advertisersTab" class="tab-content">
+            <div class="toolbar">
+                <h2 class="section-title">Advertiser Management</h2>
+                <button class="btn btn-primary" onclick="openAdvertiserModal()">+ Create Advertiser</button>
+            </div>
+            <div class="table-container">
+                <div id="advertisersLoadingState" class="loading">Loading advertisers...</div>
+                <div id="advertisersEmptyState" class="empty-state" style="display: none;">No advertisers found</div>
+                <table id="advertisersTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Agency</th>
+                            <th>Sales Rep</th>
+                            <th>Active</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="advertisersTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Agencies Tab -->
+        <div id="agenciesTab" class="tab-content">
+            <div class="toolbar">
+                <h2 class="section-title">Agency Management</h2>
+                <button class="btn btn-primary" onclick="openAgencyModal()">+ Create Agency</button>
+            </div>
+            <div class="table-container">
+                <div id="agenciesLoadingState" class="loading">Loading agencies...</div>
+                <div id="agenciesEmptyState" class="empty-state" style="display: none;">No agencies found</div>
+                <table id="agenciesTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Active</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="agenciesTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sales Reps Tab -->
+        <div id="sales-repsTab" class="tab-content">
+            <div class="toolbar">
+                <h2 class="section-title">Sales Representative Management</h2>
+                <button class="btn btn-primary" onclick="openSalesRepModal()">+ Create Sales Rep</button>
+            </div>
+            <div class="table-container">
+                <div id="salesRepsLoadingState" class="loading">Loading sales reps...</div>
+                <div id="salesRepsEmptyState" class="empty-state" style="display: none;">No sales reps found</div>
+                <table id="salesRepsTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Active</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salesRepsTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>&copy; <span id="copyrightYear"></span> LibreLog. All rights reserved. | Version <span id="appVersion">Loading...</span></p>
+    </div>
+
+    <!-- Create/Edit User Modal -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Create User</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="error-message" id="modalErrorMessage"></div>
+            <form id="userForm">
+                <input type="hidden" id="userId">
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password <span id="passwordRequired">*</span></label>
+                    <input type="password" id="password" placeholder="Leave empty to keep current password">
+                </div>
+                <div class="form-group">
+                    <label for="role">Role *</label>
+                    <select id="role" required>
+                        <option value="ADMIN">Admin</option>
+                        <option value="TRAFFIC_MANAGER">Traffic Manager</option>
+                        <option value="SALES_REP">Sales Representative</option>
+                        <option value="PROGRAMMING">Programming</option>
+                        <option value="ACCOUNTING">Accounting</option>
+                        <option value="OPERATIONS">Operations</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="status">Status *</label>
+                    <select id="status" required>
+                        <option value="ACTIVE">Active</option>
+                        <option value="INACTIVE">Inactive</option>
+                        <option value="BANNED">Banned</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let authToken = localStorage.getItem('authToken');
+        let currentUser = null;
+
+        // Check authentication
+        if (!authToken) {
+            window.location.href = '/';
+        }
+
+        // Load current user info
+        async function loadUserInfo() {
+            try {
+                // Decode JWT to get user info (simple base64 decode)
+                const payload = JSON.parse(atob(authToken.split('.')[1]));
+                currentUser = payload;
+                document.getElementById('userBadge').textContent = `${payload.email} (${payload.role})`;
+            } catch (error) {
+                console.error('Error loading user info:', error);
+                logout();
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userRole');
+            window.location.href = '/';
+        }
+
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    showError('Unauthorized. Please login again.');
+                    setTimeout(() => logout(), 2000);
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error('Failed to load users');
+                }
+
+                const users = await response.json();
+                displayUsers(users);
+            } catch (error) {
+                console.error('Error loading users:', error);
+                showError('Failed to load users. Please try again.');
+            }
+        }
+
+        function displayUsers(users) {
+            const tableBody = document.getElementById('usersTableBody');
+            const loadingState = document.getElementById('usersLoadingState');
+            const emptyState = document.getElementById('usersEmptyState');
+            const usersTable = document.getElementById('usersTable');
+
+            loadingState.style.display = 'none';
+
+            if (users.length === 0) {
+                emptyState.style.display = 'block';
+                usersTable.style.display = 'none';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            usersTable.style.display = 'table';
+            tableBody.innerHTML = '';
+
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.email}</td>
+                    <td><span class="badge badge-${user.role.toLowerCase()}">${user.role}</span></td>
+                    <td><span class="badge badge-${user.status.toLowerCase()}">${user.status}</span></td>
+                    <td>${new Date(user.createdAt).toLocaleDateString()}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editUser('${user.id}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteUser('${user.id}', '${user.email}')">Delete</button>
+                        </div>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            event.target.classList.add('active');
+
+            // Load data for the selected tab
+            switch(tabName) {
+                case 'users':
+                    loadUsers();
+                    break;
+                case 'stations':
+                    loadStations();
+                    break;
+                case 'clocks':
+                    loadClocks();
+                    break;
+                case 'dayparts':
+                    loadDayparts();
+                    break;
+                case 'orders':
+                    loadOrders();
+                    break;
+                case 'advertisers':
+                    loadAdvertisers();
+                    break;
+                case 'agencies':
+                    loadAgencies();
+                    break;
+                case 'sales-reps':
+                    loadSalesReps();
+                    break;
+            }
+        }
+
+        // Load Stations
+        async function loadStations() {
+            try {
+                const response = await fetch('/api/stations', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load stations');
+                const stations = await response.json();
+                displayStations(stations);
+            } catch (error) {
+                console.error('Error loading stations:', error);
+                showError('Failed to load stations');
+            }
+        }
+
+        function displayStations(stations) {
+            const tableBody = document.getElementById('stationsTableBody');
+            const loadingState = document.getElementById('stationsLoadingState');
+            const emptyState = document.getElementById('stationsEmptyState');
+            const table = document.getElementById('stationsTable');
+
+            loadingState.style.display = 'none';
+            if (stations.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = stations.map(s => `
+                <tr>
+                    <td>${s.callSign}</td>
+                    <td>${s.name}</td>
+                    <td>${s.frequency || '-'}</td>
+                    <td>${s.market || '-'}</td>
+                    <td><div class="action-buttons">
+                        <button class="btn btn-secondary btn-sm" onclick="editStation('${s.id}')">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteStation('${s.id}')">Delete</button>
+                    </div></td>
+                </tr>
+            `).join('');
+        }
+
+        // Load Clock Templates
+        async function loadClocks() {
+            try {
+                const response = await fetch('/api/clocks', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load clock templates');
+                const clocks = await response.json();
+                displayClocks(clocks);
+            } catch (error) {
+                console.error('Error loading clocks:', error);
+                showError('Failed to load clock templates');
+            }
+        }
+
+        function displayClocks(clocks) {
+            const tableBody = document.getElementById('clocksTableBody');
+            const loadingState = document.getElementById('clocksLoadingState');
+            const emptyState = document.getElementById('clocksEmptyState');
+            const table = document.getElementById('clocksTable');
+
+            loadingState.style.display = 'none';
+            if (clocks.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = clocks.map(c => `
+                <tr>
+                    <td>${c.name}</td>
+                    <td>${c.stationCallSign}</td>
+                    <td><span class="badge ${c.isActive ? 'badge-active' : 'badge-inactive'}">${c.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td>${c.description || '-'}</td>
+                    <td><div class="action-buttons">
+                        <button class="btn btn-secondary btn-sm" onclick="editClock('${c.id}')">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteClock('${c.id}')">Delete</button>
+                    </div></td>
+                </tr>
+            `).join('');
+        }
+
+        // Load Dayparts
+        async function loadDayparts() {
+            try {
+                const response = await fetch('/api/dayparts', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load dayparts');
+                const dayparts = await response.json();
+                displayDayparts(dayparts);
+            } catch (error) {
+                console.error('Error loading dayparts:', error);
+                showError('Failed to load dayparts');
+            }
+        }
+
+        function displayDayparts(dayparts) {
+            const tableBody = document.getElementById('daypartsTableBody');
+            const loadingState = document.getElementById('daypartsLoadingState');
+            const emptyState = document.getElementById('daypartsEmptyState');
+            const table = document.getElementById('daypartsTable');
+
+            loadingState.style.display = 'none';
+            if (dayparts.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = dayparts.map(d => `
+                <tr>
+                    <td>${d.name}</td>
+                    <td>${d.startTime}</td>
+                    <td>${d.endTime}</td>
+                    <td>${d.categoryName || '-'}</td>
+                    <td><div class="action-buttons">
+                        <button class="btn btn-secondary btn-sm" onclick="editDaypart('${d.id}')">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteDaypart('${d.id}')">Delete</button>
+                    </div></td>
+                </tr>
+            `).join('');
+        }
+
+        // Load Orders
+        async function loadOrders() {
+            try {
+                const response = await fetch('/api/orders', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load orders');
+                const orders = await response.json();
+                displayOrders(orders);
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                showError('Failed to load orders');
+            }
+        }
+
+        function displayOrders(orders) {
+            const tableBody = document.getElementById('ordersTableBody');
+            const loadingState = document.getElementById('ordersLoadingState');
+            const emptyState = document.getElementById('ordersEmptyState');
+            const table = document.getElementById('ordersTable');
+
+            loadingState.style.display = 'none';
+            if (orders.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = orders.map(o => `
+                <tr>
+                    <td>${o.orderNumber}</td>
+                    <td>${o.stationCallSign}</td>
+                    <td>${o.advertiserName}</td>
+                    <td><span class="badge badge-active">${o.status}</span></td>
+                    <td>${new Date(o.startDate).toLocaleDateString()}</td>
+                    <td>${new Date(o.endDate).toLocaleDateString()}</td>
+                    <td><div class="action-buttons">
+                        <button class="btn btn-secondary btn-sm" onclick="editOrder('${o.id}')">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteOrder('${o.id}')">Delete</button>
+                    </div></td>
+                </tr>
+            `).join('');
+        }
+
+        // Load Advertisers
+        async function loadAdvertisers() {
+            try {
+                const response = await fetch('/api/advertisers', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load advertisers');
+                const advertisers = await response.json();
+                displayAdvertisers(advertisers);
+            } catch (error) {
+                console.error('Error loading advertisers:', error);
+                showError('Failed to load advertisers');
+            }
+        }
+
+        function displayAdvertisers(advertisers) {
+            const tableBody = document.getElementById('advertisersTableBody');
+            const loadingState = document.getElementById('advertisersLoadingState');
+            const emptyState = document.getElementById('advertisersEmptyState');
+            const table = document.getElementById('advertisersTable');
+
+            loadingState.style.display = 'none';
+            if (advertisers.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = advertisers.map(a => `
+                <tr>
+                    <td>${a.name}</td>
+                    <td>${a.agencyName || '-'}</td>
+                    <td>${a.salesRepName || '-'}</td>
+                    <td><span class="badge ${a.isActive ? 'badge-active' : 'badge-inactive'}">${a.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td><div class="action-buttons">
+                        <button class="btn btn-secondary btn-sm" onclick="editAdvertiser('${a.id}')">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteAdvertiser('${a.id}')">Delete</button>
+                    </div></td>
+                </tr>
+            `).join('');
+        }
+
+        // Load Agencies
+        async function loadAgencies() {
+            try {
+                const response = await fetch('/api/agencies', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load agencies');
+                const agencies = await response.json();
+                displayAgencies(agencies);
+            } catch (error) {
+                console.error('Error loading agencies:', error);
+                showError('Failed to load agencies');
+            }
+        }
+
+        function displayAgencies(agencies) {
+            const tableBody = document.getElementById('agenciesTableBody');
+            const loadingState = document.getElementById('agenciesLoadingState');
+            const emptyState = document.getElementById('agenciesEmptyState');
+            const table = document.getElementById('agenciesTable');
+
+            loadingState.style.display = 'none';
+            if (agencies.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = agencies.map(a => `
+                <tr>
+                    <td>${a.name}</td>
+                    <td>${a.email || '-'}</td>
+                    <td>${a.phone || '-'}</td>
+                    <td><span class="badge ${a.isActive ? 'badge-active' : 'badge-inactive'}">${a.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td><div class="action-buttons">
+                        <button class="btn btn-secondary btn-sm" onclick="editAgency('${a.id}')">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteAgency('${a.id}')">Delete</button>
+                    </div></td>
+                </tr>
+            `).join('');
+        }
+
+        // Load Sales Reps
+        async function loadSalesReps() {
+            try {
+                const response = await fetch('/api/sales-reps', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load sales reps');
+                const salesReps = await response.json();
+                displaySalesReps(salesReps);
+            } catch (error) {
+                console.error('Error loading sales reps:', error);
+                showError('Failed to load sales reps');
+            }
+        }
+
+        function displaySalesReps(salesReps) {
+            const tableBody = document.getElementById('salesRepsTableBody');
+            const loadingState = document.getElementById('salesRepsLoadingState');
+            const emptyState = document.getElementById('salesRepsEmptyState');
+            const table = document.getElementById('salesRepsTable');
+
+            loadingState.style.display = 'none';
+            if (salesReps.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = salesReps.map(sr => `
+                <tr>
+                    <td>${sr.firstName} ${sr.lastName}</td>
+                    <td>${sr.email}</td>
+                    <td>${sr.phone || '-'}</td>
+                    <td><span class="badge ${sr.isActive ? 'badge-active' : 'badge-inactive'}">${sr.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td><div class="action-buttons">
+                        <button class="btn btn-secondary btn-sm" onclick="editSalesRep('${sr.id}')">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteSalesRep('${sr.id}')">Delete</button>
+                    </div></td>
+                </tr>
+            `).join('');
+        }
+
+        // Placeholder functions for modals and actions
+        function openStationModal() { showError('Station creation modal - Coming soon'); }
+        function openClockModal() { showError('Clock template creation modal - Coming soon'); }
+        function openDaypartModal() { showError('Daypart creation modal - Coming soon'); }
+        function openOrderModal() { showError('Order creation modal - Coming soon'); }
+        function openAdvertiserModal() { showError('Advertiser creation modal - Coming soon'); }
+        function openAgencyModal() { showError('Agency creation modal - Coming soon'); }
+        function openSalesRepModal() { showError('Sales rep creation modal - Coming soon'); }
+        function editStation(id) { showError('Edit station - Coming soon'); }
+        function deleteStation(id) { showError('Delete station - Coming soon'); }
+        function editClock(id) { showError('Edit clock - Coming soon'); }
+        function deleteClock(id) { showError('Delete clock - Coming soon'); }
+        function editDaypart(id) { showError('Edit daypart - Coming soon'); }
+        function deleteDaypart(id) { showError('Delete daypart - Coming soon'); }
+        function editOrder(id) { showError('Edit order - Coming soon'); }
+        function deleteOrder(id) { showError('Delete order - Coming soon'); }
+        function editAdvertiser(id) { showError('Edit advertiser - Coming soon'); }
+        function deleteAdvertiser(id) { showError('Delete advertiser - Coming soon'); }
+        function editAgency(id) { showError('Edit agency - Coming soon'); }
+        function deleteAgency(id) { showError('Delete agency - Coming soon'); }
+        function editSalesRep(id) { showError('Edit sales rep - Coming soon'); }
+        function deleteSalesRep(id) { showError('Delete sales rep - Coming soon'); }
+
+        function openCreateModal() {
+            document.getElementById('modalTitle').textContent = 'Create User';
+            document.getElementById('userForm').reset();
+            document.getElementById('userId').value = '';
+            document.getElementById('passwordRequired').style.display = 'inline';
+            document.getElementById('password').required = true;
+            document.getElementById('userModal').classList.add('show');
+        }
+
+        async function editUser(userId) {
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load user');
+                }
+
+                const user = await response.json();
+                document.getElementById('modalTitle').textContent = 'Edit User';
+                document.getElementById('userId').value = user.id;
+                document.getElementById('email').value = user.email;
+                document.getElementById('role').value = user.role;
+                document.getElementById('status').value = user.status;
+                document.getElementById('password').value = '';
+                document.getElementById('passwordRequired').style.display = 'none';
+                document.getElementById('password').required = false;
+                document.getElementById('userModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading user:', error);
+                showError('Failed to load user. Please try again.');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('userModal').classList.remove('show');
+            document.getElementById('modalErrorMessage').classList.remove('show');
+        }
+
+        async function deleteUser(userId, email) {
+            if (!confirm(`Are you sure you want to delete user "${email}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    showError('Unauthorized. Please login again.');
+                    setTimeout(() => logout(), 2000);
+                    return;
+                }
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to delete user');
+                }
+
+                showSuccess('User deleted successfully');
+                loadUsers();
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                showError(error.message || 'Failed to delete user. Please try again.');
+            }
+        }
+
+        document.getElementById('userForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('modalErrorMessage');
+            errorMsg.classList.remove('show');
+
+            const userId = document.getElementById('userId').value;
+            const userData = {
+                email: document.getElementById('email').value,
+                role: document.getElementById('role').value,
+                status: document.getElementById('status').value
+            };
+
+            const password = document.getElementById('password').value;
+            if (password) {
+                userData.password = password;
+            } else if (!userId) {
+                errorMsg.textContent = 'Password is required for new users';
+                errorMsg.classList.add('show');
+                return;
+            }
+
+            try {
+                const url = userId ? `/api/users/${userId}` : '/api/users';
+                const method = userId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    errorMsg.textContent = 'Unauthorized. Please login again.';
+                    errorMsg.classList.add('show');
+                    setTimeout(() => logout(), 2000);
+                    return;
+                }
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to save user');
+                }
+
+                closeModal();
+                showSuccess(userId ? 'User updated successfully' : 'User created successfully');
+                loadUsers();
+            } catch (error) {
+                console.error('Error saving user:', error);
+                errorMsg.textContent = error.message || 'Failed to save user. Please try again.';
+                errorMsg.classList.add('show');
+            }
+        });
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            setTimeout(() => errorDiv.classList.remove('show'), 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.classList.add('show');
+            setTimeout(() => successDiv.classList.remove('show'), 5000);
+        }
+
+        // Set copyright year dynamically
+        document.getElementById('copyrightYear').textContent = new Date().getFullYear();
+        
+        // Load version from actuator info endpoint
+        fetch('/actuator/info')
+            .then(r => r.ok ? r.json() : null)
+            .then(info => {
+                if (info && info.app && info.app.version) {
+                    document.getElementById('appVersion').textContent = info.app.version;
+                } else {
+                    document.getElementById('appVersion').textContent = 'Unknown';
+                }
+            })
+            .catch(() => {
+                document.getElementById('appVersion').textContent = 'Unknown';
+            });
+        
+        // Initialize
+        loadUserInfo();
+        loadUsers();
+    </script>
+</body>
+</html>
+

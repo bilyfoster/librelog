@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="006-add-audit-and-permissions" author="migration">
+        <comment>Add audit logs, log revisions, and extend users table with permissions</comment>
+
+        <!-- Extend users table -->
+        <addColumn tableName="users">
+            <column name="last_activity" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="permissions" type="JSONB"/>
+        </addColumn>
+
+        <!-- Create audit_logs table -->
+        <createTable tableName="audit_logs">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="action" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="resource_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="resource_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="changes" type="JSONB">
+                <constraints nullable="true"/>
+            </column>
+            <column name="ip_address" type="VARCHAR(45)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="user_agent" type="VARCHAR(500)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="audit_logs"
+            baseColumnNames="user_id"
+            constraintName="fk_audit_logs_user_id"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="audit_logs" indexName="ix_audit_logs_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="audit_logs" indexName="ix_audit_logs_user_id">
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex tableName="audit_logs" indexName="ix_audit_logs_action">
+            <column name="action"/>
+        </createIndex>
+        <createIndex tableName="audit_logs" indexName="ix_audit_logs_resource_type">
+            <column name="resource_type"/>
+        </createIndex>
+        <createIndex tableName="audit_logs" indexName="ix_audit_logs_resource_id">
+            <column name="resource_id"/>
+        </createIndex>
+        <createIndex tableName="audit_logs" indexName="ix_audit_logs_created_at">
+            <column name="created_at"/>
+        </createIndex>
+
+        <!-- Create log_revisions table -->
+        <createTable tableName="log_revisions">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="log_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revision_number" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="json_data" type="JSONB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="change_summary" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="log_revisions"
+            baseColumnNames="changed_by"
+            constraintName="fk_log_revisions_changed_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="log_revisions"
+            baseColumnNames="log_id"
+            constraintName="fk_log_revisions_log_id"
+            referencedTableName="daily_logs"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="log_revisions" indexName="ix_log_revisions_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="log_revisions" indexName="ix_log_revisions_log_id">
+            <column name="log_id"/>
+        </createIndex>
+        <createIndex tableName="log_revisions" indexName="ix_log_revisions_revision_number">
+            <column name="revision_number"/>
+        </createIndex>
+        <createIndex tableName="log_revisions" indexName="ix_log_revisions_created_at">
+            <column name="created_at"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
+
+

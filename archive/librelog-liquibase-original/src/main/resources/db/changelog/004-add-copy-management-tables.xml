@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="004-add-copy-management-tables" author="migration">
+        <comment>Add copy management tables: copy and copy_assignments</comment>
+
+        <!-- Create copy table -->
+        <createTable tableName="copy">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="order_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="advertiser_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="title" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="script_text" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="audio_file_path" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="audio_file_url" type="TEXT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="version" type="INTEGER" defaultValueNumeric="1">
+                <constraints nullable="true"/>
+            </column>
+            <column name="expires_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="copy"
+            baseColumnNames="advertiser_id"
+            constraintName="fk_copy_advertiser_id"
+            referencedTableName="advertisers"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="copy"
+            baseColumnNames="order_id"
+            constraintName="fk_copy_order_id"
+            referencedTableName="orders"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="copy" indexName="ix_copy_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="copy" indexName="ix_copy_order_id">
+            <column name="order_id"/>
+        </createIndex>
+        <createIndex tableName="copy" indexName="ix_copy_advertiser_id">
+            <column name="advertiser_id"/>
+        </createIndex>
+        <createIndex tableName="copy" indexName="ix_copy_title">
+            <column name="title"/>
+        </createIndex>
+        <createIndex tableName="copy" indexName="ix_copy_expires_at">
+            <column name="expires_at"/>
+        </createIndex>
+        <createIndex tableName="copy" indexName="ix_copy_active">
+            <column name="active"/>
+        </createIndex>
+
+        <!-- Create copy_assignments table -->
+        <createTable tableName="copy_assignments">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="spot_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="copy_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="order_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="assigned_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="assigned_by" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="copy_assignments"
+            baseColumnNames="assigned_by"
+            constraintName="fk_copy_assignments_assigned_by"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="copy_assignments"
+            baseColumnNames="copy_id"
+            constraintName="fk_copy_assignments_copy_id"
+            referencedTableName="copy"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="copy_assignments"
+            baseColumnNames="order_id"
+            constraintName="fk_copy_assignments_order_id"
+            referencedTableName="orders"
+            referencedColumnNames="id"/>
+        <addForeignKeyConstraint
+            baseTableName="copy_assignments"
+            baseColumnNames="spot_id"
+            constraintName="fk_copy_assignments_spot_id"
+            referencedTableName="spots"
+            referencedColumnNames="id"/>
+
+        <createIndex tableName="copy_assignments" indexName="ix_copy_assignments_id">
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="copy_assignments" indexName="ix_copy_assignments_spot_id">
+            <column name="spot_id"/>
+        </createIndex>
+        <createIndex tableName="copy_assignments" indexName="ix_copy_assignments_copy_id">
+            <column name="copy_id"/>
+        </createIndex>
+        <createIndex tableName="copy_assignments" indexName="ix_copy_assignments_order_id">
+            <column name="order_id"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
+
