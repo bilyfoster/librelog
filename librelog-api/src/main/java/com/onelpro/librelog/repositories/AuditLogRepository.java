@@ -4,9 +4,9 @@ import com.onelpro.librelog.enums.AuditActionType;
 import com.onelpro.librelog.models.AuditLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -17,7 +17,7 @@ import java.util.UUID;
  * Repository interface for AuditLog entity operations.
  */
 @Repository
-public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
+public interface AuditLogRepository extends JpaRepository<AuditLog, UUID>, JpaSpecificationExecutor<AuditLog> {
 
 	/**
 	 * Find all audit logs for a specific user.
@@ -95,24 +95,30 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
 	Page<AuditLog> findByResourceTypeAndResourceId(String resourceType, UUID resourceId, Pageable pageable);
 
 	/**
-	 * Custom query to find audit logs with multiple filters.
+	 * Find audit logs with multiple filters using Specifications.
+	 * This method uses Criteria API to avoid PostgreSQL parameter type inference issues.
+	 * 
+	 * @param userId optional user ID filter
+	 * @param actionType optional action type filter
+	 * @param resourceType optional resource type filter
+	 * @param stationId optional station ID filter
+	 * @param startDate optional start date filter (inclusive)
+	 * @param endDate optional end date filter (inclusive)
+	 * @param pageable pagination information
+	 * @return page of filtered audit logs
 	 */
-	@Query("SELECT al FROM AuditLog al WHERE " +
-			"(:userId IS NULL OR al.user.id = :userId) AND " +
-			"(:actionType IS NULL OR al.actionType = :actionType) AND " +
-			"(:resourceType IS NULL OR al.resourceType = :resourceType) AND " +
-			"(:stationId IS NULL OR al.station.id = :stationId) AND " +
-			"(:startDate IS NULL OR al.timestamp >= :startDate) AND " +
-			"(:endDate IS NULL OR al.timestamp <= :endDate) " +
-			"ORDER BY al.timestamp DESC")
-	Page<AuditLog> findWithFilters(
-			@Param("userId") UUID userId,
-			@Param("actionType") AuditActionType actionType,
-			@Param("resourceType") String resourceType,
-			@Param("stationId") UUID stationId,
-			@Param("startDate") LocalDateTime startDate,
-			@Param("endDate") LocalDateTime endDate,
-			Pageable pageable);
+	default Page<AuditLog> findWithFilters(
+			UUID userId,
+			AuditActionType actionType,
+			String resourceType,
+			UUID stationId,
+			LocalDateTime startDate,
+			LocalDateTime endDate,
+			Pageable pageable) {
+		Specification<AuditLog> spec = com.onelpro.librelog.repositories.specifications.AuditLogSpecifications
+				.withFilters(userId, actionType, resourceType, stationId, startDate, endDate);
+		return findAll(spec, pageable);
+	}
 
 }
 
