@@ -90,6 +90,9 @@ public class BreakStructureServiceImpl implements BreakStructureService {
 				.availType(availType)
 				.timingType(timingType)
 				.transitionCode(request.getTransitionCode())
+				.assetType(request.getAssetType())
+				.musicCategory(request.getMusicCategory())
+				.showSegmentName(request.getShowSegmentName())
 				.createdAt(LocalDateTime.now())
 				.updatedAt(LocalDateTime.now())
 				.build();
@@ -178,6 +181,9 @@ public class BreakStructureServiceImpl implements BreakStructureService {
 		breakStructure.setAvailType(availType);
 		breakStructure.setTimingType(timingType);
 		breakStructure.setTransitionCode(request.getTransitionCode());
+		breakStructure.setAssetType(request.getAssetType());
+		breakStructure.setMusicCategory(request.getMusicCategory());
+		breakStructure.setShowSegmentName(request.getShowSegmentName());
 		breakStructure.setUpdatedAt(LocalDateTime.now());
 
 		breakStructure = breakStructureRepository.save(breakStructure);
@@ -214,6 +220,9 @@ public class BreakStructureServiceImpl implements BreakStructureService {
 				.availTypeName(availType != null ? availType.getName() : null)
 				.timingType(breakStructure.getTimingType())
 				.transitionCode(breakStructure.getTransitionCode())
+				.assetType(breakStructure.getAssetType())
+				.musicCategory(breakStructure.getMusicCategory())
+				.showSegmentName(breakStructure.getShowSegmentName())
 				.createdAt(breakStructure.getCreatedAt())
 				.updatedAt(breakStructure.getUpdatedAt())
 				.build();

@@ -1,6 +1,7 @@
 package com.onelpro.librelog.models;
 
 import com.onelpro.librelog.enums.AssetType;
+import com.onelpro.librelog.enums.MusicCategory;
 import com.onelpro.librelog.enums.TimingType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -58,6 +59,13 @@ public class FixedAsset {
 	@Enumerated(EnumType.STRING)
 	@Column(name = "timing_type", nullable = false)
 	private TimingType timingType;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "music_category")
+	private MusicCategory musicCategory;
+
+	@Column(name = "show_segment_name")
+	private String showSegmentName;
 
 	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;

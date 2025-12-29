@@ -1,6 +1,7 @@
 package com.onelpro.librelog.dto;
 
 import com.onelpro.librelog.enums.AssetType;
+import com.onelpro.librelog.enums.MusicCategory;
 import com.onelpro.librelog.enums.TimingType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -36,6 +37,10 @@ public class FixedAssetRequestDTO {
 	private String assetIdentifier;
 
 	private TimingType timingType;
+
+	private MusicCategory musicCategory;
+
+	private String showSegmentName;
 
 }
 

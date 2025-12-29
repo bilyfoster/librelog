@@ -28,14 +28,17 @@ public class ClockBuilderController {
 	private final ClockBuilderService clockBuilderService;
 	private final RevenueAnalysisService revenueAnalysisService;
 	private final com.onelpro.librelog.services.LibreTimeSyncService libreTimeSyncService;
+	private final com.onelpro.librelog.services.WideOrbitExportService wideOrbitExportService;
 
 	public ClockBuilderController(
 			ClockBuilderService clockBuilderService,
 			RevenueAnalysisService revenueAnalysisService,
-			com.onelpro.librelog.services.LibreTimeSyncService libreTimeSyncService) {
+			com.onelpro.librelog.services.LibreTimeSyncService libreTimeSyncService,
+			com.onelpro.librelog.services.WideOrbitExportService wideOrbitExportService) {
 		this.clockBuilderService = clockBuilderService;
 		this.revenueAnalysisService = revenueAnalysisService;
 		this.libreTimeSyncService = libreTimeSyncService;
+		this.wideOrbitExportService = wideOrbitExportService;
 	}
 
 	@GetMapping("/{id}/structure")
@@ -220,6 +223,29 @@ public class ClockBuilderController {
 			return ResponseEntity.ok(export);
 		} else {
 			LibreTimeExportDTO export = libreTimeSyncService.exportClock(id);
+			return ResponseEntity.ok(export);
+		}
+	}
+
+	@PostMapping("/{id}/export/wideorbit")
+	@Operation(
+			summary = "Export clock template to WideOrbit format",
+			description = "Exports a clock template to WideOrbit-compatible format (JSON or XML)"
+	)
+	@ApiResponse(responseCode = "200", description = "Clock template exported successfully")
+	@ApiResponse(responseCode = "404", description = "Clock template not found")
+	public ResponseEntity<?> exportToWideOrbit(
+			@PathVariable UUID id,
+			@RequestParam(required = false, defaultValue = "json") String format) {
+		logger.info("POST /api/clock-templates/{}/export/wideorbit - Exporting clock template (format: {})", id, format);
+		
+		if ("xml".equalsIgnoreCase(format)) {
+			String xml = wideOrbitExportService.exportClockToXml(id);
+			return ResponseEntity.ok()
+					.header("Content-Type", "application/xml")
+					.body(xml);
+		} else {
+			WideOrbitExportDTO export = wideOrbitExportService.exportClock(id);
 			return ResponseEntity.ok(export);
 		}
 	}

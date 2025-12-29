@@ -61,6 +61,8 @@ public class FixedAssetServiceImpl implements FixedAssetService {
 				.startTime(request.getStartTime())
 				.assetIdentifier(request.getAssetIdentifier())
 				.timingType(timingType)
+				.musicCategory(request.getMusicCategory())
+				.showSegmentName(request.getShowSegmentName())
 				.createdAt(LocalDateTime.now())
 				.updatedAt(LocalDateTime.now())
 				.build();
@@ -128,6 +130,8 @@ public class FixedAssetServiceImpl implements FixedAssetService {
 		fixedAsset.setStartTime(request.getStartTime());
 		fixedAsset.setAssetIdentifier(request.getAssetIdentifier());
 		fixedAsset.setTimingType(timingType);
+		fixedAsset.setMusicCategory(request.getMusicCategory());
+		fixedAsset.setShowSegmentName(request.getShowSegmentName());
 		fixedAsset.setUpdatedAt(LocalDateTime.now());
 
 		fixedAsset = fixedAssetRepository.save(fixedAsset);
@@ -160,6 +164,8 @@ public class FixedAssetServiceImpl implements FixedAssetService {
 				.startTime(fixedAsset.getStartTime())
 				.assetIdentifier(fixedAsset.getAssetIdentifier())
 				.timingType(fixedAsset.getTimingType())
+				.musicCategory(fixedAsset.getMusicCategory())
+				.showSegmentName(fixedAsset.getShowSegmentName())
 				.createdAt(fixedAsset.getCreatedAt())
 				.updatedAt(fixedAsset.getUpdatedAt())
 				.build();

@@ -1,6 +1,7 @@
 package com.onelpro.librelog.dto;
 
 import com.onelpro.librelog.enums.AssetType;
+import com.onelpro.librelog.enums.MusicCategory;
 import com.onelpro.librelog.enums.TimingType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,6 +28,8 @@ public class FixedAssetResponseDTO {
 	private LocalTime startTime;
 	private String assetIdentifier;
 	private TimingType timingType;
+	private MusicCategory musicCategory;
+	private String showSegmentName;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 }

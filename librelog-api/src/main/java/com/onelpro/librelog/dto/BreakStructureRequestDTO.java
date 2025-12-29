@@ -1,5 +1,7 @@
 package com.onelpro.librelog.dto;
 
+import com.onelpro.librelog.enums.AssetType;
+import com.onelpro.librelog.enums.MusicCategory;
 import com.onelpro.librelog.enums.TimingType;
 import com.onelpro.librelog.enums.TransitionCode;
 import jakarta.validation.constraints.Min;
@@ -42,6 +44,12 @@ public class BreakStructureRequestDTO {
 	private TimingType timingType;
 
 	private TransitionCode transitionCode;
+
+	private AssetType assetType;
+
+	private MusicCategory musicCategory;
+
+	private String showSegmentName;
 
 }
 

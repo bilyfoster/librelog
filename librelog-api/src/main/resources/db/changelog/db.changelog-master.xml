@@ -674,5 +674,6 @@
 	<include file="db/changelog/016-create-user-sessions-table.xml"/>
 	<include file="db/changelog/017-create-user-market-assignments-table.xml"/>
 	<include file="db/changelog/018-create-user-cluster-assignments-table.xml"/>
+	<include file="db/changelog/019-add-wideorbit-fields.xml"/>
 
 </databaseChangeLog>
