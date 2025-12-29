@@ -247,13 +247,13 @@ Based on PRD: `prd-user-management.md`
   - [x] 9.3 Create `CustomRoleService` interface in `services` package with methods: createRole(request), updateRole(roleId, request), deleteRole(roleId), getRoleById(roleId), getAllRoles(), cloneRole(roleId, newName), getRolesAssignedToUser(userId)
   - [x] 9.4 Create `CustomRoleServiceImpl` in `services.impl` package implementing the interface with constructor injection, transaction management, validation (prevent deletion if assigned to users), audit logging, and proper error handling
   - [x] 9.5 Create `ImpersonationService` interface in `services` package with methods: startImpersonation(adminUserId, targetUserId), stopImpersonation(adminUserId), isImpersonating(userId), getImpersonatedUser(userId)
-  - [ ] 9.6 Create `ImpersonationServiceImpl` in `services.impl` package implementing the interface with constructor injection, validation (prevent impersonating higher-level users), audit logging, and proper error handling
+  - [x] 9.6 Create `ImpersonationServiceImpl` in `services.impl` package implementing the interface with constructor injection, validation (prevent impersonating higher-level users), audit logging, and proper error handling
   - [x] 9.7 Create `BulkUserImportService` interface in `services` package with methods: importUsers(file, validateOnly), validateUserData(rows), generateImportTemplate()
-  - [ ] 9.8 Create `BulkUserImportServiceImpl` in `services.impl` package implementing the interface with constructor injection, CSV/Excel parsing, validation, partial import support, and detailed error reporting
-  - [ ] 9.9 Enhance `UserService` interface with methods: getUserDetail(userId), getUserWithAssignments(userId), updateUserWithStations(userId, request, stationAssignments)
-  - [ ] 9.10 Enhance `UserServiceImpl` to integrate with permission system, audit logging, and station assignments
-  - [ ] 9.11 Integrate permission checks into all service methods that access station-specific data
-  - [ ] 9.12 Integrate audit logging into all service methods that modify data
+  - [x] 9.8 Create `BulkUserImportServiceImpl` in `services.impl` package implementing the interface with constructor injection, CSV/Excel parsing, validation, partial import support, and detailed error reporting
+  - [x] 9.9 Enhance `UserService` interface with methods: getUserDetail(userId), getUserWithAssignments(userId), updateUserWithStations(userId, request, stationAssignments)
+  - [x] 9.10 Enhance `UserServiceImpl` to integrate with permission system, audit logging, and station assignments
+  - [x] 9.11 Integrate permission checks into all service methods that access station-specific data
+  - [x] 9.12 Integrate audit logging into all service methods that modify data
   - [ ] 9.13 Write comprehensive unit tests for all new service implementations (80%+ coverage)
   - [ ] 9.14 Write integration tests for service workflows
 
