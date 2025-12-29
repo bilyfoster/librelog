@@ -27,12 +27,15 @@ public class ClockBuilderController {
 
 	private final ClockBuilderService clockBuilderService;
 	private final RevenueAnalysisService revenueAnalysisService;
+	private final com.onelpro.librelog.services.LibreTimeSyncService libreTimeSyncService;
 
 	public ClockBuilderController(
 			ClockBuilderService clockBuilderService,
-			RevenueAnalysisService revenueAnalysisService) {
+			RevenueAnalysisService revenueAnalysisService,
+			com.onelpro.librelog.services.LibreTimeSyncService libreTimeSyncService) {
 		this.clockBuilderService = clockBuilderService;
 		this.revenueAnalysisService = revenueAnalysisService;
+		this.libreTimeSyncService = libreTimeSyncService;
 	}
 
 	@GetMapping("/{id}/structure")
@@ -194,6 +197,31 @@ public class ClockBuilderController {
 		logger.debug("GET /api/clock-templates/{}/revenue-analysis - Fetching revenue analysis", id);
 		RevenueAnalysisDTO analysis = revenueAnalysisService.calculateRevenueImpact(id);
 		return ResponseEntity.ok(analysis);
+	}
+
+	@PostMapping("/{id}/export/libretime")
+	@Operation(
+			summary = "Export clock template to LibreTime",
+			description = "Exports a clock template to LibreTime format and optionally pushes it to LibreTime API"
+	)
+	@ApiResponse(responseCode = "200", description = "Clock template exported successfully")
+	@ApiResponse(responseCode = "404", description = "Clock template not found")
+	@ApiResponse(responseCode = "500", description = "Failed to export to LibreTime")
+	public ResponseEntity<LibreTimeExportDTO> exportToLibreTime(
+			@PathVariable UUID id,
+			@RequestParam(required = false, defaultValue = "false") boolean push) {
+		logger.info("POST /api/clock-templates/{}/export/libretime - Exporting clock template (push: {})", id, push);
+		
+		if (push) {
+			String response = libreTimeSyncService.pushClockToLibreTime(id);
+			logger.info("Clock template {} pushed to LibreTime successfully", id);
+			// Return the exported format as well
+			LibreTimeExportDTO export = libreTimeSyncService.exportClock(id);
+			return ResponseEntity.ok(export);
+		} else {
+			LibreTimeExportDTO export = libreTimeSyncService.exportClock(id);
+			return ResponseEntity.ok(export);
+		}
 	}
 
 }
