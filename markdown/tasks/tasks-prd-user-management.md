@@ -272,10 +272,10 @@ Based on PRD: `prd-user-management.md`
   - [ ] 10.12 Write integration tests for all REST endpoints
 
 - [ ] 11.0 Security Integration and Permission Enforcement
-  - [ ] 11.1 Enhance `SecurityConfig` to integrate with permission system for method-level security
-  - [ ] 11.2 Create custom `PermissionEvaluator` for Spring Security to check permissions based on user-station assignments
-  - [ ] 11.3 Update `JwtAuthenticationFilter` to include user's station assignments in security context
-  - [ ] 11.4 Create `StationFilterInterceptor` or aspect to automatically filter API responses based on user's station assignments
+  - [x] 11.1 Enhance `SecurityConfig` to integrate with permission system for method-level security
+  - [x] 11.2 Create custom `PermissionEvaluator` for Spring Security to check permissions based on user-station assignments
+  - [x] 11.3 Update `JwtAuthenticationFilter` to include user's station assignments in security context
+  - [x] 11.4 Create `StationFilterInterceptor` or aspect to automatically filter API responses based on user's station assignments
   - [ ] 11.5 Integrate permission checks into existing controllers (OrderController, LogController, etc.) to filter data by station
   - [ ] 11.6 Update service methods in existing services to check permissions before allowing operations
   - [ ] 11.7 Implement automatic data filtering in repository queries based on user's station assignments (using @Query annotations or custom repository methods)

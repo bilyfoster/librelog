@@ -1,6 +1,7 @@
 package com.onelpro.librelog.config;
 
 import com.onelpro.librelog.services.JwtService;
+import com.onelpro.librelog.services.PermissionService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,9 +17,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * JWT authentication filter that processes JWT tokens in request headers.
+ * Includes user's station assignments in the security context for permission checking.
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -28,9 +32,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	private static final String BEARER_PREFIX = "Bearer ";
 
 	private final JwtService jwtService;
+	private final PermissionService permissionService;
 
-	public JwtAuthenticationFilter(JwtService jwtService) {
+	public JwtAuthenticationFilter(JwtService jwtService, PermissionService permissionService) {
 		this.jwtService = jwtService;
+		this.permissionService = permissionService;
 	}
 
 	@Override
@@ -67,19 +73,41 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		String token = authHeader.substring(BEARER_PREFIX.length());
 
 		if (jwtService.isTokenValid(token)) {
-			String userId = jwtService.extractUserId(token);
+			String userIdStr = jwtService.extractUserId(token);
 			String email = jwtService.extractEmail(token);
 			String role = jwtService.extractRole(token);
 
-			if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-				UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-						userId,
-						null,
-						Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
-				);
-				authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-				SecurityContextHolder.getContext().setAuthentication(authToken);
-				logger.debug("Authenticated user: {} with role: {}", email, role);
+			if (userIdStr != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+				try {
+					UUID userId = UUID.fromString(userIdStr);
+					
+					// Get user's station assignments for permission checking
+					List<UUID> stationIds = permissionService.getUserStations(userId);
+					
+					// Create authentication token with user ID, role, and station assignments
+					UsernamePasswordAuthenticationToken authToken = 
+							new UsernamePasswordAuthenticationToken(
+									userIdStr,
+									null,
+									Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
+							);
+					
+					// Store station assignments in authentication details
+					UserAuthenticationDetails details = new UserAuthenticationDetails(
+							userId,
+							email,
+							role,
+							stationIds,
+							request
+					);
+					authToken.setDetails(details);
+					
+					SecurityContextHolder.getContext().setAuthentication(authToken);
+					logger.debug("Authenticated user: {} with role: {} and {} station assignments", 
+							email, role, stationIds.size());
+				} catch (IllegalArgumentException e) {
+					logger.warn("Invalid user ID format in JWT token: {}", userIdStr);
+				}
 			}
 		}
 
