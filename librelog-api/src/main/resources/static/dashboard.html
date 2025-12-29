@@ -3243,12 +3243,58 @@
         function openClockBuilder(clockTemplateId, clockName) {
             const builderContainer = document.getElementById('clockBuilderContainer');
             const builderTitle = document.getElementById('clockBuilderTitle');
+            const clocksTab = document.getElementById('clocksTab');
+            const clocksTable = document.getElementById('clocksTable');
+            const clocksLoadingState = document.getElementById('clocksLoadingState');
+            const clocksEmptyState = document.getElementById('clocksEmptyState');
             
             if (builderContainer && builderTitle) {
+                // Hide the clocks table and show the builder
+                if (clocksTable) clocksTable.style.display = 'none';
+                if (clocksLoadingState) clocksLoadingState.style.display = 'none';
+                if (clocksEmptyState) clocksEmptyState.style.display = 'none';
+                
                 builderTitle.textContent = `Clock Builder: ${clockName}`;
                 builderContainer.style.display = 'block';
-                initClockBuilder(clockTemplateId);
+                
+                // Make sure we're on the clocks tab
+                if (clocksTab) {
+                    switchTab('clocks');
+                }
+                
+                // Initialize the clock builder
+                if (typeof initClockBuilder === 'function') {
+                    initClockBuilder(clockTemplateId);
+                } else {
+                    console.error('initClockBuilder function not found. Make sure clock-builder.js is loaded.');
+                    alert('Clock builder script not loaded. Please refresh the page.');
+                }
+            } else {
+                console.error('Clock builder container or title not found');
+                alert('Clock builder UI not found. Please refresh the page.');
             }
+        }
+        
+        function closeClockBuilder() {
+            const builderContainer = document.getElementById('clockBuilderContainer');
+            const clocksTable = document.getElementById('clocksTable');
+            const clocksLoadingState = document.getElementById('clocksLoadingState');
+            const clocksEmptyState = document.getElementById('clocksEmptyState');
+            
+            if (builderContainer) {
+                builderContainer.style.display = 'none';
+            }
+            
+            // Show the clocks table again
+            if (clocksTable) {
+                const tableContainer = clocksTable.closest('.table-container');
+                if (tableContainer) {
+                    tableContainer.style.display = 'block';
+                }
+            }
+            
+            // Reload clocks to refresh the view
+            loadClocks();
         }
 
         // Daypart Category Management

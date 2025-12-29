@@ -660,7 +660,7 @@ async function saveElementPosition(element) {
 async function loadValidation(clockTemplateId) {
     try {
         const token = localStorage.getItem('authToken');
-        const response = await fetch(`/api/clock-templates/${clockTemplateId}/validate`, {
+        const response = await fetch(`/api/clocks/${clockTemplateId}/validate`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`
