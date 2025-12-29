@@ -258,16 +258,16 @@ Based on PRD: `prd-user-management.md`
   - [ ] 9.14 Write integration tests for service workflows
 
 - [ ] 10.0 REST API Controllers
-  - [ ] 10.1 Create `UserStationAssignmentController` in `controllers` package with REST endpoints: POST /api/user-station-assignments (assign user to station), DELETE /api/user-station-assignments/{id} (remove assignment), GET /api/user-station-assignments/user/{userId} (get user's assignments), GET /api/user-station-assignments/station/{stationId} (get station's users), PUT /api/user-station-assignments/{id} (update permission level)
-  - [ ] 10.2 Create `CustomRoleController` in `controllers` package with REST endpoints: POST /api/custom-roles (create role), GET /api/custom-roles/{id} (get role), GET /api/custom-roles (get all roles), PUT /api/custom-roles/{id} (update role), DELETE /api/custom-roles/{id} (delete role), POST /api/custom-roles/{id}/clone (clone role)
-  - [ ] 10.3 Create `AuditLogController` in `controllers` package with REST endpoints: GET /api/audit-logs (get audit logs with filtering), GET /api/audit-logs/{id} (get audit log by ID), GET /api/audit-logs/export (export audit logs to CSV/Excel)
-  - [ ] 10.4 Create `SessionController` in `controllers` package with REST endpoints: GET /api/sessions (get all active sessions), GET /api/sessions/user/{userId} (get user's sessions), DELETE /api/sessions/{id} (terminate session), DELETE /api/sessions/user/{userId} (terminate all user's sessions), PUT /api/sessions/{id}/resource (update current resource)
-  - [ ] 10.5 Create `ImpersonationController` in `controllers` package with REST endpoints: POST /api/impersonation/start (start impersonation), POST /api/impersonation/stop (stop impersonation), GET /api/impersonation/status (check if impersonating)
-  - [ ] 10.6 Create `BulkUserImportController` in `controllers` package with REST endpoints: POST /api/users/bulk-import (import users from file), GET /api/users/bulk-import/template (download template file)
-  - [ ] 10.7 Enhance `UserController` with new endpoints: GET /api/users/{id}/detail (get user detail with assignments and sessions), GET /api/users/{id}/assignments (get user's station assignments), PUT /api/users/{id}/assignments (update user's station assignments)
-  - [ ] 10.8 Add Swagger/OpenAPI annotations (@Operation, @ApiResponse, @Tag) to all controller endpoints
-  - [ ] 10.9 Add proper HTTP status codes and error handling to all endpoints
-  - [ ] 10.10 Add @PreAuthorize annotations to enforce access control at controller level
+  - [x] 10.1 Create `UserStationAssignmentController` in `controllers` package with REST endpoints: POST /api/user-station-assignments (assign user to station), DELETE /api/user-station-assignments/{id} (remove assignment), GET /api/user-station-assignments/user/{userId} (get user's assignments), GET /api/user-station-assignments/station/{stationId} (get station's users), PUT /api/user-station-assignments/{id} (update permission level)
+  - [x] 10.2 Create `CustomRoleController` in `controllers` package with REST endpoints: POST /api/custom-roles (create role), GET /api/custom-roles/{id} (get role), GET /api/custom-roles (get all roles), PUT /api/custom-roles/{id} (update role), DELETE /api/custom-roles/{id} (delete role), POST /api/custom-roles/{id}/clone (clone role)
+  - [x] 10.3 Create `AuditLogController` in `controllers` package with REST endpoints: GET /api/audit-logs (get audit logs with filtering), GET /api/audit-logs/{id} (get audit log by ID), GET /api/audit-logs/export (export audit logs to CSV/Excel)
+  - [x] 10.4 Create `SessionController` in `controllers` package with REST endpoints: GET /api/sessions (get all active sessions), GET /api/sessions/user/{userId} (get user's sessions), DELETE /api/sessions/{id} (terminate session), DELETE /api/sessions/user/{userId} (terminate all user's sessions), PUT /api/sessions/{id}/resource (update current resource)
+  - [x] 10.5 Create `ImpersonationController` in `controllers` package with REST endpoints: POST /api/impersonation/start (start impersonation), POST /api/impersonation/stop (stop impersonation), GET /api/impersonation/status (check if impersonating)
+  - [x] 10.6 Create `BulkUserImportController` in `controllers` package with REST endpoints: POST /api/users/bulk-import (import users from file), GET /api/users/bulk-import/template (download template file)
+  - [x] 10.7 Enhance `UserController` with new endpoints: GET /api/users/{id}/detail (get user detail with assignments and sessions), GET /api/users/{id}/assignments (get user's station assignments), PUT /api/users/{id}/assignments (update user's station assignments)
+  - [x] 10.8 Add Swagger/OpenAPI annotations (@Operation, @ApiResponse, @Tag) to all controller endpoints
+  - [x] 10.9 Add proper HTTP status codes and error handling to all endpoints
+  - [x] 10.10 Add @PreAuthorize annotations to enforce access control at controller level
   - [ ] 10.11 Write comprehensive unit tests for all controllers (80%+ coverage)
   - [ ] 10.12 Write integration tests for all REST endpoints
 

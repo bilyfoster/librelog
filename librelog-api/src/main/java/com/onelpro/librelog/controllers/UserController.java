@@ -1,7 +1,9 @@
 package com.onelpro.librelog.controllers;
 
+import com.onelpro.librelog.dto.UserDetailResponseDTO;
 import com.onelpro.librelog.dto.UserRequestDTO;
 import com.onelpro.librelog.dto.UserResponseDTO;
+import com.onelpro.librelog.dto.UserStationAssignmentRequestDTO;
 import com.onelpro.librelog.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -12,14 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -115,6 +110,55 @@ public class UserController {
 		logger.info("Delete user request received for ID: {}", id);
 		userService.delete(id);
 		return ResponseEntity.noContent().build();
+	}
+
+	@GetMapping("/{id}/detail")
+	@PreAuthorize("hasRole('ADMIN')")
+	@Operation(
+			summary = "Get user detail",
+			description = "Retrieves detailed user information including station assignments, active sessions, and recent audit logs. Requires ADMIN role."
+	)
+	@ApiResponse(responseCode = "200", description = "User detail retrieved successfully")
+	@ApiResponse(responseCode = "404", description = "User not found")
+	@ApiResponse(responseCode = "403", description = "Access denied")
+	public ResponseEntity<UserDetailResponseDTO> getUserDetail(@PathVariable UUID id) {
+		logger.info("Get user detail request for ID: {}", id);
+		UserDetailResponseDTO response = userService.getUserDetail(id);
+		return ResponseEntity.ok(response);
+	}
+
+	@GetMapping("/{id}/assignments")
+	@PreAuthorize("hasRole('ADMIN')")
+	@Operation(
+			summary = "Get user's station assignments",
+			description = "Retrieves a user with their station assignment summaries. Requires ADMIN role."
+	)
+	@ApiResponse(responseCode = "200", description = "User assignments retrieved successfully")
+	@ApiResponse(responseCode = "404", description = "User not found")
+	@ApiResponse(responseCode = "403", description = "Access denied")
+	public ResponseEntity<UserResponseDTO> getUserAssignments(@PathVariable UUID id) {
+		logger.info("Get user assignments request for ID: {}", id);
+		UserResponseDTO response = userService.getUserWithAssignments(id);
+		return ResponseEntity.ok(response);
+	}
+
+	@PutMapping("/{id}/assignments")
+	@PreAuthorize("hasRole('ADMIN')")
+	@Operation(
+			summary = "Update user's station assignments",
+			description = "Updates a user and their station assignments in a single transaction. Requires ADMIN role."
+	)
+	@ApiResponse(responseCode = "200", description = "User and assignments updated successfully")
+	@ApiResponse(responseCode = "404", description = "User not found")
+	@ApiResponse(responseCode = "400", description = "Invalid request data")
+	@ApiResponse(responseCode = "403", description = "Access denied")
+	public ResponseEntity<UserResponseDTO> updateUserWithAssignments(
+			@PathVariable UUID id,
+			@Valid @RequestBody UserRequestDTO request,
+			@RequestBody(required = false) List<@Valid UserStationAssignmentRequestDTO> stationAssignments) {
+		logger.info("Update user with assignments request for ID: {}", id);
+		UserResponseDTO response = userService.updateUserWithStations(id, request, stationAssignments);
+		return ResponseEntity.ok(response);
 	}
 
 }
