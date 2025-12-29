@@ -1,0 +1,498 @@
+/* Clock Builder Styles */
+
+.clock-builder-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 200px);
+    background: rgba(15, 15, 30, 0.95);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+}
+
+.clock-builder-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.clock-builder-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.clock-builder-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.clock-builder-actions .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+/* Timeline Container */
+.timeline-container {
+    flex: 1;
+    position: relative;
+    background: rgba(20, 20, 35, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    min-height: 400px;
+    padding: 1rem;
+}
+
+.timeline-wrapper {
+    position: relative;
+    width: 100%;
+    min-width: 3600px; /* 60 minutes * 60px per minute */
+    height: 100%;
+}
+
+/* Timeline Ruler */
+.timeline-ruler {
+    position: sticky;
+    top: 0;
+    height: 40px;
+    background: rgba(26, 26, 46, 0.95);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+}
+
+.timeline-marker {
+    position: absolute;
+    height: 100%;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    padding-left: 0.5rem;
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.timeline-marker.major {
+    border-left-width: 2px;
+    border-left-color: rgba(255, 255, 255, 0.4);
+    font-weight: 600;
+    color: #b0b0b0;
+}
+
+.timeline-marker-label {
+    position: absolute;
+    left: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Timeline Track */
+.timeline-track {
+    position: relative;
+    margin-top: 1rem;
+    height: 60px;
+    background: rgba(30, 30, 50, 0.5);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timeline-track-label {
+    position: absolute;
+    left: -120px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 110px;
+    text-align: right;
+    padding-right: 1rem;
+    font-size: 0.875rem;
+    color: #b0b0b0;
+    font-weight: 500;
+}
+
+/* Clock Element Blocks */
+.clock-element {
+    position: absolute;
+    height: 50px;
+    border-radius: 4px;
+    cursor: move;
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    z-index: 5;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.clock-element:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 6;
+}
+
+.clock-element.dragging {
+    opacity: 0.7;
+    z-index: 100;
+    cursor: grabbing;
+}
+
+.clock-element.selected {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+    z-index: 7;
+}
+
+/* Break Elements */
+.clock-element.break {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: #fff;
+    border-left: 4px solid #ff4757;
+}
+
+.clock-element.break.floating {
+    background: linear-gradient(135deg, #ffa502 0%, #ff6348 100%);
+    border-left-color: #ff6348;
+}
+
+/* Fixed Asset Elements */
+.clock-element.fixed-asset {
+    background: linear-gradient(135deg, #3742fa 0%, #2f3542 100%);
+    color: #fff;
+    border-left: 4px solid #5352ed;
+}
+
+/* Automation Command Elements */
+.clock-element.automation-command {
+    background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
+    color: #1a1a2e;
+    border-left: 4px solid #ffa502;
+}
+
+/* Element Resize Handles */
+.clock-element .resize-handle {
+    position: absolute;
+    width: 8px;
+    height: 100%;
+    cursor: ew-resize;
+    background: rgba(255, 255, 255, 0.2);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.clock-element:hover .resize-handle {
+    opacity: 1;
+}
+
+.clock-element .resize-handle.left {
+    left: 0;
+    border-radius: 4px 0 0 4px;
+}
+
+.clock-element .resize-handle.right {
+    right: 0;
+    border-radius: 0 4px 4px 0;
+}
+
+/* Drop Zone Indicator */
+.drop-zone {
+    position: absolute;
+    height: 100%;
+    background: rgba(102, 126, 234, 0.1);
+    border: 2px dashed #667eea;
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Snap Grid Lines */
+.snap-grid-line {
+    position: absolute;
+    width: 1px;
+    height: 100%;
+    background: rgba(102, 126, 234, 0.3);
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Properties Panel */
+.properties-panel {
+    position: fixed;
+    right: -400px;
+    top: 0;
+    width: 400px;
+    height: 100vh;
+    background: rgba(26, 26, 46, 0.98);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    transition: right 0.3s ease;
+    z-index: 200;
+    overflow-y: auto;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
+}
+
+.properties-panel.open {
+    right: 0;
+}
+
+.properties-panel-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    background: rgba(26, 26, 46, 0.98);
+    z-index: 10;
+}
+
+.properties-panel-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.properties-panel-close {
+    background: none;
+    border: none;
+    color: #b0b0b0;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.properties-panel-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+}
+
+.properties-panel-content {
+    padding: 1.5rem;
+}
+
+.properties-form-group {
+    margin-bottom: 1.5rem;
+}
+
+.properties-form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #b0b0b0;
+}
+
+.properties-form-group input,
+.properties-form-group select,
+.properties-form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    background: rgba(15, 15, 30, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: #e0e0e0;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.properties-form-group input:focus,
+.properties-form-group select:focus,
+.properties-form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Validation Panel */
+.validation-panel {
+    background: rgba(20, 20, 35, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 1rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.validation-panel-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #b0b0b0;
+    margin-bottom: 0.75rem;
+}
+
+.validation-item {
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: start;
+    gap: 0.5rem;
+}
+
+.validation-item.error {
+    background: rgba(255, 71, 87, 0.1);
+    border-left: 3px solid #ff4757;
+    color: #ff6b6b;
+}
+
+.validation-item.warning {
+    background: rgba(255, 165, 2, 0.1);
+    border-left: 3px solid #ffa502;
+    color: #ffa502;
+}
+
+.validation-item.info {
+    background: rgba(102, 126, 234, 0.1);
+    border-left: 3px solid #667eea;
+    color: #8b9aff;
+}
+
+/* Revenue Analysis Panel */
+.revenue-panel {
+    background: rgba(20, 20, 35, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.revenue-panel-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #b0b0b0;
+    margin-bottom: 0.75rem;
+}
+
+.revenue-stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.revenue-stat:last-child {
+    border-bottom: none;
+}
+
+.revenue-stat-label {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.revenue-stat-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #4ade80;
+}
+
+/* Tooltip */
+.element-tooltip {
+    position: absolute;
+    background: rgba(26, 26, 46, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    color: #e0e0e0;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .clock-builder-container {
+        height: auto;
+        min-height: 500px;
+    }
+
+    .timeline-container {
+        min-height: 300px;
+    }
+
+    .timeline-wrapper {
+        min-width: 2400px; /* Reduced for mobile */
+    }
+
+    .properties-panel {
+        width: 100%;
+        right: -100%;
+    }
+
+    .clock-builder-actions {
+        flex-wrap: wrap;
+    }
+
+    .clock-builder-actions .btn {
+        flex: 1;
+        min-width: 120px;
+    }
+}
+
+/* Accessibility */
+.clock-element:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+.clock-element[aria-label] {
+    cursor: pointer;
+}
+
+/* Loading State */
+.clock-builder-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    color: #888;
+    font-size: 0.875rem;
+}
+
+/* Empty State */
+.clock-builder-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    color: #888;
+    text-align: center;
+    padding: 2rem;
+}
+
+.clock-builder-empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.clock-builder-empty-text {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.clock-builder-empty-hint {
+    font-size: 0.875rem;
+    color: #666;
+}
+

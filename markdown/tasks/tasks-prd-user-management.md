@@ -199,7 +199,7 @@ Based on PRD: `prd-user-management.md`
   - [x] 5.16 Add validation annotations (@NotNull, @NotBlank, @Valid) where appropriate
 
 - [ ] 6.0 Permission System Core
-  - [ ] 6.1 Create `PermissionService` interface in `services` package with methods: hasPermission(userId, stationId, moduleType, actionType), getUserStations(userId), canAccessStation(userId, stationId), getEffectivePermissions(userId, stationId)
+  - [x] 6.1 Create `PermissionService` interface in `services` package with methods: hasPermission(userId, stationId, moduleType, actionType), getUserStations(userId), canAccessStation(userId, stationId), getEffectivePermissions(userId, stationId)
   - [ ] 6.2 Create `PermissionServiceImpl` in `services.impl` package implementing the interface with constructor injection, caching for permission lookups, and proper error handling
   - [ ] 6.3 Implement `hasPermission` method that checks user-station assignments, role permissions, and custom permissions
   - [ ] 6.4 Implement `getUserStations` method that returns all stations a user has access to
@@ -213,7 +213,7 @@ Based on PRD: `prd-user-management.md`
   - [ ] 6.12 Write integration tests for permission enforcement across different user-station combinations
 
 - [ ] 7.0 Audit Trail System
-  - [ ] 7.1 Create `AuditService` interface in `services` package with methods: logAction(actionType, resourceType, resourceId, previousValue, newValue, userId, stationId), logLogin(userId, ipAddress, userAgent), logLogout(userId), logPermissionChange(userId, targetUserId, previousPermissions, newPermissions), getAuditLogs(filter), exportAuditLogs(filter)
+  - [x] 7.1 Create `AuditService` interface in `services` package with methods: logAction(actionType, resourceType, resourceId, previousValue, newValue, userId, stationId), logLogin(userId, ipAddress, userAgent), logLogout(userId), logPermissionChange(userId, targetUserId, previousPermissions, newPermissions), getAuditLogs(filter), exportAuditLogs(filter)
   - [ ] 7.2 Create `AuditServiceImpl` in `services.impl` package implementing the interface with constructor injection, transaction management, and proper error handling
   - [ ] 7.3 Implement `logAction` method that creates audit log entries with all required fields
   - [ ] 7.4 Implement `logLogin` and `logLogout` methods for authentication events
@@ -227,7 +227,7 @@ Based on PRD: `prd-user-management.md`
   - [ ] 7.12 Write integration tests for audit logging across different scenarios
 
 - [ ] 8.0 Session Management
-  - [ ] 8.1 Create `SessionService` interface in `services` package with methods: createSession(userId, ipAddress, userAgent), updateLastActivity(sessionId), terminateSession(sessionId), terminateAllUserSessions(userId), getActiveSessions(), getUserSessions(userId), updateCurrentResource(sessionId, stationId, resourceId), getSession(sessionId)
+  - [x] 8.1 Create `SessionService` interface in `services` package with methods: createSession(userId, ipAddress, userAgent), updateLastActivity(sessionId), terminateSession(sessionId), terminateAllUserSessions(userId), getActiveSessions(), getUserSessions(userId), updateCurrentResource(sessionId, stationId, resourceId), getSession(sessionId)
   - [ ] 8.2 Create `SessionServiceImpl` in `services.impl` package implementing the interface with constructor injection, session token generation/hashing, and proper error handling
   - [ ] 8.3 Implement `createSession` method that creates a new session with hashed token and expiration
   - [ ] 8.4 Implement `updateLastActivity` method that updates the last activity timestamp
@@ -242,13 +242,13 @@ Based on PRD: `prd-user-management.md`
   - [ ] 8.13 Write integration tests for session management workflows
 
 - [ ] 9.0 Service Layer Implementation
-  - [ ] 9.1 Create `UserStationAssignmentService` interface in `services` package with methods: assignUserToStation(request), removeUserFromStation(userId, stationId), getUserStationAssignments(userId), getStationUserAssignments(stationId), updatePermissionLevel(userId, stationId, permissionLevel, customPermissions)
+  - [x] 9.1 Create `UserStationAssignmentService` interface in `services` package with methods: assignUserToStation(request), removeUserFromStation(userId, stationId), getUserStationAssignments(userId), getStationUserAssignments(stationId), updatePermissionLevel(userId, stationId, permissionLevel, customPermissions)
   - [ ] 9.2 Create `UserStationAssignmentServiceImpl` in `services.impl` package implementing the interface with constructor injection, transaction management, audit logging, and proper error handling
-  - [ ] 9.3 Create `CustomRoleService` interface in `services` package with methods: createRole(request), updateRole(roleId, request), deleteRole(roleId), getRoleById(roleId), getAllRoles(), cloneRole(roleId, newName), getRolesAssignedToUser(userId)
+  - [x] 9.3 Create `CustomRoleService` interface in `services` package with methods: createRole(request), updateRole(roleId, request), deleteRole(roleId), getRoleById(roleId), getAllRoles(), cloneRole(roleId, newName), getRolesAssignedToUser(userId)
   - [ ] 9.4 Create `CustomRoleServiceImpl` in `services.impl` package implementing the interface with constructor injection, transaction management, validation (prevent deletion if assigned to users), audit logging, and proper error handling
-  - [ ] 9.5 Create `ImpersonationService` interface in `services` package with methods: startImpersonation(adminUserId, targetUserId), stopImpersonation(adminUserId), isImpersonating(userId), getImpersonatedUser(userId)
+  - [x] 9.5 Create `ImpersonationService` interface in `services` package with methods: startImpersonation(adminUserId, targetUserId), stopImpersonation(adminUserId), isImpersonating(userId), getImpersonatedUser(userId)
   - [ ] 9.6 Create `ImpersonationServiceImpl` in `services.impl` package implementing the interface with constructor injection, validation (prevent impersonating higher-level users), audit logging, and proper error handling
-  - [ ] 9.7 Create `BulkUserImportService` interface in `services` package with methods: importUsers(file, validateOnly), validateUserData(rows), generateImportTemplate()
+  - [x] 9.7 Create `BulkUserImportService` interface in `services` package with methods: importUsers(file, validateOnly), validateUserData(rows), generateImportTemplate()
   - [ ] 9.8 Create `BulkUserImportServiceImpl` in `services.impl` package implementing the interface with constructor injection, CSV/Excel parsing, validation, partial import support, and detailed error reporting
   - [ ] 9.9 Enhance `UserService` interface with methods: getUserDetail(userId), getUserWithAssignments(userId), updateUserWithStations(userId, request, stationAssignments)
   - [ ] 9.10 Enhance `UserServiceImpl` to integrate with permission system, audit logging, and station assignments
