@@ -158,7 +158,7 @@ Based on PRD: `prd-user-management.md`
   - [x] 2.6 Write unit tests for all enum classes verifying values() and valueOf() methods work correctly (80%+ coverage)
   - [x] 2.7 Verify all enums follow naming conventions (PascalCase for enum name, UPPER_SNAKE_CASE for constants)
 
-- [ ] 3.0 Entity Models
+- [x] 3.0 Entity Models
   - [x] 3.1 Create `UserStationAssignment` entity in `models` package with JPA annotations, UUID primary key, Lombok annotations (@Data, @Builder, @NoArgsConstructor, @AllArgsConstructor), relationships to User and Station, fields for permission_level (enum), custom_permissions (JSONB), and timestamps
   - [x] 3.2 Create `CustomRole` entity in `models` package with JPA annotations, UUID primary key, Lombok annotations, fields for name (unique), description, permissions (JSONB), created_by_user_id (FK), and timestamps
   - [x] 3.3 Create `AuditLog` entity in `models` package with JPA annotations, UUID primary key, Lombok annotations, relationships to User (user_id and impersonated_user_id, both nullable), Station (nullable), fields for action_type (enum), resource_type, resource_id (UUID nullable), previous_value (JSONB nullable), new_value (JSONB nullable), ip_address, user_agent, and timestamp
@@ -170,15 +170,15 @@ Based on PRD: `prd-user-management.md`
   - [x] 3.9 Verify all entities use UUID for primary keys with `@GeneratedValue(strategy = GenerationType.UUID)`
   - [x] 3.10 Write unit tests for entity classes verifying Lombok annotations work correctly
 
-- [ ] 4.0 Repository Interfaces
-  - [ ] 4.1 Create `UserStationAssignmentRepository` interface extending JpaRepository with custom query methods: findByUserId, findByStationId, findByUserIdAndStationId, findByUserIdIn
-  - [ ] 4.2 Create `CustomRoleRepository` interface extending JpaRepository with custom query methods: findByName, findByCreatedByUserId, existsByName
-  - [ ] 4.3 Create `AuditLogRepository` interface extending JpaRepository with custom query methods: findByUserId, findByActionType, findByResourceType, findByTimestampBetween, findByStationId, with pagination support
-  - [ ] 4.4 Create `UserSessionRepository` interface extending JpaRepository with custom query methods: findByUserId, findByIsActiveTrue, findByUserIdAndIsActiveTrue, findByExpiresAtBefore, deleteByExpiresAtBefore
-  - [ ] 4.5 Create `UserMarketAssignmentRepository` interface (Phase 2 preparation) with similar methods to UserStationAssignmentRepository
-  - [ ] 4.6 Create `UserClusterAssignmentRepository` interface (Phase 2 preparation) with similar methods to UserStationAssignmentRepository
-  - [ ] 4.7 Enhance `UserRepository` with additional query methods if needed: findByEmail, existsByEmail (verify these exist)
-  - [ ] 4.8 Write repository tests using @DataJpaTest for all new repositories
+- [x] 4.0 Repository Interfaces
+  - [x] 4.1 Create `UserStationAssignmentRepository` interface extending JpaRepository with custom query methods: findByUserId, findByStationId, findByUserIdAndStationId, findByUserIdIn
+  - [x] 4.2 Create `CustomRoleRepository` interface extending JpaRepository with custom query methods: findByName, findByCreatedByUserId, existsByName
+  - [x] 4.3 Create `AuditLogRepository` interface extending JpaRepository with custom query methods: findByUserId, findByActionType, findByResourceType, findByTimestampBetween, findByStationId, with pagination support
+  - [x] 4.4 Create `UserSessionRepository` interface extending JpaRepository with custom query methods: findByUserId, findByIsActiveTrue, findByUserIdAndIsActiveTrue, findByExpiresAtBefore, deleteByExpiresAtBefore
+  - [x] 4.5 Create `UserMarketAssignmentRepository` interface (Phase 2 preparation) with similar methods to UserStationAssignmentRepository
+  - [x] 4.6 Create `UserClusterAssignmentRepository` interface (Phase 2 preparation) with similar methods to UserStationAssignmentRepository
+  - [x] 4.7 Enhance `UserRepository` with additional query methods if needed: findByEmail, existsByEmail (verify these exist)
+  - [x] 4.8 Write repository tests using @DataJpaTest for all new repositories
 
 - [ ] 5.0 DTOs (Data Transfer Objects)
   - [ ] 5.1 Create `UserStationAssignmentRequestDTO` with fields: userId (UUID), stationId (UUID), permissionLevel (enum), customPermissions (Map<String, Boolean> or JSON)
