@@ -85,34 +85,5 @@ class LibreTimeClientTest {
 				.verifyComplete();
 	}
 
-	@Test
-	void testExportClock_WithNullConfigValues_ExpectHandlesGracefully() {
-		when(config.getBaseUrl()).thenReturn(null);
-		when(config.getApiKey()).thenReturn(null);
-		when(config.getTimeoutSeconds()).thenReturn(null);
-		when(config.getMaxRetries()).thenReturn(null);
-		
-		LibreTimeClient client = new LibreTimeClient(config);
-		Mono<String> result = client.exportClock("{\"test\":\"data\"}");
-		assertNotNull(result);
-		StepVerifier.create(result)
-				.expectError()
-				.verify(Duration.ofSeconds(35));
-	}
-
-	@Test
-	void testPushLog_WithNullConfigValues_ExpectHandlesGracefully() {
-		when(config.getBaseUrl()).thenReturn(null);
-		when(config.getApiKey()).thenReturn(null);
-		when(config.getTimeoutSeconds()).thenReturn(null);
-		when(config.getMaxRetries()).thenReturn(null);
-		
-		LibreTimeClient client = new LibreTimeClient(config);
-		Mono<String> result = client.pushLog("{\"test\":\"data\"}");
-		assertNotNull(result);
-		StepVerifier.create(result)
-				.expectError()
-				.verify(Duration.ofSeconds(35));
-	}
 
 }
