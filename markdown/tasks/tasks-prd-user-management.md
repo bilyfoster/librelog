@@ -243,7 +243,7 @@ Based on PRD: `prd-user-management.md`
 
 - [ ] 9.0 Service Layer Implementation
   - [x] 9.1 Create `UserStationAssignmentService` interface in `services` package with methods: assignUserToStation(request), removeUserFromStation(userId, stationId), getUserStationAssignments(userId), getStationUserAssignments(stationId), updatePermissionLevel(userId, stationId, permissionLevel, customPermissions)
-  - [ ] 9.2 Create `UserStationAssignmentServiceImpl` in `services.impl` package implementing the interface with constructor injection, transaction management, audit logging, and proper error handling
+  - [x] 9.2 Create `UserStationAssignmentServiceImpl` in `services.impl` package implementing the interface with constructor injection, transaction management, audit logging, and proper error handling
   - [x] 9.3 Create `CustomRoleService` interface in `services` package with methods: createRole(request), updateRole(roleId, request), deleteRole(roleId), getRoleById(roleId), getAllRoles(), cloneRole(roleId, newName), getRolesAssignedToUser(userId)
   - [ ] 9.4 Create `CustomRoleServiceImpl` in `services.impl` package implementing the interface with constructor injection, transaction management, validation (prevent deletion if assigned to users), audit logging, and proper error handling
   - [x] 9.5 Create `ImpersonationService` interface in `services` package with methods: startImpersonation(adminUserId, targetUserId), stopImpersonation(adminUserId), isImpersonating(userId), getImpersonatedUser(userId)

@@ -51,5 +51,11 @@ public interface PermissionService {
 	 */
 	Map<ModuleType, List<ActionType>> getEffectivePermissions(UUID userId, UUID stationId);
 
+	/**
+	 * Evicts all permission-related caches.
+	 * Should be called when user permissions or assignments change.
+	 */
+	void evictAllPermissionCaches();
+
 }
 

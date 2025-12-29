@@ -347,5 +347,12 @@ public class PermissionServiceImpl implements PermissionService {
 		logger.debug("Evicting permission cache for user {}", userId);
 	}
 
+	@Override
+	@CacheEvict(value = {"permissions", "userStations", "stationAccess", "effectivePermissions"}, allEntries = true)
+	@Transactional
+	public void evictAllPermissionCaches() {
+		logger.info("Evicting all permission-related caches");
+	}
+
 }
 
