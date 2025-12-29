@@ -180,23 +180,23 @@ Based on PRD: `prd-user-management.md`
   - [x] 4.7 Enhance `UserRepository` with additional query methods if needed: findByEmail, existsByEmail (verify these exist)
   - [x] 4.8 Write repository tests using @DataJpaTest for all new repositories
 
-- [ ] 5.0 DTOs (Data Transfer Objects)
-  - [ ] 5.1 Create `UserStationAssignmentRequestDTO` with fields: userId (UUID), stationId (UUID), permissionLevel (enum), customPermissions (Map<String, Boolean> or JSON)
-  - [ ] 5.2 Create `UserStationAssignmentResponseDTO` with fields: id, userId, userEmail, stationId, stationName, permissionLevel, customPermissions, createdAt, updatedAt
-  - [ ] 5.3 Create `CustomRoleRequestDTO` with fields: name (String), description (String), permissions (Map<ModuleType, Set<ActionType>> or JSON)
-  - [ ] 5.4 Create `CustomRoleResponseDTO` with fields: id, name, description, permissions, createdByUserId, createdByUserEmail, createdAt, updatedAt, assignedUserCount
-  - [ ] 5.5 Create `AuditLogResponseDTO` with fields: id, userId, userEmail, impersonatedUserId, impersonatedUserEmail, actionType, resourceType, resourceId, previousValue, newValue, ipAddress, userAgent, stationId, stationName, timestamp
-  - [ ] 5.6 Create `AuditLogFilterDTO` with fields: userId (UUID optional), actionType (enum optional), resourceType (enum optional), stationId (UUID optional), startDate (LocalDateTime optional), endDate (LocalDateTime optional), page (int), size (int)
-  - [ ] 5.7 Create `UserSessionResponseDTO` with fields: id, userId, userEmail, loginTimestamp, lastActivityTimestamp, ipAddress, userAgent, currentStationId, currentStationName, currentResourceId, isActive, expiresAt, sessionDuration
-  - [ ] 5.8 Create `ImpersonationRequestDTO` with fields: targetUserId (UUID)
-  - [ ] 5.9 Create `BulkUserImportRequestDTO` with fields: file (MultipartFile), validateOnly (boolean optional)
-  - [ ] 5.10 Create `BulkUserImportResponseDTO` with fields: totalRecords, successfulCount, failedCount, errors (List<ImportError>), importedUsers (List<UserResponseDTO>)
-  - [ ] 5.11 Create `PermissionCheckDTO` with fields: userId (UUID), stationId (UUID optional), moduleType (enum), actionType (enum), result (boolean)
-  - [ ] 5.12 Create `UserDetailResponseDTO` extending UserResponseDTO with additional fields: stationAssignments (List<UserStationAssignmentResponseDTO>), activeSessions (List<UserSessionResponseDTO>), recentAuditLogs (List<AuditLogResponseDTO>)
-  - [ ] 5.13 Enhance `UserRequestDTO` to optionally include station assignments
-  - [ ] 5.14 Enhance `UserResponseDTO` to optionally include station assignments summary
-  - [ ] 5.15 Verify all DTOs use Lombok annotations (@Data, @Builder, @NoArgsConstructor, @AllArgsConstructor) and end with "DTO" suffix
-  - [ ] 5.16 Add validation annotations (@NotNull, @NotBlank, @Valid) where appropriate
+- [x] 5.0 DTOs (Data Transfer Objects)
+  - [x] 5.1 Create `UserStationAssignmentRequestDTO` with fields: userId (UUID), stationId (UUID), permissionLevel (enum), customPermissions (Map<String, Boolean> or JSON)
+  - [x] 5.2 Create `UserStationAssignmentResponseDTO` with fields: id, userId, userEmail, stationId, stationName, permissionLevel, customPermissions, createdAt, updatedAt
+  - [x] 5.3 Create `CustomRoleRequestDTO` with fields: name (String), description (String), permissions (Map<ModuleType, Set<ActionType>> or JSON)
+  - [x] 5.4 Create `CustomRoleResponseDTO` with fields: id, name, description, permissions, createdByUserId, createdByUserEmail, createdAt, updatedAt, assignedUserCount
+  - [x] 5.5 Create `AuditLogResponseDTO` with fields: id, userId, userEmail, impersonatedUserId, impersonatedUserEmail, actionType, resourceType, resourceId, previousValue, newValue, ipAddress, userAgent, stationId, stationName, timestamp
+  - [x] 5.6 Create `AuditLogFilterDTO` with fields: userId (UUID optional), actionType (enum optional), resourceType (enum optional), stationId (UUID optional), startDate (LocalDateTime optional), endDate (LocalDateTime optional), page (int), size (int)
+  - [x] 5.7 Create `UserSessionResponseDTO` with fields: id, userId, userEmail, loginTimestamp, lastActivityTimestamp, ipAddress, userAgent, currentStationId, currentStationName, currentResourceId, isActive, expiresAt, sessionDuration
+  - [x] 5.8 Create `ImpersonationRequestDTO` with fields: targetUserId (UUID)
+  - [x] 5.9 Create `BulkUserImportRequestDTO` with fields: file (MultipartFile), validateOnly (boolean optional)
+  - [x] 5.10 Create `BulkUserImportResponseDTO` with fields: totalRecords, successfulCount, failedCount, errors (List<ImportError>), importedUsers (List<UserResponseDTO>)
+  - [x] 5.11 Create `PermissionCheckDTO` with fields: userId (UUID), stationId (UUID optional), moduleType (enum), actionType (enum), result (boolean)
+  - [x] 5.12 Create `UserDetailResponseDTO` extending UserResponseDTO with additional fields: stationAssignments (List<UserStationAssignmentResponseDTO>), activeSessions (List<UserSessionResponseDTO>), recentAuditLogs (List<AuditLogResponseDTO>)
+  - [x] 5.13 Enhance `UserRequestDTO` to optionally include station assignments
+  - [x] 5.14 Enhance `UserResponseDTO` to optionally include station assignments summary
+  - [x] 5.15 Verify all DTOs use Lombok annotations (@Data, @Builder, @NoArgsConstructor, @AllArgsConstructor) and end with "DTO" suffix
+  - [x] 5.16 Add validation annotations (@NotNull, @NotBlank, @Valid) where appropriate
 
 - [ ] 6.0 Permission System Core
   - [ ] 6.1 Create `PermissionService` interface in `services` package with methods: hasPermission(userId, stationId, moduleType, actionType), getUserStations(userId), canAccessStation(userId, stationId), getEffectivePermissions(userId, stationId)

@@ -2,6 +2,7 @@ package com.onelpro.librelog.dto;
 
 import com.onelpro.librelog.enums.UserRole;
 import com.onelpro.librelog.enums.UserStatus;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -9,6 +10,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 /**
  * DTO for creating or updating a user.
@@ -30,6 +33,12 @@ public class UserRequestDTO {
 
 	@NotNull(message = "Role is required")
 	private UserRole role;
+
+	/**
+	 * Optional list of station assignments to create along with the user.
+	 */
+	@Valid
+	private List<UserStationAssignmentRequestDTO> stationAssignments;
 
 }
 
