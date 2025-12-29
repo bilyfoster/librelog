@@ -228,16 +228,16 @@ Based on PRD: `prd-user-management.md`
 
 - [ ] 8.0 Session Management
   - [x] 8.1 Create `SessionService` interface in `services` package with methods: createSession(userId, ipAddress, userAgent), updateLastActivity(sessionId), terminateSession(sessionId), terminateAllUserSessions(userId), getActiveSessions(), getUserSessions(userId), updateCurrentResource(sessionId, stationId, resourceId), getSession(sessionId)
-  - [ ] 8.2 Create `SessionServiceImpl` in `services.impl` package implementing the interface with constructor injection, session token generation/hashing, and proper error handling
-  - [ ] 8.3 Implement `createSession` method that creates a new session with hashed token and expiration
-  - [ ] 8.4 Implement `updateLastActivity` method that updates the last activity timestamp
-  - [ ] 8.5 Implement `terminateSession` and `terminateAllUserSessions` methods
-  - [ ] 8.6 Implement `getActiveSessions` method that returns all currently active sessions
-  - [ ] 8.7 Implement `getUserSessions` method that returns all sessions for a user
-  - [ ] 8.8 Implement `updateCurrentResource` method for tracking which station/log a user is editing
-  - [ ] 8.9 Create scheduled task to clean up expired sessions (run every hour)
+  - [x] 8.2 Create `SessionServiceImpl` in `services.impl` package implementing the interface with constructor injection, session token generation/hashing, and proper error handling
+  - [x] 8.3 Implement `createSession` method that creates a new session with hashed token and expiration
+  - [x] 8.4 Implement `updateLastActivity` method that updates the last activity timestamp
+  - [x] 8.5 Implement `terminateSession` and `terminateAllUserSessions` methods
+  - [x] 8.6 Implement `getActiveSessions` method that returns all currently active sessions
+  - [x] 8.7 Implement `getUserSessions` method that returns all sessions for a user
+  - [x] 8.8 Implement `updateCurrentResource` method for tracking which station/log a user is editing
+  - [x] 8.9 Create scheduled task to clean up expired sessions (run every hour)
   - [ ] 8.10 Integrate session management into authentication flow (create session on login, terminate on logout)
-  - [ ] 8.11 Implement session timeout logic (30 minutes of inactivity = automatic expiration)
+  - [x] 8.11 Implement session timeout logic (30 minutes of inactivity = automatic expiration)
   - [ ] 8.12 Write comprehensive unit tests for `SessionServiceImpl` (80%+ coverage)
   - [ ] 8.13 Write integration tests for session management workflows
 
