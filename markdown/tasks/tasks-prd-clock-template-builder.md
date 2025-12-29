@@ -281,14 +281,14 @@ Based on PRD: `prd-clock-template-builder.md`
   - [ ] 11.10 Write unit tests for LibreTime client and sync service (80%+ coverage)
   - [ ] 11.11 Write integration tests with mocked LibreTime API
 
-- [ ] 12.0 Add WideOrbit Compatibility Features
-  - [ ] 12.1 Implement WideOrbit track category support in clock elements (S1, S2, S3)
-  - [ ] 12.2 Implement WideOrbit asset type assignment to fixed assets and breaks
-  - [ ] 12.3 Implement transition code assignment (Segue, Overlap, Hard Start) to breaks and elements
-  - [ ] 12.4 Implement show segment naming convention support (SH_MORNING_SEG1, etc.)
-  - [ ] 12.5 Create WideOrbit export format converter
-  - [ ] 12.6 Add endpoint: POST /api/clock-templates/{id}/export/wideorbit
-  - [ ] 12.7 Ensure all WideOrbit-compatible metadata is preserved during export
+- [x] 12.0 Add WideOrbit Compatibility Features
+  - [x] 12.1 Implement WideOrbit track category support in clock elements (S1, S2, S3)
+  - [x] 12.2 Implement WideOrbit asset type assignment to fixed assets and breaks
+  - [x] 12.3 Implement transition code assignment (Segue, Overlap, Hard Start) to breaks and elements
+  - [x] 12.4 Implement show segment naming convention support (SH_MORNING_SEG1, etc.)
+  - [x] 12.5 Create WideOrbit export format converter
+  - [x] 12.6 Add endpoint: POST /api/clock-templates/{id}/export/wideorbit
+  - [x] 12.7 Ensure all WideOrbit-compatible metadata is preserved during export
   - [ ] 12.8 Update UI to show WideOrbit asset types and categories in element properties
   - [ ] 12.9 Write unit tests for WideOrbit export format conversion (80%+ coverage)
 
