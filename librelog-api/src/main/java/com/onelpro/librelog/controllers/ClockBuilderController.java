@@ -2,6 +2,7 @@ package com.onelpro.librelog.controllers;
 
 import com.onelpro.librelog.dto.*;
 import com.onelpro.librelog.services.ClockBuilderService;
+import com.onelpro.librelog.services.RevenueAnalysisService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,9 +26,13 @@ public class ClockBuilderController {
 	private static final Logger logger = LoggerFactory.getLogger(ClockBuilderController.class);
 
 	private final ClockBuilderService clockBuilderService;
+	private final RevenueAnalysisService revenueAnalysisService;
 
-	public ClockBuilderController(ClockBuilderService clockBuilderService) {
+	public ClockBuilderController(
+			ClockBuilderService clockBuilderService,
+			RevenueAnalysisService revenueAnalysisService) {
 		this.clockBuilderService = clockBuilderService;
+		this.revenueAnalysisService = revenueAnalysisService;
 	}
 
 	@GetMapping("/{id}/structure")
@@ -176,6 +181,19 @@ public class ClockBuilderController {
 		logger.info("DELETE /api/clock-templates/automation-commands/{} - Removing automation command", commandId);
 		clockBuilderService.removeAutomationCommand(commandId);
 		return ResponseEntity.noContent().build();
+	}
+
+	@GetMapping("/{id}/revenue-analysis")
+	@Operation(
+			summary = "Get revenue analysis for clock template",
+			description = "Calculates and returns revenue analysis including total potential revenue, breakdowns by break and avail type, and warnings"
+	)
+	@ApiResponse(responseCode = "200", description = "Revenue analysis retrieved successfully")
+	@ApiResponse(responseCode = "404", description = "Clock template not found")
+	public ResponseEntity<RevenueAnalysisDTO> getRevenueAnalysis(@PathVariable UUID id) {
+		logger.debug("GET /api/clock-templates/{}/revenue-analysis - Fetching revenue analysis", id);
+		RevenueAnalysisDTO analysis = revenueAnalysisService.calculateRevenueImpact(id);
+		return ResponseEntity.ok(analysis);
 	}
 
 }
