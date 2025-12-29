@@ -130,5 +130,39 @@ public class ClockController {
 		return ResponseEntity.ok(result);
 	}
 
+	@PostMapping("/{id}/clone")
+	@Operation(
+			summary = "Clone clock template",
+			description = "Creates a copy of a clock template with all its associated elements (breaks, fixed assets, automation commands)"
+	)
+	@ApiResponse(responseCode = "201", description = "Clock template cloned successfully")
+	@ApiResponse(responseCode = "404", description = "Source clock template not found")
+	@ApiResponse(responseCode = "400", description = "Invalid request data")
+	public ResponseEntity<ClockTemplateResponseDTO> clone(
+			@PathVariable UUID id,
+			@RequestBody(required = false) CloneRequest request) {
+		logger.info("POST /api/clocks/{}/clone - Cloning clock template", id);
+		String newName = (request != null && request.getName() != null) 
+				? request.getName() 
+				: "Copy of Clock Template";
+		ClockTemplateResponseDTO response = clockService.cloneClockTemplate(id, newName);
+		return ResponseEntity.status(HttpStatus.CREATED).body(response);
+	}
+
+	/**
+	 * Request DTO for clone operation.
+	 */
+	public static class CloneRequest {
+		private String name;
+
+		public String getName() {
+			return name;
+		}
+
+		public void setName(String name) {
+			this.name = name;
+		}
+	}
+
 }
 

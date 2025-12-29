@@ -23,5 +23,13 @@ public interface ClockService {
 
 	void delete(UUID id);
 
+	/**
+	 * Clones a clock template with all its associated elements (breaks, fixed assets, automation commands).
+	 * @param sourceId The ID of the clock template to clone.
+	 * @param newName The name for the cloned clock template.
+	 * @return The response DTO of the cloned clock template.
+	 */
+	ClockTemplateResponseDTO cloneClockTemplate(UUID sourceId, String newName);
+
 }
 
