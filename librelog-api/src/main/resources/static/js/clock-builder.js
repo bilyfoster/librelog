@@ -432,6 +432,19 @@ function populatePropertiesForm(element) {
     
     // Add form fields based on element type
     if (element.type === 'break') {
+        const assetTypeOptions = ['', 'IM', 'ID', 'CM', 'PR', 'VT', 'SH'].map(opt => 
+            `<option value="${opt}" ${element.assetType === opt ? 'selected' : ''}>${opt || 'None'}</option>`
+        ).join('');
+        const musicCategoryOptions = ['', 'S1', 'S2', 'S3'].map(opt => 
+            `<option value="${opt}" ${element.musicCategory === opt ? 'selected' : ''}>${opt || 'None'}</option>`
+        ).join('');
+        const transitionCodeOptions = ['', 'SEGUE', 'OVERLAP', 'HARD_START'].map(opt => 
+            `<option value="${opt}" ${element.transitionCode === opt ? 'selected' : ''}>${opt || 'None'}</option>`
+        ).join('');
+        const timingTypeOptions = ['', 'HARD_START', 'SOFT_START'].map(opt => 
+            `<option value="${opt}" ${element.timingType === opt ? 'selected' : ''}>${opt || 'None'}</option>`
+        ).join('');
+        
         form.innerHTML = `
             <div class="properties-form-group">
                 <label>Name</label>
@@ -450,12 +463,124 @@ function populatePropertiesForm(element) {
                 <input type="checkbox" id="propIsFloating" ${element.isFloating ? 'checked' : ''}>
             </div>
             <div class="properties-form-group">
+                <label>Timing Type</label>
+                <select id="propTimingType">${timingTypeOptions}</select>
+            </div>
+            <div class="properties-form-group">
+                <label>Transition Code</label>
+                <select id="propTransitionCode">${transitionCodeOptions}</select>
+            </div>
+            <div class="properties-form-group">
+                <label>Asset Type (WideOrbit)</label>
+                <select id="propAssetType">${assetTypeOptions}</select>
+            </div>
+            <div class="properties-form-group">
+                <label>Music Category (WideOrbit)</label>
+                <select id="propMusicCategory">${musicCategoryOptions}</select>
+            </div>
+            <div class="properties-form-group">
+                <label>Show Segment Name (WideOrbit)</label>
+                <input type="text" id="propShowSegmentName" value="${element.showSegmentName || ''}" placeholder="e.g., SH_MORNING_SEG1">
+            </div>
+            <div class="properties-form-group">
+                <button type="button" class="btn btn-primary" onclick="saveElementProperties('${element.id}')">Save</button>
+                <button type="button" class="btn btn-secondary" onclick="deleteElement('${element.id}')">Delete</button>
+            </div>
+        `;
+    } else if (element.type === 'fixed-asset') {
+        const assetTypeOptions = ['IM', 'ID', 'CM', 'PR', 'VT', 'SH'].map(opt => 
+            `<option value="${opt}" ${element.assetType === opt ? 'selected' : ''}>${opt}</option>`
+        ).join('');
+        const musicCategoryOptions = ['', 'S1', 'S2', 'S3'].map(opt => 
+            `<option value="${opt}" ${element.musicCategory === opt ? 'selected' : ''}>${opt || 'None'}</option>`
+        ).join('');
+        const timingTypeOptions = ['HARD_START', 'SOFT_START'].map(opt => 
+            `<option value="${opt}" ${element.timingType === opt ? 'selected' : ''}>${opt}</option>`
+        ).join('');
+        
+        form.innerHTML = `
+            <div class="properties-form-group">
+                <label>Name</label>
+                <input type="text" id="propName" value="${element.name || ''}">
+            </div>
+            <div class="properties-form-group">
+                <label>Asset Type (WideOrbit)</label>
+                <select id="propAssetType">${assetTypeOptions}</select>
+            </div>
+            <div class="properties-form-group">
+                <label>Start Time</label>
+                <input type="time" id="propStartTime" value="${formatTimeForInput(element.startTime)}">
+            </div>
+            <div class="properties-form-group">
+                <label>Asset Identifier</label>
+                <input type="text" id="propAssetIdentifier" value="${element.assetIdentifier || ''}">
+            </div>
+            <div class="properties-form-group">
+                <label>Timing Type</label>
+                <select id="propTimingType">${timingTypeOptions}</select>
+            </div>
+            <div class="properties-form-group">
+                <label>Music Category (WideOrbit)</label>
+                <select id="propMusicCategory">${musicCategoryOptions}</select>
+            </div>
+            <div class="properties-form-group">
+                <label>Show Segment Name (WideOrbit)</label>
+                <input type="text" id="propShowSegmentName" value="${element.showSegmentName || ''}" placeholder="e.g., SH_MORNING_SEG1">
+            </div>
+            <div class="properties-form-group">
                 <button type="button" class="btn btn-primary" onclick="saveElementProperties('${element.id}')">Save</button>
                 <button type="button" class="btn btn-secondary" onclick="deleteElement('${element.id}')">Delete</button>
             </div>
         `;
     }
     // Add other element types as needed
+}
+
+// Save element properties from form
+async function saveElementProperties(elementId) {
+    const element = clockElements.find(el => el.id === elementId);
+    if (!element) return;
+    
+    try {
+        // Read form values
+        const name = document.getElementById('propName')?.value;
+        const startTime = document.getElementById('propStartTime')?.value;
+        
+        if (element.type === 'break') {
+            element.name = name;
+            element.startTime = startTime ? startTime + ':00' : element.startTime;
+            element.durationSeconds = parseInt(document.getElementById('propDuration')?.value || element.durationSeconds);
+            element.isFloating = document.getElementById('propIsFloating')?.checked || false;
+            element.timingType = document.getElementById('propTimingType')?.value || null;
+            element.transitionCode = document.getElementById('propTransitionCode')?.value || null;
+            element.assetType = document.getElementById('propAssetType')?.value || null;
+            element.musicCategory = document.getElementById('propMusicCategory')?.value || null;
+            element.showSegmentName = document.getElementById('propShowSegmentName')?.value || null;
+        } else if (element.type === 'fixed-asset') {
+            element.name = name;
+            element.startTime = startTime ? startTime + ':00' : element.startTime;
+            element.assetType = document.getElementById('propAssetType')?.value;
+            element.assetIdentifier = document.getElementById('propAssetIdentifier')?.value || null;
+            element.timingType = document.getElementById('propTimingType')?.value || null;
+            element.musicCategory = document.getElementById('propMusicCategory')?.value || null;
+            element.showSegmentName = document.getElementById('propShowSegmentName')?.value || null;
+        }
+        
+        // Save to backend
+        await saveElementPosition(element);
+        
+        // Re-render timeline
+        renderTimeline();
+        
+        // Close properties panel
+        closePropertiesPanel();
+        
+        // Show success message
+        alert('Element properties saved successfully');
+    } catch (error) {
+        console.error('Error saving element properties:', error);
+        alert('Failed to save element properties: ' + error.message);
+    }
 }
 
 // Save element position
@@ -474,9 +599,12 @@ async function saveElementPosition(element) {
                 startTime: element.startTime,
                 durationSeconds: element.durationSeconds,
                 isFloating: element.isFloating,
-                availTypeId: null, // TODO: Get from element
-                timingType: element.timingType,
-                transitionCode: element.transitionCode
+                availTypeId: element.availTypeId || null,
+                timingType: element.timingType || null,
+                transitionCode: element.transitionCode || null,
+                assetType: element.assetType || null,
+                musicCategory: element.musicCategory || null,
+                showSegmentName: element.showSegmentName || null
             };
         } else if (element.type === 'fixed-asset') {
             endpoint = `/api/clock-templates/fixed-assets/${element.id}`;
@@ -485,8 +613,10 @@ async function saveElementPosition(element) {
                 name: element.name,
                 assetType: element.assetType,
                 startTime: element.startTime,
-                assetIdentifier: element.assetIdentifier,
-                timingType: element.timingType
+                assetIdentifier: element.assetIdentifier || null,
+                timingType: element.timingType || null,
+                musicCategory: element.musicCategory || null,
+                showSegmentName: element.showSegmentName || null
             };
         } else if (element.type === 'automation-command') {
             endpoint = `/api/clock-templates/automation-commands/${element.id}`;

@@ -289,7 +289,7 @@ Based on PRD: `prd-clock-template-builder.md`
   - [x] 12.5 Create WideOrbit export format converter
   - [x] 12.6 Add endpoint: POST /api/clock-templates/{id}/export/wideorbit
   - [x] 12.7 Ensure all WideOrbit-compatible metadata is preserved during export
-  - [ ] 12.8 Update UI to show WideOrbit asset types and categories in element properties
+  - [x] 12.8 Update UI to show WideOrbit asset types and categories in element properties
   - [ ] 12.9 Write unit tests for WideOrbit export format conversion (80%+ coverage)
 
 - [ ] 13.0 Implement Testing and Quality Assurance
