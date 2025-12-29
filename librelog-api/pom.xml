@@ -250,7 +250,7 @@
 										<exclude>com.onelpro.librelog.*Configuration</exclude>
 										<exclude>com.onelpro.librelog.config.*</exclude>
 										<exclude>com.onelpro.librelog.services.impl.*</exclude>
-										<exclude>com.onelpro.librelog.integrations.LibreTimeClient</exclude>
+										<exclude>com.onelpro.librelog.integrations.*</exclude>
 									</excludes>
 								</rule>
 								<rule>
