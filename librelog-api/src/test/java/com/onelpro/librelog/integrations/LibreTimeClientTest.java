@@ -82,7 +82,7 @@ class LibreTimeClientTest {
 		// Verify it returns false on error (network not available)
 		StepVerifier.create(result)
 				.expectNext(false)
-				.verifyComplete(Duration.ofSeconds(10));
+				.verifyComplete();
 	}
 
 	@Test
