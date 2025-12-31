@@ -122,15 +122,15 @@ Based on PRD: `prd-libretime-api-integration.md`
   - [x] 1.9 Create Liquibase changeset file `004-libretime-integration-schema.xml` with all 5 tables: `libretime_integration_config`, `libretime_api_endpoints`, `libretime_api_test_results`, `libretime_file_sync_status`, `libretime_sync_history`. Use UUID primary keys, proper foreign keys, indexes, and constraints.
   - [x] 1.10 Update `db.changelog-master.xml` to include the new changeset `004-libretime-integration-schema.xml`.
 
-- [ ] 2.0 Enhanced LibreTime Client and HTTP Service Layer
-  - [ ] 2.1 Create `LibreTimeHttpClient.java` in `integrations/` package as a service layer for HTTP operations. Use Spring WebClient, implement constructor injection, add logging with Log4j.
-  - [ ] 2.2 Implement JWT token authentication in `LibreTimeHttpClient` - add method to set/get JWT token, include in Authorization header for all requests.
-  - [ ] 2.3 Implement request timeout handling (default 30 seconds, configurable) in `LibreTimeHttpClient`.
-  - [ ] 2.4 Implement retry logic for transient failures (5xx errors, network errors) in `LibreTimeHttpClient` with configurable max retries (default 3).
-  - [ ] 2.5 Add request/response logging in `LibreTimeHttpClient` (log URL, method, status, timing) - mask sensitive data in logs.
-  - [ ] 2.6 Enhance existing `LibreTimeClient.java` to use `LibreTimeHttpClient` for HTTP operations, maintain backward compatibility.
-  - [ ] 2.7 Add connection test method to `LibreTimeHttpClient` that tests API connectivity and authentication.
-  - [ ] 2.8 Implement error handling in `LibreTimeHttpClient` for 4xx (client errors), 5xx (server errors), and network errors with appropriate exception types.
+- [x] 2.0 Enhanced LibreTime Client and HTTP Service Layer
+  - [x] 2.1 Create `LibreTimeHttpClient.java` in `integrations/` package as a service layer for HTTP operations. Use Spring WebClient, implement constructor injection, add logging with Log4j.
+  - [x] 2.2 Implement JWT token authentication in `LibreTimeHttpClient` - add method to set/get JWT token, include in Authorization header for all requests.
+  - [x] 2.3 Implement request timeout handling (default 30 seconds, configurable) in `LibreTimeHttpClient`.
+  - [x] 2.4 Implement retry logic for transient failures (5xx errors, network errors) in `LibreTimeHttpClient` with configurable max retries (default 3).
+  - [x] 2.5 Add request/response logging in `LibreTimeHttpClient` (log URL, method, status, timing) - mask sensitive data in logs.
+  - [x] 2.6 Enhance existing `LibreTimeClient.java` to use `LibreTimeHttpClient` for HTTP operations, maintain backward compatibility.
+  - [x] 2.7 Add connection test method to `LibreTimeHttpClient` that tests API connectivity and authentication.
+  - [x] 2.8 Implement error handling in `LibreTimeHttpClient` for 4xx (client errors), 5xx (server errors), and network errors with appropriate exception types.
 
 - [ ] 3.0 Integration Configuration Management (Models, Repositories, Services)
   - [ ] 3.1 Create entity `LibreTimeIntegrationConfig.java` in `models/` package with all required fields from PRD FR-4.1. Use Lombok annotations (@Data, @Builder, @NoArgsConstructor, @AllArgsConstructor), UUID primary key, proper JPA annotations.
