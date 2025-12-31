@@ -54,6 +54,10 @@ public class AutomationCommandServiceImpl implements AutomationCommandService {
 				.triggerTime(request.getTriggerTime())
 				.priority(request.getPriority())
 				.parameters(request.getParameters())
+				// LibreTime fields
+				.libreTimePlaylistId(request.getLibreTimePlaylistId())
+				.libreTimeSmartBlockId(request.getLibreTimeSmartBlockId())
+				.libreTimeCommandType(request.getLibreTimeCommandType())
 				.createdAt(LocalDateTime.now())
 				.updatedAt(LocalDateTime.now())
 				.build();
@@ -114,6 +118,10 @@ public class AutomationCommandServiceImpl implements AutomationCommandService {
 		automationCommand.setTriggerTime(request.getTriggerTime());
 		automationCommand.setPriority(request.getPriority());
 		automationCommand.setParameters(request.getParameters());
+		// LibreTime fields
+		automationCommand.setLibreTimePlaylistId(request.getLibreTimePlaylistId());
+		automationCommand.setLibreTimeSmartBlockId(request.getLibreTimeSmartBlockId());
+		automationCommand.setLibreTimeCommandType(request.getLibreTimeCommandType());
 		automationCommand.setUpdatedAt(LocalDateTime.now());
 
 		automationCommand = automationCommandRepository.save(automationCommand);
@@ -145,6 +153,10 @@ public class AutomationCommandServiceImpl implements AutomationCommandService {
 				.triggerTime(automationCommand.getTriggerTime())
 				.priority(automationCommand.getPriority())
 				.parameters(automationCommand.getParameters())
+				// LibreTime fields
+				.libreTimePlaylistId(automationCommand.getLibreTimePlaylistId())
+				.libreTimeSmartBlockId(automationCommand.getLibreTimeSmartBlockId())
+				.libreTimeCommandType(automationCommand.getLibreTimeCommandType())
 				.createdAt(automationCommand.getCreatedAt())
 				.updatedAt(automationCommand.getUpdatedAt())
 				.build();

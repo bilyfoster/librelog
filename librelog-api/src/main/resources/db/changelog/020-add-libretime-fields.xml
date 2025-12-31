@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="020-add-libretime-fields" author="librelog">
+		<comment>Add LibreTime integration fields to fixed_assets, break_structures, and automation_commands tables</comment>
+		
+		<!-- Add LibreTime fields to fixed_assets table -->
+		<addColumn tableName="fixed_assets">
+			<column name="libretime_cart_id" type="VARCHAR(255)"/>
+			<column name="cue_in_ms" type="INTEGER"/>
+			<column name="cue_out_ms" type="INTEGER"/>
+			<column name="fade_in_ms" type="INTEGER"/>
+			<column name="fade_out_ms" type="INTEGER"/>
+		</addColumn>
+		
+		<!-- Add LibreTime fields to break_structures table -->
+		<addColumn tableName="break_structures">
+			<column name="libretime_smart_block_id" type="VARCHAR(255)"/>
+			<column name="libretime_playlist_id" type="VARCHAR(255)"/>
+			<column name="break_content_type" type="VARCHAR(50)"/>
+			<column name="break_criteria_json" type="TEXT"/>
+		</addColumn>
+		
+		<!-- Add LibreTime fields to automation_commands table -->
+		<addColumn tableName="automation_commands">
+			<column name="libretime_playlist_id" type="VARCHAR(255)"/>
+			<column name="libretime_smart_block_id" type="VARCHAR(255)"/>
+			<column name="libretime_command_type" type="VARCHAR(50)"/>
+		</addColumn>
+		
+		<!-- Create indexes for LibreTime lookups -->
+		<createIndex indexName="idx_fixed_assets_libretime_cart_id" tableName="fixed_assets">
+			<column name="libretime_cart_id"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_break_structures_libretime_smart_block_id" tableName="break_structures">
+			<column name="libretime_smart_block_id"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_break_structures_libretime_playlist_id" tableName="break_structures">
+			<column name="libretime_playlist_id"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_automation_commands_libretime_playlist_id" tableName="automation_commands">
+			<column name="libretime_playlist_id"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_automation_commands_libretime_smart_block_id" tableName="automation_commands">
+			<column name="libretime_smart_block_id"/>
+		</createIndex>
+	</changeSet>
+
+</databaseChangeLog>
+

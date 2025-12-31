@@ -3,11 +3,12 @@
 .clock-builder-container {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 200px);
+    min-height: 400px;
     background: rgba(15, 15, 30, 0.95);
     border-radius: 8px;
     padding: 1.5rem;
     margin-top: 1rem;
+    margin-bottom: 3rem;
 }
 
 .clock-builder-header {
@@ -35,68 +36,72 @@
     font-size: 0.875rem;
 }
 
-/* Timeline Container */
+/* Timeline Container - Vertical Layout */
 .timeline-container {
     flex: 1;
     position: relative;
     background: rgba(20, 20, 35, 0.8);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 6px;
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     min-height: 400px;
+    max-height: 70vh;
     padding: 1rem;
 }
 
 .timeline-wrapper {
     position: relative;
     width: 100%;
-    min-width: 3600px; /* 60 minutes * 60px per minute */
-    height: 100%;
+    display: flex;
+    flex-direction: row;
+    min-height: 100%;
 }
 
-/* Timeline Ruler */
+/* Timeline Ruler - Vertical */
 .timeline-ruler {
     position: sticky;
-    top: 0;
-    height: 40px;
+    left: 0;
+    width: 80px;
     background: rgba(26, 26, 46, 0.95);
-    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    border-right: 2px solid rgba(255, 255, 255, 0.2);
     z-index: 10;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    flex-shrink: 0;
 }
 
 .timeline-marker {
-    position: absolute;
-    height: 100%;
-    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    width: 100%;
+    height: 60px; /* 1 minute = 60px height */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     align-items: center;
     padding-left: 0.5rem;
     font-size: 0.75rem;
     color: #888;
+    flex-shrink: 0;
 }
 
 .timeline-marker.major {
-    border-left-width: 2px;
-    border-left-color: rgba(255, 255, 255, 0.4);
+    border-bottom-width: 2px;
+    border-bottom-color: rgba(255, 255, 255, 0.4);
     font-weight: 600;
     color: #b0b0b0;
+    background: rgba(30, 30, 50, 0.3);
 }
 
 .timeline-marker-label {
     position: absolute;
     left: 0.5rem;
-    top: 50%;
-    transform: translateY(-50%);
 }
 
-/* Timeline Track */
+/* Timeline Track - Vertical */
 .timeline-track {
     position: relative;
-    margin-top: 1rem;
-    height: 60px;
+    flex: 1;
+    min-height: 3600px; /* 60 minutes * 60px per minute */
     background: rgba(30, 30, 50, 0.5);
     border-radius: 4px;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -115,15 +120,17 @@
     font-weight: 500;
 }
 
-/* Clock Element Blocks */
+/* Clock Element Blocks - Vertical */
 .clock-element {
     position: absolute;
-    height: 50px;
+    width: calc(100% - 20px);
+    left: 10px;
+    min-height: 30px;
     border-radius: 4px;
     cursor: move;
     display: flex;
     align-items: center;
-    padding: 0 0.75rem;
+    padding: 0.5rem 0.75rem;
     font-size: 0.75rem;
     font-weight: 500;
     border: 2px solid transparent;
@@ -156,34 +163,34 @@
 .clock-element.break {
     background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
     color: #fff;
-    border-left: 4px solid #ff4757;
+    border-top: 4px solid #ff4757;
 }
 
 .clock-element.break.floating {
     background: linear-gradient(135deg, #ffa502 0%, #ff6348 100%);
-    border-left-color: #ff6348;
+    border-top-color: #ff6348;
 }
 
 /* Fixed Asset Elements */
 .clock-element.fixed-asset {
     background: linear-gradient(135deg, #3742fa 0%, #2f3542 100%);
     color: #fff;
-    border-left: 4px solid #5352ed;
+    border-top: 4px solid #5352ed;
 }
 
 /* Automation Command Elements */
 .clock-element.automation-command {
     background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
     color: #1a1a2e;
-    border-left: 4px solid #ffa502;
+    border-top: 4px solid #ffa502;
 }
 
-/* Element Resize Handles */
+/* Element Resize Handles - Vertical */
 .clock-element .resize-handle {
     position: absolute;
-    width: 8px;
-    height: 100%;
-    cursor: ew-resize;
+    width: 100%;
+    height: 8px;
+    cursor: ns-resize;
     background: rgba(255, 255, 255, 0.2);
     opacity: 0;
     transition: opacity 0.2s ease;
@@ -193,20 +200,20 @@
     opacity: 1;
 }
 
-.clock-element .resize-handle.left {
-    left: 0;
-    border-radius: 4px 0 0 4px;
+.clock-element .resize-handle.top {
+    top: 0;
+    border-radius: 4px 4px 0 0;
 }
 
-.clock-element .resize-handle.right {
-    right: 0;
-    border-radius: 0 4px 4px 0;
+.clock-element .resize-handle.bottom {
+    bottom: 0;
+    border-radius: 0 0 4px 4px;
 }
 
-/* Drop Zone Indicator */
+/* Drop Zone Indicator - Vertical */
 .drop-zone {
     position: absolute;
-    height: 100%;
+    width: 100%;
     background: rgba(102, 126, 234, 0.1);
     border: 2px dashed #667eea;
     border-radius: 4px;
@@ -214,11 +221,11 @@
     z-index: 1;
 }
 
-/* Snap Grid Lines */
+/* Snap Grid Lines - Horizontal */
 .snap-grid-line {
     position: absolute;
-    width: 1px;
-    height: 100%;
+    width: 100%;
+    height: 1px;
     background: rgba(102, 126, 234, 0.3);
     z-index: 2;
     pointer-events: none;

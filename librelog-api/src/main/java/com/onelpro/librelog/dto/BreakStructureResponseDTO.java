@@ -35,6 +35,13 @@ public class BreakStructureResponseDTO {
 	private AssetType assetType;
 	private MusicCategory musicCategory;
 	private String showSegmentName;
+	
+	// LibreTime integration fields
+	private String libreTimeSmartBlockId;
+	private String libreTimePlaylistId;
+	private String breakContentType;
+	private String breakCriteriaJson;
+	
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 }

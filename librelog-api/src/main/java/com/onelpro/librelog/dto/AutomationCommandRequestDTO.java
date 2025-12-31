@@ -33,5 +33,10 @@ public class AutomationCommandRequestDTO {
 
 	private Map<String, Object> parameters;
 
+	// LibreTime integration fields
+	private String libreTimePlaylistId;
+	private String libreTimeSmartBlockId;
+	private String libreTimeCommandType; // PLAYLIST, SMART_BLOCK, LIVE_INPUT, NETWORK_FEED, EAS_ALERT
+
 }
 

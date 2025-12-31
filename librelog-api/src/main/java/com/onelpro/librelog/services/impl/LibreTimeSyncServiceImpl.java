@@ -62,13 +62,24 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 		// Convert breaks to LibreTime items
 		if (clock.getBreaks() != null) {
 			for (BreakStructureResponseDTO breakItem : clock.getBreaks()) {
+				// Determine item type based on LibreTime mapping
+				String itemType = "break";
+				if (breakItem.getLibreTimePlaylistId() != null) {
+					itemType = "playlist";
+				} else if (breakItem.getLibreTimeSmartBlockId() != null) {
+					itemType = "smart_block";
+				}
+				
 				LibreTimeExportDTO.LibreTimeItem item = LibreTimeExportDTO.LibreTimeItem.builder()
-						.type("break")
+						.type(itemType)
 						.name(breakItem.getName())
 						.startTime(breakItem.getStartTime().format(TIME_FORMAT))
 						.durationSeconds(breakItem.getDurationSeconds())
 						.transition(breakItem.getTransitionCode() != null ? 
 								breakItem.getTransitionCode().name() : "SEGUE")
+						// Map transition codes to fade settings
+						.fadeIn(mapTransitionToFadeIn(breakItem.getTransitionCode()))
+						.fadeOut(mapTransitionToFadeOut(breakItem.getTransitionCode()))
 						.build();
 				showInstance.getItems().add(item);
 			}
@@ -78,12 +89,17 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 		if (clock.getFixedAssets() != null) {
 			for (FixedAssetResponseDTO asset : clock.getFixedAssets()) {
 				LibreTimeExportDTO.LibreTimeItem item = LibreTimeExportDTO.LibreTimeItem.builder()
-						.type("fixed_asset")
+						.type("file") // LibreTime uses "file" type for fixed assets
 						.name(asset.getName())
 						.startTime(asset.getStartTime().format(TIME_FORMAT))
 						.assetType(asset.getAssetType() != null ? asset.getAssetType().name() : null)
 						.transition(asset.getTimingType() != null ? 
 								asset.getTimingType().name() : "HARD_START")
+						// Include LibreTime-specific fields
+						.cueIn(asset.getCueInMs() != null ? String.valueOf(asset.getCueInMs()) : null)
+						.cueOut(asset.getCueOutMs() != null ? String.valueOf(asset.getCueOutMs()) : null)
+						.fadeIn(asset.getFadeInMs() != null ? String.valueOf(asset.getFadeInMs()) : null)
+						.fadeOut(asset.getFadeOutMs() != null ? String.valueOf(asset.getFadeOutMs()) : null)
 						.build();
 				showInstance.getItems().add(item);
 			}
@@ -92,11 +108,23 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 		// Convert automation commands to LibreTime items
 		if (clock.getAutomationCommands() != null) {
 			for (AutomationCommandResponseDTO command : clock.getAutomationCommands()) {
+				// Map automation commands to LibreTime playlists or smart blocks
+				String itemType = "playlist"; // Default to playlist
+				if (command.getLibreTimeSmartBlockId() != null) {
+					itemType = "smart_block";
+				} else if (command.getLibreTimePlaylistId() != null) {
+					itemType = "playlist";
+				} else {
+					// Map command types to LibreTime equivalents
+					itemType = mapCommandTypeToLibreTime(command.getCommandType().name());
+				}
+				
 				LibreTimeExportDTO.LibreTimeItem item = LibreTimeExportDTO.LibreTimeItem.builder()
-						.type("command")
+						.type(itemType)
 						.name(command.getCommandType().name())
 						.startTime(command.getTriggerTime().format(TIME_FORMAT))
-						.commandType(command.getCommandType().name())
+						.commandType(command.getLibreTimeCommandType() != null ? 
+								command.getLibreTimeCommandType() : command.getCommandType().name())
 						.build();
 				showInstance.getItems().add(item);
 			}
@@ -153,44 +181,67 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 					.items(new ArrayList<>())
 					.build();
 
-			// Add breaks
+			// Add breaks (same logic as exportClock)
 			if (clock.getBreaks() != null) {
 				for (BreakStructureResponseDTO breakItem : clock.getBreaks()) {
+					String itemType = "break";
+					if (breakItem.getLibreTimePlaylistId() != null) {
+						itemType = "playlist";
+					} else if (breakItem.getLibreTimeSmartBlockId() != null) {
+						itemType = "smart_block";
+					}
+					
 					LibreTimeExportDTO.LibreTimeItem item = LibreTimeExportDTO.LibreTimeItem.builder()
-							.type("break")
+							.type(itemType)
 							.name(breakItem.getName())
 							.startTime(breakItem.getStartTime().format(TIME_FORMAT))
 							.durationSeconds(breakItem.getDurationSeconds())
 							.transition(breakItem.getTransitionCode() != null ? 
 									breakItem.getTransitionCode().name() : "SEGUE")
+							.fadeIn(mapTransitionToFadeIn(breakItem.getTransitionCode()))
+							.fadeOut(mapTransitionToFadeOut(breakItem.getTransitionCode()))
 							.build();
 					showInstance.getItems().add(item);
 				}
 			}
 
-			// Add fixed assets
+			// Add fixed assets (same logic as exportClock)
 			if (clock.getFixedAssets() != null) {
 				for (FixedAssetResponseDTO asset : clock.getFixedAssets()) {
 					LibreTimeExportDTO.LibreTimeItem item = LibreTimeExportDTO.LibreTimeItem.builder()
-							.type("fixed_asset")
+							.type("file")
 							.name(asset.getName())
 							.startTime(asset.getStartTime().format(TIME_FORMAT))
 							.assetType(asset.getAssetType() != null ? asset.getAssetType().name() : null)
 							.transition(asset.getTimingType() != null ? 
 									asset.getTimingType().name() : "HARD_START")
+							.cueIn(asset.getCueInMs() != null ? String.valueOf(asset.getCueInMs()) : null)
+							.cueOut(asset.getCueOutMs() != null ? String.valueOf(asset.getCueOutMs()) : null)
+							.fadeIn(asset.getFadeInMs() != null ? String.valueOf(asset.getFadeInMs()) : null)
+							.fadeOut(asset.getFadeOutMs() != null ? String.valueOf(asset.getFadeOutMs()) : null)
 							.build();
 					showInstance.getItems().add(item);
 				}
 			}
 
-			// Add automation commands
+			// Add automation commands (same logic as exportClock)
 			if (clock.getAutomationCommands() != null) {
 				for (AutomationCommandResponseDTO command : clock.getAutomationCommands()) {
+					String itemType = "playlist";
+					if (command.getLibreTimeSmartBlockId() != null) {
+						itemType = "smart_block";
+					} else if (command.getLibreTimePlaylistId() != null) {
+						itemType = "playlist";
+					} else {
+						itemType = mapCommandTypeToLibreTime(command.getCommandType().name());
+					}
+					
 					LibreTimeExportDTO.LibreTimeItem item = LibreTimeExportDTO.LibreTimeItem.builder()
-							.type("command")
+							.type(itemType)
 							.name(command.getCommandType().name())
 							.startTime(command.getTriggerTime().format(TIME_FORMAT))
-							.commandType(command.getCommandType().name())
+							.commandType(command.getLibreTimeCommandType() != null ? 
+									command.getLibreTimeCommandType() : command.getCommandType().name())
 							.build();
 					showInstance.getItems().add(item);
 				}
@@ -227,6 +278,74 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 		} catch (Exception e) {
 			logger.error("Failed to push log to LibreTime: {}", e.getMessage());
 			throw new RuntimeException("Failed to push log to LibreTime", e);
+		}
+	}
+
+	/**
+	 * Maps WideOrbit transition codes to LibreTime fade in duration (in milliseconds).
+	 * 
+	 * @param transitionCode The WideOrbit transition code
+	 * @return Fade in duration as string (milliseconds), or null for no fade
+	 */
+	private String mapTransitionToFadeIn(com.onelpro.librelog.enums.TransitionCode transitionCode) {
+		if (transitionCode == null) {
+			return "2000"; // Default 2 second fade in for SEGUE
+		}
+		switch (transitionCode) {
+			case SEGUE:
+				return "2000"; // 2 second fade in
+			case OVERLAP:
+				return "3000"; // 3 second fade in for overlap
+			case HARD_START:
+				return "0"; // No fade
+			default:
+				return "2000";
+		}
+	}
+
+	/**
+	 * Maps WideOrbit transition codes to LibreTime fade out duration (in milliseconds).
+	 * 
+	 * @param transitionCode The WideOrbit transition code
+	 * @return Fade out duration as string (milliseconds), or null for no fade
+	 */
+	private String mapTransitionToFadeOut(com.onelpro.librelog.enums.TransitionCode transitionCode) {
+		if (transitionCode == null) {
+			return "2000"; // Default 2 second fade out for SEGUE
+		}
+		switch (transitionCode) {
+			case SEGUE:
+				return "2000"; // 2 second fade out
+			case OVERLAP:
+				return "1000"; // 1 second fade out for overlap (crossfade)
+			case HARD_START:
+				return "0"; // No fade
+			default:
+				return "2000";
+		}
+	}
+
+	/**
+	 * Maps automation command types to LibreTime item types.
+	 * 
+	 * @param commandType The automation command type name
+	 * @return LibreTime item type (playlist, live_input, etc.)
+	 */
+	private String mapCommandTypeToLibreTime(String commandType) {
+		if (commandType == null) {
+			return "playlist";
+		}
+		switch (commandType) {
+			case "SWITCH_TO_SATELLITE":
+			case "SWITCH_TO_NETWORK":
+				return "live_input";
+			case "START_STREAMING":
+			case "STOP_STREAMING":
+				return "playlist"; // Streaming handled via playlist
+			case "TRIGGER_EAS":
+				return "file"; // EAS alerts are typically files
+			default:
+				return "playlist";
 		}
 	}
 

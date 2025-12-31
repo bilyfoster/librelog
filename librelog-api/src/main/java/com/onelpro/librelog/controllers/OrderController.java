@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -45,11 +46,13 @@ public class OrderController {
 	@PostMapping
 	@Operation(
 			summary = "Create a new order",
-			description = "Creates a new broadcast advertising order"
+			description = "Creates a new broadcast advertising order. Requires ORDERS:CREATE permission for the station."
 	)
 	@ApiResponse(responseCode = "201", description = "Order created successfully")
 	@ApiResponse(responseCode = "400", description = "Invalid request data")
+	@ApiResponse(responseCode = "403", description = "Insufficient permissions")
 	@ApiResponse(responseCode = "404", description = "Station not found")
+	@PreAuthorize("hasPermission(#request.stationId, 'ORDERS:CREATE')")
 	public ResponseEntity<OrderResponseDTO> create(@Valid @RequestBody OrderRequestDTO request) {
 		logger.info("POST /api/orders - Creating order for advertiser: {}", request.getAdvertiserName());
 		OrderResponseDTO response = orderService.create(request);
@@ -59,9 +62,10 @@ public class OrderController {
 	@GetMapping("/{id}")
 	@Operation(
 			summary = "Get order by ID",
-			description = "Retrieves an order by its UUID"
+			description = "Retrieves an order by its UUID. Requires ORDERS:VIEW permission for the order's station."
 	)
 	@ApiResponse(responseCode = "200", description = "Order found")
+	@ApiResponse(responseCode = "403", description = "Insufficient permissions")
 	@ApiResponse(responseCode = "404", description = "Order not found")
 	public ResponseEntity<OrderResponseDTO> getById(@PathVariable UUID id) {
 		logger.debug("GET /api/orders/{} - Fetching order", id);
@@ -98,9 +102,10 @@ public class OrderController {
 	@PutMapping("/{id}")
 	@Operation(
 			summary = "Update order",
-			description = "Updates an existing order"
+			description = "Updates an existing order. Requires ORDERS:EDIT permission for the order's station."
 	)
 	@ApiResponse(responseCode = "200", description = "Order updated successfully")
+	@ApiResponse(responseCode = "403", description = "Insufficient permissions")
 	@ApiResponse(responseCode = "404", description = "Order not found")
 	@ApiResponse(responseCode = "400", description = "Invalid request data")
 	public ResponseEntity<OrderResponseDTO> update(
@@ -114,9 +119,10 @@ public class OrderController {
 	@PatchMapping("/{id}/status")
 	@Operation(
 			summary = "Update order status",
-			description = "Updates the status of an existing order"
+			description = "Updates the status of an existing order. Requires ORDERS:EDIT permission for the order's station."
 	)
 	@ApiResponse(responseCode = "200", description = "Order status updated successfully")
+	@ApiResponse(responseCode = "403", description = "Insufficient permissions")
 	@ApiResponse(responseCode = "404", description = "Order not found")
 	public ResponseEntity<OrderResponseDTO> updateStatus(
 			@PathVariable UUID id,
@@ -129,9 +135,10 @@ public class OrderController {
 	@DeleteMapping("/{id}")
 	@Operation(
 			summary = "Delete order",
-			description = "Deletes an order by its UUID"
+			description = "Deletes an order by its UUID. Requires ORDERS:DELETE permission for the order's station."
 	)
 	@ApiResponse(responseCode = "204", description = "Order deleted successfully")
+	@ApiResponse(responseCode = "403", description = "Insufficient permissions")
 	@ApiResponse(responseCode = "404", description = "Order not found")
 	public ResponseEntity<Void> delete(@PathVariable UUID id) {
 		logger.info("DELETE /api/orders/{} - Deleting order", id);

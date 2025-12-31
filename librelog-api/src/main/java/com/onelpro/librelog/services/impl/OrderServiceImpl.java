@@ -2,14 +2,19 @@ package com.onelpro.librelog.services.impl;
 
 import com.onelpro.librelog.dto.OrderRequestDTO;
 import com.onelpro.librelog.dto.OrderResponseDTO;
+import com.onelpro.librelog.enums.ActionType;
+import com.onelpro.librelog.enums.ModuleType;
 import com.onelpro.librelog.enums.OrderStatus;
 import com.onelpro.librelog.exceptions.BadRequestException;
+import com.onelpro.librelog.exceptions.ForbiddenException;
 import com.onelpro.librelog.exceptions.NotFoundException;
 import com.onelpro.librelog.models.Order;
 import com.onelpro.librelog.models.Station;
 import com.onelpro.librelog.repositories.OrderRepository;
 import com.onelpro.librelog.repositories.StationRepository;
 import com.onelpro.librelog.services.OrderService;
+import com.onelpro.librelog.services.PermissionService;
+import com.onelpro.librelog.utils.SecurityContextUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -31,18 +36,33 @@ public class OrderServiceImpl implements OrderService {
 
 	private final OrderRepository orderRepository;
 	private final StationRepository stationRepository;
+	private final PermissionService permissionService;
 
 	public OrderServiceImpl(
 			OrderRepository orderRepository,
-			StationRepository stationRepository) {
+			StationRepository stationRepository,
+			PermissionService permissionService) {
 		this.orderRepository = orderRepository;
 		this.stationRepository = stationRepository;
+		this.permissionService = permissionService;
 	}
 
 	@Override
 	@Transactional
 	public OrderResponseDTO create(OrderRequestDTO request) {
 		logger.info("Creating order for advertiser: {} on station: {}", request.getAdvertiserName(), request.getStationId());
+
+		UUID userId = SecurityContextUtils.getCurrentUserId();
+		if (userId == null) {
+			logger.warn("Order creation failed: user not authenticated");
+			throw new ForbiddenException("User not authenticated");
+		}
+
+		// Check permission to create orders for this station
+		if (!permissionService.hasPermission(userId, request.getStationId(), ModuleType.ORDERS, ActionType.CREATE)) {
+			logger.warn("Order creation failed: insufficient permissions for user {} on station {}", userId, request.getStationId());
+			throw new ForbiddenException("Insufficient permissions to create orders for this station");
+		}
 
 		if (request.getStartDate().isAfter(request.getEndDate())) {
 			logger.warn("Order creation failed: invalid date range");
@@ -87,13 +107,41 @@ public class OrderServiceImpl implements OrderService {
 					logger.warn("Order not found with ID: {}", id);
 					return new NotFoundException("Order not found with ID: " + id);
 				});
+
+		UUID userId = SecurityContextUtils.getCurrentUserId();
+		if (userId == null) {
+			logger.warn("Order retrieval failed: user not authenticated");
+			throw new ForbiddenException("User not authenticated");
+		}
+
+		// Check permission to view orders for this station
+		if (!permissionService.hasPermission(userId, order.getStation().getId(), ModuleType.ORDERS, ActionType.VIEW)) {
+			logger.warn("Order retrieval failed: insufficient permissions for user {} on station {}", userId, order.getStation().getId());
+			throw new ForbiddenException("Insufficient permissions to view this order");
+		}
+
 		return mapToResponseDTO(order);
 	}
 
 	@Override
 	public List<OrderResponseDTO> getAll() {
 		logger.debug("Fetching all orders");
+		UUID userId = SecurityContextUtils.getCurrentUserId();
+		if (userId == null) {
+			logger.warn("Order retrieval failed: user not authenticated");
+			throw new ForbiddenException("User not authenticated");
+		}
+
+		// Get user's station assignments and filter orders
+		List<UUID> userStationIds = permissionService.getUserStations(userId);
+		if (userStationIds.isEmpty()) {
+			logger.debug("User {} has no station assignments, returning empty list", userId);
+			return List.of();
+		}
+
 		return orderRepository.findAll().stream()
+				.filter(order -> userStationIds.contains(order.getStation().getId()))
+				.filter(order -> permissionService.hasPermission(userId, order.getStation().getId(), ModuleType.ORDERS, ActionType.VIEW))
 				.map(this::mapToResponseDTO)
 				.collect(Collectors.toList());
 	}
@@ -101,6 +149,18 @@ public class OrderServiceImpl implements OrderService {
 	@Override
 	public List<OrderResponseDTO> getByStationId(UUID stationId) {
 		logger.debug("Fetching orders for station: {}", stationId);
+		UUID userId = SecurityContextUtils.getCurrentUserId();
+		if (userId == null) {
+			logger.warn("Order retrieval failed: user not authenticated");
+			throw new ForbiddenException("User not authenticated");
+		}
+
+		// Check permission to view orders for this station
+		if (!permissionService.hasPermission(userId, stationId, ModuleType.ORDERS, ActionType.VIEW)) {
+			logger.warn("Order retrieval failed: insufficient permissions for user {} on station {}", userId, stationId);
+			throw new ForbiddenException("Insufficient permissions to view orders for this station");
+		}
+
 		return orderRepository.findByStationId(stationId).stream()
 				.map(this::mapToResponseDTO)
 				.collect(Collectors.toList());
@@ -109,7 +169,22 @@ public class OrderServiceImpl implements OrderService {
 	@Override
 	public List<OrderResponseDTO> getByStatus(OrderStatus status) {
 		logger.debug("Fetching orders with status: {}", status);
+		UUID userId = SecurityContextUtils.getCurrentUserId();
+		if (userId == null) {
+			logger.warn("Order retrieval failed: user not authenticated");
+			throw new ForbiddenException("User not authenticated");
+		}
+
+		// Get user's station assignments and filter orders
+		List<UUID> userStationIds = permissionService.getUserStations(userId);
+		if (userStationIds.isEmpty()) {
+			logger.debug("User {} has no station assignments, returning empty list", userId);
+			return List.of();
+		}
+
 		return orderRepository.findByStatus(status).stream()
+				.filter(order -> userStationIds.contains(order.getStation().getId()))
+				.filter(order -> permissionService.hasPermission(userId, order.getStation().getId(), ModuleType.ORDERS, ActionType.VIEW))
 				.map(this::mapToResponseDTO)
 				.collect(Collectors.toList());
 	}
@@ -118,11 +193,31 @@ public class OrderServiceImpl implements OrderService {
 	@Transactional
 	public OrderResponseDTO update(UUID id, OrderRequestDTO request) {
 		logger.info("Updating order with ID: {}", id);
+		UUID userId = SecurityContextUtils.getCurrentUserId();
+		if (userId == null) {
+			logger.warn("Order update failed: user not authenticated");
+			throw new ForbiddenException("User not authenticated");
+		}
+
 		Order order = orderRepository.findById(id)
 				.orElseThrow(() -> {
 					logger.warn("Order not found with ID: {}", id);
 					return new NotFoundException("Order not found with ID: " + id);
 				});
+
+		// Check permission to edit orders for the order's current station
+		if (!permissionService.hasPermission(userId, order.getStation().getId(), ModuleType.ORDERS, ActionType.EDIT)) {
+			logger.warn("Order update failed: insufficient permissions for user {} on station {}", userId, order.getStation().getId());
+			throw new ForbiddenException("Insufficient permissions to edit this order");
+		}
+
+		// If station is being changed, check permission for new station
+		if (!order.getStation().getId().equals(request.getStationId())) {
+			if (!permissionService.hasPermission(userId, request.getStationId(), ModuleType.ORDERS, ActionType.EDIT)) {
+				logger.warn("Order update failed: insufficient permissions for user {} on new station {}", userId, request.getStationId());
+				throw new ForbiddenException("Insufficient permissions to move order to this station");
+			}
+		}
 
 		if (request.getStartDate().isAfter(request.getEndDate())) {
 			logger.warn("Order update failed: invalid date range");
@@ -156,11 +251,23 @@ public class OrderServiceImpl implements OrderService {
 	@Transactional
 	public OrderResponseDTO updateStatus(UUID id, OrderStatus status) {
 		logger.info("Updating order status with ID: {} to status: {}", id, status);
+		UUID userId = SecurityContextUtils.getCurrentUserId();
+		if (userId == null) {
+			logger.warn("Order status update failed: user not authenticated");
+			throw new ForbiddenException("User not authenticated");
+		}
+
 		Order order = orderRepository.findById(id)
 				.orElseThrow(() -> {
 					logger.warn("Order not found with ID: {}", id);
 					return new NotFoundException("Order not found with ID: " + id);
 				});
+
+		// Check permission to edit orders for this station
+		if (!permissionService.hasPermission(userId, order.getStation().getId(), ModuleType.ORDERS, ActionType.EDIT)) {
+			logger.warn("Order status update failed: insufficient permissions for user {} on station {}", userId, order.getStation().getId());
+			throw new ForbiddenException("Insufficient permissions to update this order");
+		}
 
 		order.setStatus(status);
 		order.setUpdatedAt(LocalDateTime.now());
@@ -175,10 +282,24 @@ public class OrderServiceImpl implements OrderService {
 	@Transactional
 	public void delete(UUID id) {
 		logger.info("Deleting order with ID: {}", id);
-		if (!orderRepository.existsById(id)) {
-			logger.warn("Order not found with ID: {}", id);
-			throw new NotFoundException("Order not found with ID: " + id);
+		UUID userId = SecurityContextUtils.getCurrentUserId();
+		if (userId == null) {
+			logger.warn("Order deletion failed: user not authenticated");
+			throw new ForbiddenException("User not authenticated");
 		}
+
+		Order order = orderRepository.findById(id)
+				.orElseThrow(() -> {
+					logger.warn("Order not found with ID: {}", id);
+					return new NotFoundException("Order not found with ID: " + id);
+				});
+
+		// Check permission to delete orders for this station
+		if (!permissionService.hasPermission(userId, order.getStation().getId(), ModuleType.ORDERS, ActionType.DELETE)) {
+			logger.warn("Order deletion failed: insufficient permissions for user {} on station {}", userId, order.getStation().getId());
+			throw new ForbiddenException("Insufficient permissions to delete this order");
+		}
+
 		orderRepository.deleteById(id);
 		logger.info("Order deleted successfully with ID: {}", id);
 	}

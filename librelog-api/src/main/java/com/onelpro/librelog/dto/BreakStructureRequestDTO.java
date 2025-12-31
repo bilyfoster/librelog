@@ -51,5 +51,11 @@ public class BreakStructureRequestDTO {
 
 	private String showSegmentName;
 
+	// LibreTime integration fields
+	private String libreTimeSmartBlockId;
+	private String libreTimePlaylistId;
+	private String breakContentType; // STATIC, DYNAMIC, PLAYLIST
+	private String breakCriteriaJson; // JSON for smart block criteria
+
 }
 

@@ -58,6 +58,16 @@ public class AutomationCommand {
 	@Column(name = "parameters", columnDefinition = "jsonb")
 	private Map<String, Object> parameters;
 
+	// LibreTime integration fields
+	@Column(name = "libretime_playlist_id")
+	private String libreTimePlaylistId;
+
+	@Column(name = "libretime_smart_block_id")
+	private String libreTimeSmartBlockId;
+
+	@Column(name = "libretime_command_type")
+	private String libreTimeCommandType; // PLAYLIST, SMART_BLOCK, LIVE_INPUT, NETWORK_FEED, EAS_ALERT
+
 	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;
 

@@ -26,6 +26,12 @@ public class AutomationCommandResponseDTO {
 	private LocalTime triggerTime;
 	private String priority;
 	private Map<String, Object> parameters;
+	
+	// LibreTime integration fields
+	private String libreTimePlaylistId;
+	private String libreTimeSmartBlockId;
+	private String libreTimeCommandType;
+	
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 }

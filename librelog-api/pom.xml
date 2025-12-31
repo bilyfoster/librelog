@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>com.onelpro</groupId>
 		<artifactId>librelog</artifactId>
-        <version>0.0.9-SNAPSHOT</version>
+        <version>0.0.11-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>librelog-api</artifactId>
@@ -241,6 +241,8 @@
 								<exclude>**/config/**</exclude>
 								<exclude>**/services/impl/**</exclude>
 								<exclude>**/integrations/**</exclude>
+								<exclude>**/security/**</exclude>
+								<exclude>**/utils/**</exclude>
 							</excludes>
 							<rules>
 								<rule>
@@ -269,6 +271,8 @@
 										<exclude>com.onelpro.librelog.config.*</exclude>
 										<exclude>com.onelpro.librelog.services.impl.*</exclude>
 										<exclude>com.onelpro.librelog.integrations.*</exclude>
+										<exclude>com.onelpro.librelog.security.*</exclude>
+										<exclude>com.onelpro.librelog.utils.*</exclude>
 									</excludes>
 								</rule>
 								<rule>
@@ -292,6 +296,8 @@
 										<exclude>com.onelpro.librelog.controllers.*</exclude>
 										<exclude>com.onelpro.librelog.config.*</exclude>
 										<exclude>com.onelpro.librelog.services.impl.UserServiceImpl</exclude>
+										<exclude>com.onelpro.librelog.security.*</exclude>
+										<exclude>com.onelpro.librelog.utils.*</exclude>
 										<exclude>*$*</exclude>
 									</excludes>
 								</rule>

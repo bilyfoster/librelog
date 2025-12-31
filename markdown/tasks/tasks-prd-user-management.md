@@ -276,10 +276,10 @@ Based on PRD: `prd-user-management.md`
   - [x] 11.2 Create custom `PermissionEvaluator` for Spring Security to check permissions based on user-station assignments
   - [x] 11.3 Update `JwtAuthenticationFilter` to include user's station assignments in security context
   - [x] 11.4 Create `StationFilterInterceptor` or aspect to automatically filter API responses based on user's station assignments
-  - [ ] 11.5 Integrate permission checks into existing controllers (OrderController, LogController, etc.) to filter data by station
-  - [ ] 11.6 Update service methods in existing services to check permissions before allowing operations
+  - [x] 11.5 Integrate permission checks into existing controllers (OrderController, LogController, etc.) to filter data by station
+  - [x] 11.6 Update service methods in existing services to check permissions before allowing operations
   - [ ] 11.7 Implement automatic data filtering in repository queries based on user's station assignments (using @Query annotations or custom repository methods)
-  - [ ] 11.8 Add permission checks to all endpoints that access station-specific data
+  - [x] 11.8 Add permission checks to all endpoints that access station-specific data
   - [ ] 11.9 Test permission enforcement with various user-station combinations
   - [ ] 11.10 Verify that users cannot access data for stations they are not assigned to, even via direct API calls
   - [ ] 11.11 Write integration tests for permission enforcement across all endpoints

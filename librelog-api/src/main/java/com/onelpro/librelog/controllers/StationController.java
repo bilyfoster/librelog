@@ -60,7 +60,7 @@ public class StationController {
 	}
 
 	@GetMapping
-	@Operation(summary = "Get all stations", description = "Retrieves all stations")
+	@Operation(summary = "Get all stations", description = "Retrieves all stations the user has access to based on their station assignments")
 	@ApiResponse(responseCode = "200", description = "Stations retrieved successfully")
 	public ResponseEntity<List<StationResponseDTO>> getAll() {
 		logger.debug("GET /api/stations - Fetching all stations");

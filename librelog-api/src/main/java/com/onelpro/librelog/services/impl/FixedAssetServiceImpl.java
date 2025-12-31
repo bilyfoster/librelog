@@ -63,6 +63,12 @@ public class FixedAssetServiceImpl implements FixedAssetService {
 				.timingType(timingType)
 				.musicCategory(request.getMusicCategory())
 				.showSegmentName(request.getShowSegmentName())
+				// LibreTime fields
+				.libreTimeCartId(request.getLibreTimeCartId())
+				.cueInMs(request.getCueInMs())
+				.cueOutMs(request.getCueOutMs())
+				.fadeInMs(request.getFadeInMs())
+				.fadeOutMs(request.getFadeOutMs())
 				.createdAt(LocalDateTime.now())
 				.updatedAt(LocalDateTime.now())
 				.build();
@@ -132,6 +138,12 @@ public class FixedAssetServiceImpl implements FixedAssetService {
 		fixedAsset.setTimingType(timingType);
 		fixedAsset.setMusicCategory(request.getMusicCategory());
 		fixedAsset.setShowSegmentName(request.getShowSegmentName());
+		// LibreTime fields
+		fixedAsset.setLibreTimeCartId(request.getLibreTimeCartId());
+		fixedAsset.setCueInMs(request.getCueInMs());
+		fixedAsset.setCueOutMs(request.getCueOutMs());
+		fixedAsset.setFadeInMs(request.getFadeInMs());
+		fixedAsset.setFadeOutMs(request.getFadeOutMs());
 		fixedAsset.setUpdatedAt(LocalDateTime.now());
 
 		fixedAsset = fixedAssetRepository.save(fixedAsset);
@@ -166,6 +178,12 @@ public class FixedAssetServiceImpl implements FixedAssetService {
 				.timingType(fixedAsset.getTimingType())
 				.musicCategory(fixedAsset.getMusicCategory())
 				.showSegmentName(fixedAsset.getShowSegmentName())
+				// LibreTime fields
+				.libreTimeCartId(fixedAsset.getLibreTimeCartId())
+				.cueInMs(fixedAsset.getCueInMs())
+				.cueOutMs(fixedAsset.getCueOutMs())
+				.fadeInMs(fixedAsset.getFadeInMs())
+				.fadeOutMs(fixedAsset.getFadeOutMs())
 				.createdAt(fixedAsset.getCreatedAt())
 				.updatedAt(fixedAsset.getUpdatedAt())
 				.build();

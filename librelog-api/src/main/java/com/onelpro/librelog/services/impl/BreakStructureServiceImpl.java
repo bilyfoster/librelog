@@ -93,6 +93,11 @@ public class BreakStructureServiceImpl implements BreakStructureService {
 				.assetType(request.getAssetType())
 				.musicCategory(request.getMusicCategory())
 				.showSegmentName(request.getShowSegmentName())
+				// LibreTime fields
+				.libreTimeSmartBlockId(request.getLibreTimeSmartBlockId())
+				.libreTimePlaylistId(request.getLibreTimePlaylistId())
+				.breakContentType(request.getBreakContentType())
+				.breakCriteriaJson(request.getBreakCriteriaJson())
 				.createdAt(LocalDateTime.now())
 				.updatedAt(LocalDateTime.now())
 				.build();
@@ -184,6 +189,11 @@ public class BreakStructureServiceImpl implements BreakStructureService {
 		breakStructure.setAssetType(request.getAssetType());
 		breakStructure.setMusicCategory(request.getMusicCategory());
 		breakStructure.setShowSegmentName(request.getShowSegmentName());
+		// LibreTime fields
+		breakStructure.setLibreTimeSmartBlockId(request.getLibreTimeSmartBlockId());
+		breakStructure.setLibreTimePlaylistId(request.getLibreTimePlaylistId());
+		breakStructure.setBreakContentType(request.getBreakContentType());
+		breakStructure.setBreakCriteriaJson(request.getBreakCriteriaJson());
 		breakStructure.setUpdatedAt(LocalDateTime.now());
 
 		breakStructure = breakStructureRepository.save(breakStructure);
@@ -223,6 +233,11 @@ public class BreakStructureServiceImpl implements BreakStructureService {
 				.assetType(breakStructure.getAssetType())
 				.musicCategory(breakStructure.getMusicCategory())
 				.showSegmentName(breakStructure.getShowSegmentName())
+				// LibreTime fields
+				.libreTimeSmartBlockId(breakStructure.getLibreTimeSmartBlockId())
+				.libreTimePlaylistId(breakStructure.getLibreTimePlaylistId())
+				.breakContentType(breakStructure.getBreakContentType())
+				.breakCriteriaJson(breakStructure.getBreakCriteriaJson())
 				.createdAt(breakStructure.getCreatedAt())
 				.updatedAt(breakStructure.getUpdatedAt())
 				.build();

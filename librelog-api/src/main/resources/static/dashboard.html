@@ -472,9 +472,13 @@
             text-align: center;
             margin-top: 3rem;
             padding-top: 2rem;
+            padding-bottom: 1rem;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             color: #888;
             font-size: 0.85rem;
+            position: relative;
+            z-index: 1;
+            clear: both;
         }
     </style>
 </head>
@@ -735,15 +739,28 @@
                     <div class="clock-builder-header">
                         <div class="clock-builder-title" id="clockBuilderTitle">Clock Builder</div>
                         <div class="clock-builder-actions">
+                            <button class="btn btn-primary" onclick="startClockBuilderTour()" style="margin-right: 0.5rem;" title="Take a guided tour">
+                                📚 Start Tour
+                            </button>
                             <button class="btn btn-secondary" onclick="addBreakToClock()">+ Add Break</button>
                             <button class="btn btn-secondary" onclick="addFixedAssetToClock()">+ Add Fixed Asset</button>
                             <button class="btn btn-secondary" onclick="addAutomationCommandToClock()">+ Add Command</button>
+                            <button class="btn btn-secondary" onclick="closeClockBuilder()" style="margin-left: 0.5rem;">Close</button>
                         </div>
                     </div>
                     <div id="timelineContainer" class="timeline-container">
                         <div class="clock-builder-loading">Loading clock structure...</div>
+                        <div id="clockTemplateGuide" style="position: absolute; top: 10px; right: 10px; background: rgba(26, 26, 46, 0.95); padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid rgba(102, 126, 234, 0.3); font-size: 0.85rem; color: #b0b0b0; z-index: 100; max-width: 250px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                            <strong style="color: #667eea; display: block; margin-bottom: 0.5rem;">⏰ Clock Template Guide</strong>
+                            <div style="font-size: 0.75rem; line-height: 1.6;">
+                                <div style="margin-bottom: 0.5rem;"><strong>Time Range:</strong> 00:00 to 00:59</div>
+                                <div style="margin-bottom: 0.5rem;"><strong>00:00</strong> = Top of hour</div>
+                                <div style="margin-bottom: 0.5rem;"><strong>00:59</strong> = End of hour</div>
+                                <div style="color: #888; font-style: italic; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">Template repeats every hour</div>
+                            </div>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem; margin-bottom: 1rem; position: relative; z-index: 10;">
                         <div id="validationPanel" class="validation-panel" style="flex: 1;"></div>
                         <div id="revenuePanel" class="revenue-panel" style="flex: 1;"></div>
                     </div>
@@ -3249,6 +3266,12 @@
             const clocksEmptyState = document.getElementById('clocksEmptyState');
             
             if (builderContainer && builderTitle) {
+                // Hide footer when clock builder is open
+                const footer = document.querySelector('.footer');
+                if (footer) {
+                    footer.style.display = 'none';
+                }
+                
                 // Hide the clocks table and show the builder
                 if (clocksTable) clocksTable.style.display = 'none';
                 if (clocksLoadingState) clocksLoadingState.style.display = 'none';
@@ -3281,20 +3304,30 @@
             const clocksLoadingState = document.getElementById('clocksLoadingState');
             const clocksEmptyState = document.getElementById('clocksEmptyState');
             
+            // Hide the builder
             if (builderContainer) {
                 builderContainer.style.display = 'none';
             }
             
             // Show the clocks table again
+            const tableContainer = document.querySelector('.table-container');
+            if (tableContainer) {
+                tableContainer.style.display = 'block';
+            }
             if (clocksTable) {
-                const tableContainer = clocksTable.closest('.table-container');
-                if (tableContainer) {
-                    tableContainer.style.display = 'block';
-                }
+                clocksTable.style.display = 'table';
+            }
+            if (clocksLoadingState) {
+                clocksLoadingState.style.display = 'block';
+            }
+            if (clocksEmptyState) {
+                clocksEmptyState.style.display = 'none';
             }
             
             // Reload clocks to refresh the view
-            loadClocks();
+            if (typeof loadClocks === 'function') {
+                loadClocks();
+            }
         }
 
         // Daypart Category Management
@@ -3659,6 +3692,7 @@
     
     <!-- Clock Builder Script -->
     <script src="/js/clock-builder.js"></script>
+    <script src="/js/clock-builder-tour.js"></script>
     
     <!-- Properties Panel -->
     <div id="propertiesPanel" class="properties-panel">
@@ -3668,6 +3702,218 @@
         </div>
         <div class="properties-panel-content">
             <form id="propertiesForm"></form>
+        </div>
+    </div>
+
+    <!-- Add Break Modal -->
+    <div id="addBreakModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Break</h2>
+                <button class="close-btn" onclick="closeAddBreakModal()">&times;</button>
+            </div>
+            <div class="error-message" id="addBreakModalErrorMessage"></div>
+            <form id="addBreakForm">
+                <div class="form-group">
+                    <label for="breakName">Name *</label>
+                    <input type="text" id="breakName" required placeholder="e.g., Morning Break 1">
+                </div>
+                <div class="form-group">
+                    <label for="breakStartTime">Start Time * (00:00 to 00:59)</label>
+                    <input type="text" id="breakStartTime" required pattern="00:[0-5][0-9]" placeholder="00:00" maxlength="5" style="font-family: monospace; font-size: 1rem; text-align: center;">
+                    <small style="color: #888; font-size: 0.75rem; display: block; margin-top: 0.25rem;">
+                        Enter time in 24-hour format (e.g., 00:00, 00:15, 00:30, 00:45, 00:59)
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="breakDuration">Duration (seconds) *</label>
+                    <input type="number" id="breakDuration" required min="1" value="60">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="breakIsFloating"> Floating Break
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="breakTimingType">Timing Type</label>
+                    <select id="breakTimingType">
+                        <option value="">-- Select --</option>
+                        <option value="HARD_START">Hard Start</option>
+                        <option value="SOFT_START">Soft Start</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="breakTransitionCode">Transition Code</label>
+                    <select id="breakTransitionCode">
+                        <option value="">-- Select --</option>
+                        <option value="SEGUE">Segue</option>
+                        <option value="OVERLAP">Overlap</option>
+                        <option value="HARD_START">Hard Start</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="breakAssetType">Asset Type (WideOrbit)</label>
+                    <select id="breakAssetType">
+                        <option value="">-- Select --</option>
+                        <option value="IM">IM (Imaging)</option>
+                        <option value="ID">ID (Legal ID)</option>
+                        <option value="CM">CM (Commercials)</option>
+                        <option value="PR">PR (Promos)</option>
+                        <option value="VT">VT (Voice Tracks)</option>
+                        <option value="SH">SH (Show/Longform)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="breakMusicCategory">Music Category (WideOrbit)</label>
+                    <select id="breakMusicCategory">
+                        <option value="">-- Select --</option>
+                        <option value="S1">S1</option>
+                        <option value="S2">S2</option>
+                        <option value="S3">S3</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="breakShowSegmentName">Show Segment Name (WideOrbit)</label>
+                    <input type="text" id="breakShowSegmentName" placeholder="e.g., SH_MORNING_SEG1">
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Add Break</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAddBreakModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Fixed Asset Modal -->
+    <div id="addFixedAssetModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Fixed Asset</h2>
+                <button class="close-btn" onclick="closeAddFixedAssetModal()">&times;</button>
+            </div>
+            <div class="error-message" id="addFixedAssetModalErrorMessage"></div>
+            <form id="addFixedAssetForm">
+                <div class="form-group">
+                    <label for="fixedAssetName">Name *</label>
+                    <input type="text" id="fixedAssetName" required placeholder="e.g., Legal ID">
+                </div>
+                <div class="form-group">
+                    <label for="fixedAssetType">Asset Type *</label>
+                    <select id="fixedAssetType" required>
+                        <option value="">-- Select --</option>
+                        <option value="IM">IM (Imaging)</option>
+                        <option value="ID">ID (Legal ID)</option>
+                        <option value="CM">CM (Commercials)</option>
+                        <option value="PR">PR (Promos)</option>
+                        <option value="VT">VT (Voice Tracks)</option>
+                        <option value="SH">SH (Show/Longform)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="fixedAssetStartTime">Start Time * (00:00 to 00:59)</label>
+                    <input type="text" id="fixedAssetStartTime" required pattern="00:[0-5][0-9]" placeholder="00:00" maxlength="5" style="font-family: monospace; font-size: 1rem; text-align: center;">
+                    <small style="color: #888; font-size: 0.75rem; display: block; margin-top: 0.25rem;">
+                        Enter time in 24-hour format (e.g., 00:00, 00:15, 00:30, 00:45, 00:59)
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="fixedAssetDuration">Duration (seconds)</label>
+                    <input type="number" id="fixedAssetDuration" min="0" placeholder="Leave empty for instant elements (Legal IDs)">
+                    <small style="color: #888; font-size: 0.75rem; display: block; margin-top: 0.25rem;">
+                        Required for songs/interviews. Leave empty for instant elements like Legal IDs.
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="fixedAssetContentType">Content Type</label>
+                    <select id="fixedAssetContentType">
+                        <option value="">-- Select --</option>
+                        <option value="MUSIC">MUSIC</option>
+                        <option value="TALK">TALK</option>
+                        <option value="INTERVIEW">INTERVIEW</option>
+                        <option value="MIXED">MIXED</option>
+                        <option value="ADVERT">ADVERT</option>
+                    </select>
+                    <small style="color: #888; font-size: 0.75rem; display: block; margin-top: 0.25rem;">
+                        Categorize your content for LibreTime export
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="fixedAssetIdentifier">Asset Identifier</label>
+                    <input type="text" id="fixedAssetIdentifier" placeholder="Cart number or file name">
+                </div>
+                <div class="form-group">
+                    <label for="fixedAssetTimingType">Timing Type</label>
+                    <select id="fixedAssetTimingType">
+                        <option value="">-- Select --</option>
+                        <option value="HARD_START">Hard Start</option>
+                        <option value="SOFT_START">Soft Start</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="fixedAssetMusicCategory">Music Category (WideOrbit)</label>
+                    <select id="fixedAssetMusicCategory">
+                        <option value="">-- Select --</option>
+                        <option value="S1">S1</option>
+                        <option value="S2">S2</option>
+                        <option value="S3">S3</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="fixedAssetShowSegmentName">Show Segment Name (WideOrbit)</label>
+                    <input type="text" id="fixedAssetShowSegmentName" placeholder="e.g., SH_MORNING_SEG1">
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Add Fixed Asset</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAddFixedAssetModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Automation Command Modal -->
+    <div id="addAutomationCommandModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Automation Command</h2>
+                <button class="close-btn" onclick="closeAddAutomationCommandModal()">&times;</button>
+            </div>
+            <div class="error-message" id="addAutomationCommandModalErrorMessage"></div>
+            <form id="addAutomationCommandForm">
+                <div class="form-group">
+                    <label for="commandType">Command Type *</label>
+                    <select id="commandType" required>
+                        <option value="">-- Select --</option>
+                        <option value="SWITCH_TO_SATELLITE">Switch to Satellite</option>
+                        <option value="START_RECORDING">Start Recording</option>
+                        <option value="ENABLE_LIVE_MIX">Enable Live Mix</option>
+                        <option value="DISABLE_LIVE_MIX">Disable Live Mix</option>
+                        <option value="SWITCH_TO_NETWORK">Switch to Network</option>
+                        <option value="TRIGGER_EAS">Trigger EAS</option>
+                        <option value="START_STREAMING">Start Streaming</option>
+                        <option value="STOP_STREAMING">Stop Streaming</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="commandTriggerTime">Trigger Time * (00:00 to 00:59)</label>
+                    <input type="text" id="commandTriggerTime" required pattern="00:[0-5][0-9]" placeholder="00:00" maxlength="5" style="font-family: monospace; font-size: 1rem; text-align: center;">
+                    <small style="color: #888; font-size: 0.75rem; display: block; margin-top: 0.25rem;">
+                        Enter time in 24-hour format (e.g., 00:00, 00:15, 00:30, 00:45, 00:59)
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="commandPriority">Priority</label>
+                    <input type="text" id="commandPriority" placeholder="e.g., HIGH, NORMAL">
+                </div>
+                <div class="form-group">
+                    <label for="commandParameters">Parameters (JSON)</label>
+                    <textarea id="commandParameters" rows="4" placeholder='{"key": "value"}'></textarea>
+                    <small style="color: #888; font-size: 0.75rem;">Optional JSON object for command-specific parameters</small>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Add Command</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAddAutomationCommandModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
         </div>
     </div>
 </body>

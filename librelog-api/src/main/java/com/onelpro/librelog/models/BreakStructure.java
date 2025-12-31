@@ -78,6 +78,19 @@ public class BreakStructure {
 	@Column(name = "show_segment_name")
 	private String showSegmentName;
 
+	// LibreTime integration fields
+	@Column(name = "libretime_smart_block_id")
+	private String libreTimeSmartBlockId;
+
+	@Column(name = "libretime_playlist_id")
+	private String libreTimePlaylistId;
+
+	@Column(name = "break_content_type")
+	private String breakContentType; // STATIC, DYNAMIC, PLAYLIST
+
+	@Column(name = "break_criteria_json", columnDefinition = "TEXT")
+	private String breakCriteriaJson; // JSON for smart block criteria
+
 	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;
 

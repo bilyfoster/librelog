@@ -1,8 +1,9 @@
 package com.onelpro.librelog.services.impl;
 
-import com.onelpro.librelog.dto.StationRequestDTO;
 import com.onelpro.librelog.dto.StationResponseDTO;
+import com.onelpro.librelog.dto.StationRequestDTO;
 import com.onelpro.librelog.exceptions.BadRequestException;
+import com.onelpro.librelog.exceptions.ForbiddenException;
 import com.onelpro.librelog.exceptions.NotFoundException;
 import com.onelpro.librelog.models.Cluster;
 import com.onelpro.librelog.models.Market;
@@ -12,7 +13,9 @@ import com.onelpro.librelog.repositories.ClusterRepository;
 import com.onelpro.librelog.repositories.MarketRepository;
 import com.onelpro.librelog.repositories.OrganizationRepository;
 import com.onelpro.librelog.repositories.StationRepository;
+import com.onelpro.librelog.services.PermissionService;
 import com.onelpro.librelog.services.StationService;
+import com.onelpro.librelog.utils.SecurityContextUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -35,16 +38,19 @@ public class StationServiceImpl implements StationService {
 	private final OrganizationRepository organizationRepository;
 	private final MarketRepository marketRepository;
 	private final ClusterRepository clusterRepository;
+	private final PermissionService permissionService;
 
 	public StationServiceImpl(
 			StationRepository stationRepository,
 			OrganizationRepository organizationRepository,
 			MarketRepository marketRepository,
-			ClusterRepository clusterRepository) {
+			ClusterRepository clusterRepository,
+			PermissionService permissionService) {
 		this.stationRepository = stationRepository;
 		this.organizationRepository = organizationRepository;
 		this.marketRepository = marketRepository;
 		this.clusterRepository = clusterRepository;
+		this.permissionService = permissionService;
 	}
 
 	@Override
@@ -103,18 +109,45 @@ public class StationServiceImpl implements StationService {
 	@Override
 	public StationResponseDTO getById(UUID id) {
 		logger.debug("Fetching station with ID: {}", id);
+		UUID userId = SecurityContextUtils.getCurrentUserId();
+		if (userId == null) {
+			logger.warn("Station retrieval failed: user not authenticated");
+			throw new ForbiddenException("User not authenticated");
+		}
+
 		Station station = stationRepository.findById(id)
 				.orElseThrow(() -> {
 					logger.warn("Station not found with ID: {}", id);
 					return new NotFoundException("Station not found with ID: " + id);
 				});
+
+		// Check if user has access to this station
+		if (!permissionService.canAccessStation(userId, id)) {
+			logger.warn("Station retrieval failed: user {} does not have access to station {}", userId, id);
+			throw new ForbiddenException("Insufficient permissions to access this station");
+		}
+
 		return mapToResponseDTO(station);
 	}
 
 	@Override
 	public List<StationResponseDTO> getAll() {
 		logger.debug("Fetching all stations");
+		UUID userId = SecurityContextUtils.getCurrentUserId();
+		if (userId == null) {
+			logger.warn("Station retrieval failed: user not authenticated");
+			throw new ForbiddenException("User not authenticated");
+		}
+
+		// Get user's station assignments and filter stations
+		List<UUID> userStationIds = permissionService.getUserStations(userId);
+		if (userStationIds.isEmpty()) {
+			logger.debug("User {} has no station assignments, returning empty list", userId);
+			return List.of();
+		}
+
 		return stationRepository.findAll().stream()
+				.filter(station -> userStationIds.contains(station.getId()))
 				.map(this::mapToResponseDTO)
 				.collect(Collectors.toList());
 	}

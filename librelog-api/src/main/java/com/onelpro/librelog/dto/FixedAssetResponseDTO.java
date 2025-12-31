@@ -30,6 +30,14 @@ public class FixedAssetResponseDTO {
 	private TimingType timingType;
 	private MusicCategory musicCategory;
 	private String showSegmentName;
+	
+	// LibreTime integration fields
+	private String libreTimeCartId;
+	private Integer cueInMs;
+	private Integer cueOutMs;
+	private Integer fadeInMs;
+	private Integer fadeOutMs;
+	
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 }

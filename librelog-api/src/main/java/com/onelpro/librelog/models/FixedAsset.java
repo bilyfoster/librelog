@@ -67,6 +67,28 @@ public class FixedAsset {
 	@Column(name = "show_segment_name")
 	private String showSegmentName;
 
+	@Column(name = "duration_seconds")
+	private Integer durationSeconds;
+
+	@Column(name = "content_type")
+	private String contentType; // MUSIC, TALK, INTERVIEW, MIXED, ADVERT, etc.
+
+	// LibreTime integration fields
+	@Column(name = "libretime_cart_id")
+	private String libreTimeCartId;
+
+	@Column(name = "cue_in_ms")
+	private Integer cueInMs;
+
+	@Column(name = "cue_out_ms")
+	private Integer cueOutMs;
+
+	@Column(name = "fade_in_ms")
+	private Integer fadeInMs;
+
+	@Column(name = "fade_out_ms")
+	private Integer fadeOutMs;
+
 	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;
 
