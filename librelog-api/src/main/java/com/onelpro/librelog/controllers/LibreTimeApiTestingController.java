@@ -77,9 +77,10 @@ public class LibreTimeApiTestingController {
 	@PreAuthorize("hasPermission(null, 'LIBRETIME_INTEGRATION_TEST')")
 	public ResponseEntity<ApiEndpointResponseDTO> updateEndpointStatus(
 			@PathVariable UUID endpointId,
-			@RequestParam EndpointStatus status) {
+			@RequestParam String status) {
 		logger.info("PUT /api/libretime/testing/endpoints/{}/status - Updating endpoint status to {}", endpointId, status);
-		ApiEndpointResponseDTO endpoint = discoveryService.updateEndpointStatus(endpointId, status);
+		EndpointStatus endpointStatus = EndpointStatus.valueOf(status.toUpperCase());
+		ApiEndpointResponseDTO endpoint = discoveryService.updateEndpointStatus(endpointId, endpointStatus);
 		return ResponseEntity.ok(endpoint);
 	}
 
