@@ -47,11 +47,12 @@ public class LibreTimeFileSyncServiceImpl implements LibreTimeFileSyncService {
 			LibreTimeFileSyncStatusRepository syncStatusRepository,
 			LibreTimeIntegrationConfigService configService,
 			LibreTimeHttpClient httpClient,
-			ObjectMapper objectMapper) {
+			org.springframework.beans.factory.ObjectProvider<ObjectMapper> objectMapperProvider) {
 		this.syncStatusRepository = syncStatusRepository;
 		this.configService = configService;
 		this.httpClient = httpClient;
-		this.objectMapper = objectMapper;
+		// Use ObjectMapper from provider, or create a new one if not available
+		this.objectMapper = objectMapperProvider.getIfAvailable(() -> new ObjectMapper());
 	}
 
 	@Override

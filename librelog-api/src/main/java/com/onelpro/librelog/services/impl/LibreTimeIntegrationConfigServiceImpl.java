@@ -41,11 +41,12 @@ public class LibreTimeIntegrationConfigServiceImpl implements LibreTimeIntegrati
 			LibreTimeIntegrationConfigRepository configRepository,
 			UserRepository userRepository,
 			LibreTimeHttpClient httpClient,
-			ObjectMapper objectMapper) {
+			org.springframework.beans.factory.ObjectProvider<ObjectMapper> objectMapperProvider) {
 		this.configRepository = configRepository;
 		this.userRepository = userRepository;
 		this.httpClient = httpClient;
-		this.objectMapper = objectMapper;
+		// Use ObjectMapper from provider, or create a new one if not available
+		this.objectMapper = objectMapperProvider.getIfAvailable(() -> new ObjectMapper());
 	}
 
 	@Override
