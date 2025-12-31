@@ -158,6 +158,28 @@ public class LibreTimeIntegrationConfigServiceImpl implements LibreTimeIntegrati
 	}
 
 	@Override
+	public String getDecryptedJwtToken() {
+		LibreTimeIntegrationConfig config = configRepository.findFirstByOrderByCreatedAtAsc()
+				.orElse(null);
+		if (config == null || config.getJwtToken() == null) {
+			return null;
+		}
+		try {
+			return EncryptionUtils.decrypt(config.getJwtToken());
+		} catch (Exception e) {
+			logger.error("Failed to decrypt JWT token: {}", e.getMessage());
+			return null;
+		}
+	}
+
+	@Override
+	public String getApiBaseUrl() {
+		LibreTimeIntegrationConfig config = configRepository.findFirstByOrderByCreatedAtAsc()
+				.orElse(null);
+		return config != null ? config.getApiBaseUrl() : null;
+	}
+
+	@Override
 	public ConnectionTestResponseDTO testConnection() {
 		logger.info("Testing LibreTime API connection");
 

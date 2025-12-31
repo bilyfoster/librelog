@@ -142,17 +142,17 @@ Based on PRD: `prd-libretime-api-integration.md`
   - [x] 3.7 Create `ConnectionTestResponseDTO.java` in `dto/` package for connection test results.
   - [x] 3.8 Add validation to config service - validate URL format, validate enum values, validate file size limits.
 
-- [ ] 4.0 File Synchronization Services (Upload, Download, List, Query)
-  - [ ] 4.1 Create entity `LibreTimeFileSyncStatus.java` in `models/` package with all fields from PRD FR-4.4. Use proper JPA annotations, UUID primary key, enum types.
-  - [ ] 4.2 Create repository `LibreTimeFileSyncStatusRepository.java` with query methods for finding by status, by cart ID, by file ID, etc.
-  - [ ] 4.3 Create service interface `LibreTimeFileSyncService.java` in `services/` package with methods: uploadFile(), downloadFile(), listFiles(), queryFiles(), getSyncStatus().
-  - [ ] 4.4 Create service implementation `LibreTimeFileSyncServiceImpl.java` in `services/impl/` package. Use constructor injection, implement file upload using multipart/form-data.
-  - [ ] 4.5 Implement file upload in service - validate file format and size, include metadata (name, cart ID, cue points, fade settings, asset type), track upload progress, handle errors.
-  - [ ] 4.6 Implement file download in service - retrieve file and metadata from LibreTime API, save to configured storage path, preserve metadata in database, track download progress.
-  - [ ] 4.7 Implement file listing in service - support pagination, caching, filtering, sorting. Handle API pagination automatically.
-  - [ ] 4.8 Implement file querying in service - query by metadata (asset type, content type, etc.), support filtering and sorting.
-  - [ ] 4.9 Create DTOs: `FileUploadRequestDTO.java`, `FileUploadResponseDTO.java`, `FileDownloadResponseDTO.java`, `FileListResponseDTO.java`, `FileQueryRequestDTO.java` in `dto/` package.
-  - [ ] 4.10 Implement sync status tracking - update `LibreTimeFileSyncStatus` entity after each sync operation, track status changes, detect conflicts using file hash comparison.
+- [x] 4.0 File Synchronization Services (Upload, Download, List, Query)
+  - [x] 4.1 Create entity `LibreTimeFileSyncStatus.java` in `models/` package with all fields from PRD FR-4.4. Use proper JPA annotations, UUID primary key, enum types.
+  - [x] 4.2 Create repository `LibreTimeFileSyncStatusRepository.java` with query methods for finding by status, by cart ID, by file ID, etc.
+  - [x] 4.3 Create service interface `LibreTimeFileSyncService.java` in `services/` package with methods: uploadFile(), downloadFile(), listFiles(), queryFiles(), getSyncStatus().
+  - [x] 4.4 Create service implementation `LibreTimeFileSyncServiceImpl.java` in `services/impl/` package. Use constructor injection, implement file upload using multipart/form-data.
+  - [x] 4.5 Implement file upload in service - validate file format and size, include metadata (name, cart ID, cue points, fade settings, asset type), track upload progress, handle errors.
+  - [x] 4.6 Implement file download in service - retrieve file and metadata from LibreTime API, save to configured storage path, preserve metadata in database, track download progress.
+  - [x] 4.7 Implement file listing in service - support pagination, caching, filtering, sorting. Handle API pagination automatically.
+  - [x] 4.8 Implement file querying in service - query by metadata (asset type, content type, etc.), support filtering and sorting.
+  - [x] 4.9 Create DTOs: `FileUploadRequestDTO.java`, `FileUploadResponseDTO.java`, `FileDownloadResponseDTO.java`, `FileListResponseDTO.java`, `FileQueryRequestDTO.java` in `dto/` package.
+  - [x] 4.10 Implement sync status tracking - update `LibreTimeFileSyncStatus` entity after each sync operation, track status changes, detect conflicts using file hash comparison.
 
 - [ ] 5.0 API Endpoint Discovery and Testing Services
   - [ ] 5.1 Create entity `LibreTimeApiEndpoint.java` in `models/` package with all fields from PRD FR-4.2. Use proper JPA annotations, UUID primary key.

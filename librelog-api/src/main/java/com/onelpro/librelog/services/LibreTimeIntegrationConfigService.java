@@ -43,5 +43,20 @@ public interface LibreTimeIntegrationConfigService {
 	 */
 	ConnectionTestResponseDTO testConnection();
 
+	/**
+	 * Gets the decrypted JWT token for internal service use.
+	 * This method should only be used by other services that need to make API calls.
+	 * 
+	 * @return Decrypted JWT token, or null if not configured
+	 */
+	String getDecryptedJwtToken();
+
+	/**
+	 * Gets the API base URL for internal service use.
+	 * 
+	 * @return API base URL, or null if not configured
+	 */
+	String getApiBaseUrl();
+
 }
 
