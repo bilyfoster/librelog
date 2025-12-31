@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="004-create-libretime-integration-config-table" author="librelog">
+		<comment>Create libretime_integration_config table for storing LibreTime API integration settings</comment>
+		
+		<createTable tableName="libretime_integration_config">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="api_base_url" type="VARCHAR(500)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="jwt_token" type="VARCHAR(1000)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="sync_enabled" type="BOOLEAN">
+				<constraints nullable="false"/>
+			</column>
+			<column name="sync_frequency" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="sync_direction" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="conflict_resolution" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="webhook_url" type="VARCHAR(500)"/>
+			<column name="webhook_secret" type="VARCHAR(500)"/>
+			<column name="webhook_enabled" type="BOOLEAN">
+				<constraints nullable="false"/>
+			</column>
+			<column name="max_file_size_mb" type="INTEGER">
+				<constraints nullable="false"/>
+			</column>
+			<column name="supported_formats" type="TEXT"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+			<column name="created_by" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_by" type="UUID"/>
+		</createTable>
+
+		<addForeignKeyConstraint
+			baseTableName="libretime_integration_config"
+			baseColumnNames="created_by"
+			constraintName="fk_libretime_integration_config_created_by"
+			referencedTableName="users"
+			referencedColumnNames="id"
+			onDelete="RESTRICT"/>
+
+		<addForeignKeyConstraint
+			baseTableName="libretime_integration_config"
+			baseColumnNames="updated_by"
+			constraintName="fk_libretime_integration_config_updated_by"
+			referencedTableName="users"
+			referencedColumnNames="id"
+			onDelete="SET NULL"/>
+
+		<createIndex indexName="idx_libretime_integration_config_sync_enabled" tableName="libretime_integration_config">
+			<column name="sync_enabled"/>
+		</createIndex>
+
+	</changeSet>
+
+	<changeSet id="004-create-libretime-api-endpoints-table" author="librelog">
+		<comment>Create libretime_api_endpoints table for storing discovered LibreTime API endpoint information</comment>
+		
+		<createTable tableName="libretime_api_endpoints">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="endpoint_path" type="VARCHAR(500)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="http_method" type="VARCHAR(10)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="resource_type" type="VARCHAR(100)"/>
+			<column name="status" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="last_tested_at" type="TIMESTAMP"/>
+			<column name="response_time_ms" type="INTEGER"/>
+			<column name="requires_authentication" type="BOOLEAN">
+				<constraints nullable="false"/>
+			</column>
+			<column name="description" type="TEXT"/>
+			<column name="documentation_url" type="VARCHAR(500)"/>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+
+		<createIndex indexName="idx_libretime_api_endpoints_path_method" tableName="libretime_api_endpoints">
+			<column name="endpoint_path"/>
+			<column name="http_method"/>
+		</createIndex>
+
+		<createIndex indexName="idx_libretime_api_endpoints_status" tableName="libretime_api_endpoints">
+			<column name="status"/>
+		</createIndex>
+
+		<createIndex indexName="idx_libretime_api_endpoints_resource_type" tableName="libretime_api_endpoints">
+			<column name="resource_type"/>
+		</createIndex>
+
+	</changeSet>
+
+	<changeSet id="004-create-libretime-api-test-results-table" author="librelog">
+		<comment>Create libretime_api_test_results table for storing detailed API test results</comment>
+		
+		<createTable tableName="libretime_api_test_results">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="endpoint_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="test_type" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="status" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="request_payload" type="TEXT"/>
+			<column name="response_status_code" type="INTEGER"/>
+			<column name="response_body" type="TEXT"/>
+			<column name="error_message" type="TEXT"/>
+			<column name="response_time_ms" type="INTEGER"/>
+			<column name="test_timestamp" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="notes" type="TEXT"/>
+		</createTable>
+
+		<addForeignKeyConstraint
+			baseTableName="libretime_api_test_results"
+			baseColumnNames="endpoint_id"
+			constraintName="fk_libretime_api_test_results_endpoint"
+			referencedTableName="libretime_api_endpoints"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+
+		<createIndex indexName="idx_libretime_api_test_results_endpoint_id" tableName="libretime_api_test_results">
+			<column name="endpoint_id"/>
+		</createIndex>
+
+		<createIndex indexName="idx_libretime_api_test_results_status" tableName="libretime_api_test_results">
+			<column name="status"/>
+		</createIndex>
+
+		<createIndex indexName="idx_libretime_api_test_results_test_type" tableName="libretime_api_test_results">
+			<column name="test_type"/>
+		</createIndex>
+
+		<createIndex indexName="idx_libretime_api_test_results_test_timestamp" tableName="libretime_api_test_results">
+			<column name="test_timestamp"/>
+		</createIndex>
+
+	</changeSet>
+
+	<changeSet id="004-create-libretime-file-sync-status-table" author="librelog">
+		<comment>Create libretime_file_sync_status table for tracking file synchronization status</comment>
+		
+		<createTable tableName="libretime_file_sync_status">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="librelog_file_id" type="UUID"/>
+			<column name="libretime_cart_id" type="VARCHAR(255)"/>
+			<column name="file_name" type="VARCHAR(500)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="sync_direction" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="sync_status" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="last_sync_at" type="TIMESTAMP"/>
+			<column name="sync_error" type="TEXT"/>
+			<column name="file_size_bytes" type="BIGINT"/>
+			<column name="file_hash" type="VARCHAR(255)"/>
+			<column name="metadata_synced" type="BOOLEAN">
+				<constraints nullable="false"/>
+			</column>
+			<column name="created_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="updated_at" type="TIMESTAMP"/>
+		</createTable>
+
+		<createIndex indexName="idx_libretime_file_sync_status_librelog_file_id" tableName="libretime_file_sync_status">
+			<column name="librelog_file_id"/>
+		</createIndex>
+
+		<createIndex indexName="idx_libretime_file_sync_status_libretime_cart_id" tableName="libretime_file_sync_status">
+			<column name="libretime_cart_id"/>
+		</createIndex>
+
+		<createIndex indexName="idx_libretime_file_sync_status_sync_status" tableName="libretime_file_sync_status">
+			<column name="sync_status"/>
+		</createIndex>
+
+		<createIndex indexName="idx_libretime_file_sync_status_sync_direction" tableName="libretime_file_sync_status">
+			<column name="sync_direction"/>
+		</createIndex>
+
+		<createIndex indexName="idx_libretime_file_sync_status_file_hash" tableName="libretime_file_sync_status">
+			<column name="file_hash"/>
+		</createIndex>
+
+	</changeSet>
+
+	<changeSet id="004-create-libretime-sync-history-table" author="librelog">
+		<comment>Create libretime_sync_history table for maintaining sync operation history</comment>
+		
+		<createTable tableName="libretime_sync_history">
+			<column name="id" type="UUID">
+				<constraints primaryKey="true" nullable="false"/>
+			</column>
+			<column name="sync_type" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="status" type="VARCHAR(50)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="items_total" type="INTEGER">
+				<constraints nullable="false"/>
+			</column>
+			<column name="items_succeeded" type="INTEGER">
+				<constraints nullable="false"/>
+			</column>
+			<column name="items_failed" type="INTEGER">
+				<constraints nullable="false"/>
+			</column>
+			<column name="started_at" type="TIMESTAMP">
+				<constraints nullable="false"/>
+			</column>
+			<column name="completed_at" type="TIMESTAMP"/>
+			<column name="error_summary" type="TEXT"/>
+			<column name="initiated_by" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+			<column name="details" type="TEXT"/>
+		</createTable>
+
+		<addForeignKeyConstraint
+			baseTableName="libretime_sync_history"
+			baseColumnNames="initiated_by"
+			constraintName="fk_libretime_sync_history_initiated_by"
+			referencedTableName="users"
+			referencedColumnNames="id"
+			onDelete="RESTRICT"/>
+
+		<createIndex indexName="idx_libretime_sync_history_sync_type" tableName="libretime_sync_history">
+			<column name="sync_type"/>
+		</createIndex>
+
+		<createIndex indexName="idx_libretime_sync_history_status" tableName="libretime_sync_history">
+			<column name="status"/>
+		</createIndex>
+
+		<createIndex indexName="idx_libretime_sync_history_initiated_by" tableName="libretime_sync_history">
+			<column name="initiated_by"/>
+		</createIndex>
+
+		<createIndex indexName="idx_libretime_sync_history_started_at" tableName="libretime_sync_history">
+			<column name="started_at"/>
+		</createIndex>
+
+	</changeSet>
+
+</databaseChangeLog>
+

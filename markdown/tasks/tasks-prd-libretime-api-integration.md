@@ -110,17 +110,17 @@ Based on PRD: `prd-libretime-api-integration.md`
 
 ## Tasks
 
-- [ ] 1.0 Database Schema and Enums
-  - [ ] 1.1 Create enum `SyncFrequency` in `enums/` folder with values: REAL_TIME, FIVE_MINUTES, FIFTEEN_MINUTES, HOURLY, MANUAL. Include Javadoc and unit test.
-  - [ ] 1.2 Create enum `SyncDirection` in `enums/` folder with values: BIDIRECTIONAL, LIBRELOG_TO_LIBRETIME, LIBRETIME_TO_LIBRELOG. Include Javadoc and unit test.
-  - [ ] 1.3 Create enum `ConflictResolution` in `enums/` folder with values: LAST_WRITE_WINS, MANUAL, LIBRELOG_PRIORITY, LIBRETIME_PRIORITY. Include Javadoc and unit test.
-  - [ ] 1.4 Create enum `SyncStatus` in `enums/` folder with values: PENDING, SYNCING, SYNCED, FAILED, CONFLICT. Include Javadoc and unit test.
-  - [ ] 1.5 Create enum `SyncType` in `enums/` folder with values: FILE_UPLOAD, FILE_DOWNLOAD, BATCH_SYNC, LOG_EXPORT, MANUAL. Include Javadoc and unit test.
-  - [ ] 1.6 Create enum `EndpointStatus` in `enums/` folder with values: WORKING, BROKEN, MISSING, UNKNOWN. Include Javadoc and unit test.
-  - [ ] 1.7 Create enum `TestType` in `enums/` folder with values: CONNECTIVITY, AUTHENTICATION, CRUD, ERROR_HANDLING, EDGE_CASE. Include Javadoc and unit test.
-  - [ ] 1.8 Create enum `TestStatus` in `enums/` folder with values: PASSED, FAILED, ERROR, SKIPPED. Include Javadoc and unit test.
-  - [ ] 1.9 Create Liquibase changeset file `004-libretime-integration-schema.xml` with all 5 tables: `libretime_integration_config`, `libretime_api_endpoints`, `libretime_api_test_results`, `libretime_file_sync_status`, `libretime_sync_history`. Use UUID primary keys, proper foreign keys, indexes, and constraints.
-  - [ ] 1.10 Update `db.changelog-master.xml` to include the new changeset `004-libretime-integration-schema.xml`.
+- [x] 1.0 Database Schema and Enums
+  - [x] 1.1 Create enum `SyncFrequency` in `enums/` folder with values: REAL_TIME, FIVE_MINUTES, FIFTEEN_MINUTES, HOURLY, MANUAL. Include Javadoc and unit test.
+  - [x] 1.2 Create enum `SyncDirection` in `enums/` folder with values: BIDIRECTIONAL, LIBRELOG_TO_LIBRETIME, LIBRETIME_TO_LIBRELOG. Include Javadoc and unit test.
+  - [x] 1.3 Create enum `ConflictResolution` in `enums/` folder with values: LAST_WRITE_WINS, MANUAL, LIBRELOG_PRIORITY, LIBRETIME_PRIORITY. Include Javadoc and unit test.
+  - [x] 1.4 Create enum `SyncStatus` in `enums/` folder with values: PENDING, SYNCING, SYNCED, FAILED, CONFLICT. Include Javadoc and unit test.
+  - [x] 1.5 Create enum `SyncType` in `enums/` folder with values: FILE_UPLOAD, FILE_DOWNLOAD, BATCH_SYNC, LOG_EXPORT, MANUAL. Include Javadoc and unit test.
+  - [x] 1.6 Create enum `EndpointStatus` in `enums/` folder with values: WORKING, BROKEN, MISSING, UNKNOWN. Include Javadoc and unit test.
+  - [x] 1.7 Create enum `TestType` in `enums/` folder with values: CONNECTIVITY, AUTHENTICATION, CRUD, ERROR_HANDLING, EDGE_CASE. Include Javadoc and unit test.
+  - [x] 1.8 Create enum `TestStatus` in `enums/` folder with values: PASSED, FAILED, ERROR, SKIPPED. Include Javadoc and unit test.
+  - [x] 1.9 Create Liquibase changeset file `004-libretime-integration-schema.xml` with all 5 tables: `libretime_integration_config`, `libretime_api_endpoints`, `libretime_api_test_results`, `libretime_file_sync_status`, `libretime_sync_history`. Use UUID primary keys, proper foreign keys, indexes, and constraints.
+  - [x] 1.10 Update `db.changelog-master.xml` to include the new changeset `004-libretime-integration-schema.xml`.
 
 - [ ] 2.0 Enhanced LibreTime Client and HTTP Service Layer
   - [ ] 2.1 Create `LibreTimeHttpClient.java` in `integrations/` package as a service layer for HTTP operations. Use Spring WebClient, implement constructor injection, add logging with Log4j.

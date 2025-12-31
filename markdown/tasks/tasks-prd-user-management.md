@@ -285,16 +285,16 @@ Based on PRD: `prd-user-management.md`
   - [ ] 11.11 Write integration tests for permission enforcement across all endpoints
 
 - [ ] 12.0 Bulk User Import
-  - [ ] 12.1 Implement CSV parsing in `BulkUserImportServiceImpl` using Apache Commons CSV or similar library
-  - [ ] 12.2 Implement Excel parsing in `BulkUserImportServiceImpl` using Apache POI or similar library
-  - [ ] 12.3 Create CSV/Excel template file with headers: email, password (optional), role, status, station_assignments (comma-separated station IDs), permission_levels (JSON or comma-separated)
-  - [ ] 12.4 Implement validation logic for imported user data (email format, role validity, station existence, etc.)
-  - [ ] 12.5 Implement preview functionality that validates data and shows what will be imported before confirmation
-  - [ ] 12.6 Implement partial import logic that creates valid users and skips invalid ones with detailed error reporting
-  - [ ] 12.7 Implement password auto-generation for users without passwords in import file
-  - [ ] 12.8 Create endpoint to download template CSV/Excel file
-  - [ ] 12.9 Implement import result reporting with success count, failure count, and detailed error messages
-  - [ ] 12.10 Add file size limits and validation (max 10MB)
+  - [x] 12.1 Implement CSV parsing in `BulkUserImportServiceImpl` using Apache Commons CSV or similar library
+  - [x] 12.2 Implement Excel parsing in `BulkUserImportServiceImpl` using Apache POI or similar library
+  - [x] 12.3 Create CSV/Excel template file with headers: email, password (optional), role, status, station_assignments (comma-separated station IDs), permission_levels (JSON or comma-separated)
+  - [x] 12.4 Implement validation logic for imported user data (email format, role validity, station existence, etc.)
+  - [x] 12.5 Implement preview functionality that validates data and shows what will be imported before confirmation
+  - [x] 12.6 Implement partial import logic that creates valid users and skips invalid ones with detailed error reporting
+  - [x] 12.7 Implement password auto-generation for users without passwords in import file
+  - [x] 12.8 Create endpoint to download template CSV/Excel file
+  - [x] 12.9 Implement import result reporting with success count, failure count, and detailed error messages
+  - [x] 12.10 Add file size limits and validation (max 10MB)
   - [ ] 12.11 Write comprehensive unit tests for bulk import service (80%+ coverage)
   - [ ] 12.12 Write integration tests for bulk import endpoint with sample CSV/Excel files
 

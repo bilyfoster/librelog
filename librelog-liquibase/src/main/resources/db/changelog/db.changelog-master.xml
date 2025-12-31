@@ -8,6 +8,7 @@
 	<include file="001-initial-schema.xml"/>
 	<include file="002-create-stations-and-channels.xml"/>
 	<include file="003-create-admin-user.xml"/>
+	<include file="004-libretime-integration-schema.xml"/>
 
 </databaseChangeLog>
 
