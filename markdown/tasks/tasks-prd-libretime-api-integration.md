@@ -132,15 +132,15 @@ Based on PRD: `prd-libretime-api-integration.md`
   - [x] 2.7 Add connection test method to `LibreTimeHttpClient` that tests API connectivity and authentication.
   - [x] 2.8 Implement error handling in `LibreTimeHttpClient` for 4xx (client errors), 5xx (server errors), and network errors with appropriate exception types.
 
-- [ ] 3.0 Integration Configuration Management (Models, Repositories, Services)
-  - [ ] 3.1 Create entity `LibreTimeIntegrationConfig.java` in `models/` package with all required fields from PRD FR-4.1. Use Lombok annotations (@Data, @Builder, @NoArgsConstructor, @AllArgsConstructor), UUID primary key, proper JPA annotations.
-  - [ ] 3.2 Create repository interface `LibreTimeIntegrationConfigRepository.java` extending JpaRepository. Add custom query methods if needed (e.g., find by sync enabled status).
-  - [ ] 3.3 Create service interface `LibreTimeIntegrationConfigService.java` in `services/` package with methods: getConfig(), saveConfig(), updateConfig(), testConnection().
-  - [ ] 3.4 Create service implementation `LibreTimeIntegrationConfigServiceImpl.java` in `services/impl/` package. Use constructor injection, implement all interface methods, add logging.
-  - [ ] 3.5 Implement encryption for JWT token and webhook secret in config service using Spring encryption utilities or create `EncryptionUtils.java`.
-  - [ ] 3.6 Create DTOs: `LibreTimeIntegrationConfigRequestDTO.java` and `LibreTimeIntegrationConfigResponseDTO.java` in `dto/` package. Use Lombok, mask sensitive fields in response DTO.
-  - [ ] 3.7 Create `ConnectionTestResponseDTO.java` in `dto/` package for connection test results.
-  - [ ] 3.8 Add validation to config service - validate URL format, validate enum values, validate file size limits.
+- [x] 3.0 Integration Configuration Management (Models, Repositories, Services)
+  - [x] 3.1 Create entity `LibreTimeIntegrationConfig.java` in `models/` package with all required fields from PRD FR-4.1. Use Lombok annotations (@Data, @Builder, @NoArgsConstructor, @AllArgsConstructor), UUID primary key, proper JPA annotations.
+  - [x] 3.2 Create repository interface `LibreTimeIntegrationConfigRepository.java` extending JpaRepository. Add custom query methods if needed (e.g., find by sync enabled status).
+  - [x] 3.3 Create service interface `LibreTimeIntegrationConfigService.java` in `services/` package with methods: getConfig(), saveConfig(), updateConfig(), testConnection().
+  - [x] 3.4 Create service implementation `LibreTimeIntegrationConfigServiceImpl.java` in `services/impl/` package. Use constructor injection, implement all interface methods, add logging.
+  - [x] 3.5 Implement encryption for JWT token and webhook secret in config service using Spring encryption utilities or create `EncryptionUtils.java`.
+  - [x] 3.6 Create DTOs: `LibreTimeIntegrationConfigRequestDTO.java` and `LibreTimeIntegrationConfigResponseDTO.java` in `dto/` package. Use Lombok, mask sensitive fields in response DTO.
+  - [x] 3.7 Create `ConnectionTestResponseDTO.java` in `dto/` package for connection test results.
+  - [x] 3.8 Add validation to config service - validate URL format, validate enum values, validate file size limits.
 
 - [ ] 4.0 File Synchronization Services (Upload, Download, List, Query)
   - [ ] 4.1 Create entity `LibreTimeFileSyncStatus.java` in `models/` package with all fields from PRD FR-4.4. Use proper JPA annotations, UUID primary key, enum types.
