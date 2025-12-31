@@ -34,20 +34,221 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 	private final ClockBuilderService clockBuilderService;
 	private final LibreTimeClient libreTimeClient;
 	private final ObjectMapper objectMapper;
+	private final com.onelpro.librelog.services.LibreTimeFileSyncService fileSyncService;
 
 	public LibreTimeSyncServiceImpl(
 			ClockBuilderService clockBuilderService,
 			LibreTimeClient libreTimeClient,
-			org.springframework.beans.factory.ObjectProvider<ObjectMapper> objectMapperProvider) {
+			org.springframework.beans.factory.ObjectProvider<ObjectMapper> objectMapperProvider,
+			com.onelpro.librelog.services.LibreTimeFileSyncService fileSyncService) {
 		this.clockBuilderService = clockBuilderService;
 		this.libreTimeClient = libreTimeClient;
 		// Use ObjectMapper from provider, or create a new one if not available
 		this.objectMapper = objectMapperProvider.getIfAvailable(() -> new ObjectMapper());
+		this.fileSyncService = fileSyncService;
+	}
+
+	@Override
+	public ClockExportValidationResultDTO validateClockTemplate(UUID clockTemplateId) {
+		logger.info("Validating clock template {} before export", clockTemplateId);
+		ClockExportValidationResultDTO result = ClockExportValidationResultDTO.builder()
+				.clockTemplateId(clockTemplateId)
+				.isValid(true)
+				.errors(new ArrayList<>())
+				.warnings(new ArrayList<>())
+				.totalItems(0)
+				.validItems(0)
+				.invalidItems(0)
+				.build();
+
+		try {
+			ClockTemplateWithBreaksDTO clock = clockBuilderService.getClockStructure(clockTemplateId);
+
+			// Validate clock name
+			if (clock.getName() == null || clock.getName().trim().isEmpty()) {
+				result.addError("name", "Clock template name is required");
+				result.setIsValid(false);
+			}
+
+			int totalItems = 0;
+			int validItems = 0;
+
+			// Validate breaks
+			if (clock.getBreaks() != null) {
+				for (BreakStructureResponseDTO breakItem : clock.getBreaks()) {
+					totalItems++;
+					boolean isValid = true;
+
+					// Validate break name
+					if (breakItem.getName() == null || breakItem.getName().trim().isEmpty()) {
+						result.addError("breaks[" + totalItems + "].name", "Break name is required");
+						isValid = false;
+					}
+
+					// Validate start time
+					if (breakItem.getStartTime() == null) {
+						result.addError("breaks[" + totalItems + "].startTime", "Break start time is required");
+						isValid = false;
+					}
+
+					// Validate duration
+					if (breakItem.getDurationSeconds() == null || breakItem.getDurationSeconds() <= 0) {
+						result.addError("breaks[" + totalItems + "].durationSeconds", "Break duration must be greater than 0");
+						isValid = false;
+					}
+
+					// Check if referenced LibreTime resources exist
+					if (breakItem.getLibreTimePlaylistId() != null) {
+						// Could check if playlist exists in LibreTime
+						result.addWarning("breaks[" + totalItems + "].libreTimePlaylistId", 
+								"Playlist existence not verified in LibreTime");
+					}
+					if (breakItem.getLibreTimeSmartBlockId() != null) {
+						result.addWarning("breaks[" + totalItems + "].libreTimeSmartBlockId", 
+								"Smart block existence not verified in LibreTime");
+					}
+
+					if (isValid) {
+						validItems++;
+					}
+				}
+			}
+
+			// Validate fixed assets
+			if (clock.getFixedAssets() != null) {
+				for (FixedAssetResponseDTO asset : clock.getFixedAssets()) {
+					totalItems++;
+					boolean isValid = true;
+
+					// Validate asset name
+					if (asset.getName() == null || asset.getName().trim().isEmpty()) {
+						result.addError("fixedAssets[" + totalItems + "].name", "Asset name is required");
+						isValid = false;
+					}
+
+					// Validate start time
+					if (asset.getStartTime() == null) {
+						result.addError("fixedAssets[" + totalItems + "].startTime", "Asset start time is required");
+						isValid = false;
+					}
+
+					// Check if file exists in LibreTime (if cart ID is provided)
+					if (asset.getLibreTimeCartId() != null) {
+						try {
+							com.onelpro.librelog.dto.SyncStatusResponseDTO syncStatus = 
+									fileSyncService.getSyncStatus(null, asset.getLibreTimeCartId());
+							if (syncStatus == null || syncStatus.getSyncStatus() == null) {
+								result.addWarning("fixedAssets[" + totalItems + "].libreTimeCartId", 
+										"File existence in LibreTime not verified");
+							}
+						} catch (Exception e) {
+							result.addWarning("fixedAssets[" + totalItems + "].libreTimeCartId", 
+									"Could not verify file existence in LibreTime: " + e.getMessage());
+						}
+					} else {
+						result.addWarning("fixedAssets[" + totalItems + "].libreTimeCartId", 
+								"Asset does not have a LibreTime cart ID - may not exist in LibreTime");
+					}
+
+					if (isValid) {
+						validItems++;
+					}
+				}
+			}
+
+			// Validate automation commands
+			if (clock.getAutomationCommands() != null) {
+				for (AutomationCommandResponseDTO command : clock.getAutomationCommands()) {
+					totalItems++;
+					boolean isValid = true;
+
+					// Validate command type
+					if (command.getCommandType() == null) {
+						result.addError("automationCommands[" + totalItems + "].commandType", 
+								"Command type is required");
+						isValid = false;
+					}
+
+					// Validate trigger time
+					if (command.getTriggerTime() == null) {
+						result.addError("automationCommands[" + totalItems + "].triggerTime", 
+								"Command trigger time is required");
+						isValid = false;
+					}
+
+					if (isValid) {
+						validItems++;
+					}
+				}
+			}
+
+			result.setTotalItems(totalItems);
+			result.setValidItems(validItems);
+			result.setInvalidItems(totalItems - validItems);
+
+			// Check for timing conflicts within the clock
+			validateTimingConflicts(clock, result);
+
+			if (!result.getErrors().isEmpty()) {
+				result.setIsValid(false);
+			}
+
+		} catch (Exception e) {
+			logger.error("Error validating clock template {}: {}", clockTemplateId, e.getMessage());
+			result.addError("general", "Error validating clock template: " + e.getMessage());
+			result.setIsValid(false);
+		}
+
+		logger.info("Clock template {} validation completed. Valid: {}, Errors: {}, Warnings: {}", 
+				clockTemplateId, result.getIsValid(), result.getErrors().size(), result.getWarnings().size());
+		return result;
+	}
+
+	/**
+	 * Validates timing conflicts within a clock template.
+	 */
+	private void validateTimingConflicts(ClockTemplateWithBreaksDTO clock, ClockExportValidationResultDTO result) {
+		List<com.onelpro.librelog.dto.ClockExportValidationResultDTO.ValidationWarningDTO> timingWarnings = new ArrayList<>();
+
+		// Check for overlapping items (simplified - would need more sophisticated logic for real conflict detection)
+		// This is a basic check - in production, you'd want more sophisticated conflict detection
+		if (clock.getBreaks() != null && clock.getFixedAssets() != null) {
+			for (BreakStructureResponseDTO breakItem : clock.getBreaks()) {
+				if (breakItem.getStartTime() == null || breakItem.getDurationSeconds() == null) {
+					continue;
+				}
+				java.time.Duration breakStart = java.time.Duration.between(
+						java.time.LocalTime.MIDNIGHT, breakItem.getStartTime());
+				java.time.Duration breakEnd = breakStart.plusSeconds(breakItem.getDurationSeconds());
+
+				for (FixedAssetResponseDTO asset : clock.getFixedAssets()) {
+					if (asset.getStartTime() == null) {
+						continue;
+					}
+					java.time.Duration assetStart = java.time.Duration.between(
+							java.time.LocalTime.MIDNIGHT, asset.getStartTime());
+
+					// Check if asset overlaps with break
+					if (assetStart.compareTo(breakStart) >= 0 && assetStart.compareTo(breakEnd) < 0) {
+						result.addWarning("timing", 
+								String.format("Fixed asset '%s' overlaps with break '%s' at %s", 
+										asset.getName(), breakItem.getName(), asset.getStartTime()));
+					}
+				}
+			}
+		}
 	}
 
 	@Override
 	public LibreTimeExportDTO exportClock(UUID clockTemplateId) {
 		logger.info("Exporting clock template {} to LibreTime format", clockTemplateId);
+		
+		// Perform validation first
+		ClockExportValidationResultDTO validation = validateClockTemplate(clockTemplateId);
+		if (!validation.getIsValid() && !validation.getErrors().isEmpty()) {
+			logger.warn("Exporting clock template {} with validation errors: {}", 
+					clockTemplateId, validation.getErrors().size());
+		}
 
 		ClockTemplateWithBreaksDTO clock = clockBuilderService.getClockStructure(clockTemplateId);
 
@@ -144,21 +345,95 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 	}
 
 	@Override
-	public String pushClockToLibreTime(UUID clockTemplateId) {
+	public ClockExportResultDTO pushClockToLibreTime(UUID clockTemplateId) {
 		logger.info("Pushing clock template {} to LibreTime API", clockTemplateId);
 
-		LibreTimeExportDTO export = exportClock(clockTemplateId);
+		ClockExportResultDTO result = ClockExportResultDTO.builder()
+				.clockTemplateId(clockTemplateId)
+				.success(false)
+				.exportedAt(LocalDateTime.now())
+				.totalShowInstances(0)
+				.successfulShowInstances(0)
+				.failedShowInstances(0)
+				.failures(new ArrayList<>())
+				.warnings(new ArrayList<>())
+				.build();
+
+		// Validate before export
+		ClockExportValidationResultDTO validation = validateClockTemplate(clockTemplateId);
+		if (!validation.getIsValid()) {
+			result.setMessage("Clock template validation failed. Please fix errors before exporting.");
+			for (ClockExportValidationResultDTO.ValidationErrorDTO error : validation.getErrors()) {
+				result.addFailure("validation", error.getMessage());
+			}
+			result.setFailedShowInstances(validation.getInvalidItems());
+			return result;
+		}
+
+		// Add validation warnings to result
+		for (ClockExportValidationResultDTO.ValidationWarningDTO warning : validation.getWarnings()) {
+			result.addWarning("validation", warning.getMessage());
+		}
 
 		try {
+			LibreTimeExportDTO export = exportClock(clockTemplateId);
+			result.setTotalShowInstances(export.getShowInstances() != null ? export.getShowInstances().size() : 0);
+
+			// Check for scheduling conflicts
+			List<String> conflicts = detectSchedulingConflicts(export);
+			if (!conflicts.isEmpty()) {
+				for (String conflict : conflicts) {
+					result.addWarning("scheduling", conflict);
+				}
+			}
+
 			String json = objectMapper.writeValueAsString(export);
-			return libreTimeClient.exportClock(json).block();
+			String libreTimeResponse = libreTimeClient.exportClock(json).block();
+			result.setLibreTimeResponse(libreTimeResponse);
+			result.setSuccess(true);
+			result.setMessage("Clock template exported successfully to LibreTime");
+			result.setSuccessfulShowInstances(result.getTotalShowInstances());
+
 		} catch (JsonProcessingException e) {
 			logger.error("Failed to serialize clock export to JSON: {}", e.getMessage());
-			throw new RuntimeException("Failed to serialize clock export", e);
+			result.setMessage("Failed to serialize clock export: " + e.getMessage());
+			result.addFailure("serialization", "Failed to serialize clock export: " + e.getMessage());
+			result.setFailedShowInstances(result.getTotalShowInstances());
 		} catch (Exception e) {
 			logger.error("Failed to push clock to LibreTime: {}", e.getMessage());
-			throw new RuntimeException("Failed to push clock to LibreTime", e);
+			result.setMessage("Failed to push clock to LibreTime: " + e.getMessage());
+			result.addFailure("api", "Failed to push clock to LibreTime: " + e.getMessage());
+			result.setFailedShowInstances(result.getTotalShowInstances());
 		}
+
+		return result;
+	}
+
+	@Override
+	public LibreTimeExportDTO generateLogFromClock(UUID clockTemplateId, LocalDate startDate, LocalDate endDate) {
+		logger.info("Generating log from clock template {} for date range {} to {}", 
+				clockTemplateId, startDate, endDate);
+
+		ClockTemplateWithBreaksDTO clock = clockBuilderService.getClockStructure(clockTemplateId);
+		List<LibreTimeExportDTO.LibreTimeShowInstance> showInstances = new ArrayList<>();
+
+		// Generate show instances for each day in the range
+		LocalDate currentDate = startDate;
+		while (!currentDate.isAfter(endDate)) {
+			List<LibreTimeExportDTO.LibreTimeShowInstance> dayInstances = generateShowInstancesForDate(clock, currentDate);
+			showInstances.addAll(dayInstances);
+			currentDate = currentDate.plusDays(1);
+		}
+
+		LibreTimeExportDTO log = LibreTimeExportDTO.builder()
+				.name(clock.getName() + " - " + startDate + " to " + endDate)
+				.description("Log generated from clock template: " + clock.getName() + " for date range " + startDate + " to " + endDate)
+				.showInstances(showInstances)
+				.build();
+
+		logger.info("Log generated successfully for clock template {} and date range {} to {}", 
+				clockTemplateId, startDate, endDate);
+		return log;
 	}
 
 	@Override
@@ -168,6 +443,25 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 		ClockTemplateWithBreaksDTO clock = clockBuilderService.getClockStructure(clockTemplateId);
 
 		// Generate show instances for each hour of the day (24 hours)
+		List<LibreTimeExportDTO.LibreTimeShowInstance> showInstances = new ArrayList<>();
+
+		List<LibreTimeExportDTO.LibreTimeShowInstance> dayInstances = generateShowInstancesForDate(clock, date);
+
+		LibreTimeExportDTO log = LibreTimeExportDTO.builder()
+				.name(clock.getName() + " - " + date.toString())
+				.description("Daily log generated from clock template: " + clock.getName())
+				.showInstances(dayInstances)
+				.build();
+
+		logger.info("Log generated successfully for clock template {} and date {}", clockTemplateId, date);
+		return log;
+	}
+
+	/**
+	 * Generates show instances for a specific date (24 hours).
+	 */
+	private List<LibreTimeExportDTO.LibreTimeShowInstance> generateShowInstancesForDate(
+			ClockTemplateWithBreaksDTO clock, LocalDate date) {
 		List<LibreTimeExportDTO.LibreTimeShowInstance> showInstances = new ArrayList<>();
 
 		for (int hour = 0; hour < 24; hour++) {
@@ -253,14 +547,44 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 			showInstances.add(showInstance);
 		}
 
-		LibreTimeExportDTO log = LibreTimeExportDTO.builder()
-				.name(clock.getName() + " - " + date.toString())
-				.description("Daily log generated from clock template: " + clock.getName())
-				.showInstances(showInstances)
-				.build();
+		return showInstances;
+	}
 
-		logger.info("Log generated successfully for clock template {} and date {}", clockTemplateId, date);
-		return log;
+	@Override
+	public List<String> detectSchedulingConflicts(LibreTimeExportDTO export) {
+		logger.debug("Detecting scheduling conflicts for export: {}", export.getName());
+		List<String> conflicts = new ArrayList<>();
+
+		if (export.getShowInstances() == null || export.getShowInstances().isEmpty()) {
+			return conflicts;
+		}
+
+		// Check for overlapping show instances within the export
+		for (int i = 0; i < export.getShowInstances().size(); i++) {
+			LibreTimeExportDTO.LibreTimeShowInstance instance1 = export.getShowInstances().get(i);
+			LocalDateTime start1 = LocalDateTime.parse(instance1.getStartTime(), ISO_DATE_TIME);
+			LocalDateTime end1 = LocalDateTime.parse(instance1.getEndTime(), ISO_DATE_TIME);
+
+			for (int j = i + 1; j < export.getShowInstances().size(); j++) {
+				LibreTimeExportDTO.LibreTimeShowInstance instance2 = export.getShowInstances().get(j);
+				LocalDateTime start2 = LocalDateTime.parse(instance2.getStartTime(), ISO_DATE_TIME);
+				LocalDateTime end2 = LocalDateTime.parse(instance2.getEndTime(), ISO_DATE_TIME);
+
+				// Check if instances overlap
+				if (start1.isBefore(end2) && start2.isBefore(end1)) {
+					conflicts.add(String.format(
+							"Show instance '%s' (%s to %s) overlaps with '%s' (%s to %s)",
+							instance1.getShowName(), instance1.getStartTime(), instance1.getEndTime(),
+							instance2.getShowName(), instance2.getStartTime(), instance2.getEndTime()));
+				}
+			}
+		}
+
+		// Note: In a full implementation, you would also check against existing shows in LibreTime
+		// This would require querying the LibreTime API for existing show instances
+
+		logger.debug("Found {} scheduling conflicts", conflicts.size());
+		return conflicts;
 	}
 
 	@Override

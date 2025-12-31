@@ -210,17 +210,15 @@ public class ClockBuilderController {
 	@ApiResponse(responseCode = "200", description = "Clock template exported successfully")
 	@ApiResponse(responseCode = "404", description = "Clock template not found")
 	@ApiResponse(responseCode = "500", description = "Failed to export to LibreTime")
-	public ResponseEntity<LibreTimeExportDTO> exportToLibreTime(
+	public ResponseEntity<?> exportToLibreTime(
 			@PathVariable UUID id,
 			@RequestParam(required = false, defaultValue = "false") boolean push) {
 		logger.info("POST /api/clock-templates/{}/export/libretime - Exporting clock template (push: {})", id, push);
 		
 		if (push) {
-			String response = libreTimeSyncService.pushClockToLibreTime(id);
-			logger.info("Clock template {} pushed to LibreTime successfully", id);
-			// Return the exported format as well
-			LibreTimeExportDTO export = libreTimeSyncService.exportClock(id);
-			return ResponseEntity.ok(export);
+			com.onelpro.librelog.dto.ClockExportResultDTO result = libreTimeSyncService.pushClockToLibreTime(id);
+			logger.info("Clock template {} push completed. Success: {}", id, result.getSuccess());
+			return ResponseEntity.ok(result);
 		} else {
 			LibreTimeExportDTO export = libreTimeSyncService.exportClock(id);
 			return ResponseEntity.ok(export);
