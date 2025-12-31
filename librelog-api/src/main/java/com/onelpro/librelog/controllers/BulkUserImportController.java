@@ -65,20 +65,29 @@ public class BulkUserImportController {
 	)
 	@ApiResponse(responseCode = "200", description = "Template file downloaded successfully")
 	@ApiResponse(responseCode = "403", description = "Access denied")
-	public ResponseEntity<Resource> downloadTemplate() {
-		logger.info("Download import template request");
+	public ResponseEntity<Resource> downloadTemplate(
+			@RequestParam(defaultValue = "csv") String format) {
+		logger.info("Download import template request: format={}", format);
 
-		// Generate CSV template with headers
-		String csvTemplate = "email,password,role,status,station_ids,permission_level\n" +
-				"user1@example.com,Password123!,SALES_REP,ACTIVE,station-uuid-1,station-uuid-2,FULL_ACCESS\n" +
-				"user2@example.com,Password123!,TRAFFIC_MANAGER,ACTIVE,station-uuid-1,VIEW_ONLY\n";
+		byte[] templateBytes;
+		String filename;
+		MediaType contentType;
 
-		byte[] templateBytes = csvTemplate.getBytes();
+		if ("excel".equalsIgnoreCase(format) || "xlsx".equalsIgnoreCase(format)) {
+			templateBytes = bulkUserImportService.generateExcelTemplate();
+			filename = "user-import-template.xlsx";
+			contentType = MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+		} else {
+			templateBytes = bulkUserImportService.generateCsvTemplate();
+			filename = "user-import-template.csv";
+			contentType = MediaType.TEXT_PLAIN;
+		}
+
 		ByteArrayResource resource = new ByteArrayResource(templateBytes);
 
 		HttpHeaders headers = new HttpHeaders();
-		headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=user-import-template.csv");
-		headers.setContentType(MediaType.TEXT_PLAIN);
+		headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename);
+		headers.setContentType(contentType);
 
 		return ResponseEntity.ok()
 				.headers(headers)

@@ -40,6 +40,9 @@ public class BulkUserImportServiceImpl implements BulkUserImportService {
 
 	private static final Logger logger = LoggerFactory.getLogger(BulkUserImportServiceImpl.class);
 
+	// File size limit: 10MB
+	private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+
 	// Expected CSV/Excel headers
 	private static final String HEADER_EMAIL = "email";
 	private static final String HEADER_PASSWORD = "password";
@@ -68,6 +71,11 @@ public class BulkUserImportServiceImpl implements BulkUserImportService {
 
 		if (request.getFile() == null || request.getFile().isEmpty()) {
 			throw new BadRequestException("Import file is required");
+		}
+
+		// Validate file size
+		if (request.getFile().getSize() > MAX_FILE_SIZE) {
+			throw new BadRequestException("File size exceeds maximum limit of 10MB");
 		}
 
 		String fileName = request.getFile().getOriginalFilename();
@@ -339,7 +347,8 @@ public class BulkUserImportServiceImpl implements BulkUserImportService {
 			}
 		}
 
-		String[] stationIdStrings = stationIdsStr.split(",");
+		// Support both comma and semicolon separators
+		String[] stationIdStrings = stationIdsStr.split("[;,]");
 		for (String stationIdStr : stationIdStrings) {
 			try {
 				UUID stationId = UUID.fromString(stationIdStr.trim());
@@ -387,7 +396,8 @@ public class BulkUserImportServiceImpl implements BulkUserImportService {
 			}
 		}
 
-		String[] stationIdStrings = stationIdsStr.split(",");
+		// Support both comma and semicolon separators
+		String[] stationIdStrings = stationIdsStr.split("[;,]");
 		for (String stationIdStr : stationIdStrings) {
 			try {
 				UUID stationId = UUID.fromString(stationIdStr.trim());
@@ -497,6 +507,95 @@ public class BulkUserImportServiceImpl implements BulkUserImportService {
 		// Generate a random password that meets requirements
 		// In production, this should be more secure and users should be required to change it
 		return "TempPass123!";
+	}
+
+	@Override
+	public byte[] generateCsvTemplate() {
+		StringBuilder csv = new StringBuilder();
+		
+		// Header row
+		csv.append("email,password,role,status,station_ids,permission_level\n");
+		
+		// Example rows with comments
+		csv.append("# Example rows (remove # to use):\n");
+		csv.append("# user1@example.com,Password123!,SALES_REP,ACTIVE,station-uuid-1;station-uuid-2,FULL_ACCESS\n");
+		csv.append("# user2@example.com,,TRAFFIC_MANAGER,ACTIVE,station-uuid-1,VIEW_ONLY\n");
+		csv.append("# user3@example.com,SecurePass456!,ADMIN,ACTIVE,station-uuid-1;station-uuid-2;station-uuid-3,CUSTOM\n");
+		csv.append("\n");
+		csv.append("# Notes:\n");
+		csv.append("# - email: Required, must be valid email format\n");
+		csv.append("# - password: Optional, will be auto-generated if empty\n");
+		csv.append("# - role: Required, one of: ADMIN, SALES_REP, TRAFFIC_MANAGER, PROGRAM_DIRECTOR\n");
+		csv.append("# - status: Optional, defaults to ACTIVE. Options: ACTIVE, INACTIVE, SUSPENDED\n");
+		csv.append("# - station_ids: Optional, semicolon-separated list of station UUIDs\n");
+		csv.append("# - permission_level: Optional, defaults to FULL_ACCESS. Options: FULL_ACCESS, VIEW_ONLY, CUSTOM\n");
+		
+		return csv.toString().getBytes(StandardCharsets.UTF_8);
+	}
+
+	@Override
+	public byte[] generateExcelTemplate() {
+		try (Workbook workbook = new XSSFWorkbook()) {
+			Sheet sheet = workbook.createSheet("User Import Template");
+			
+			// Create header row
+			Row headerRow = sheet.createRow(0);
+			String[] headers = {
+				"email", "password", "role", "status", "station_ids", "permission_level"
+			};
+			for (int i = 0; i < headers.length; i++) {
+				Cell cell = headerRow.createCell(i);
+				cell.setCellValue(headers[i]);
+			}
+			
+			// Create example rows
+			Row exampleRow1 = sheet.createRow(1);
+			exampleRow1.createCell(0).setCellValue("user1@example.com");
+			exampleRow1.createCell(1).setCellValue("Password123!");
+			exampleRow1.createCell(2).setCellValue("SALES_REP");
+			exampleRow1.createCell(3).setCellValue("ACTIVE");
+			exampleRow1.createCell(4).setCellValue("station-uuid-1;station-uuid-2");
+			exampleRow1.createCell(5).setCellValue("FULL_ACCESS");
+			
+			Row exampleRow2 = sheet.createRow(2);
+			exampleRow2.createCell(0).setCellValue("user2@example.com");
+			exampleRow2.createCell(1).setCellValue(""); // Empty password - will be auto-generated
+			exampleRow2.createCell(2).setCellValue("TRAFFIC_MANAGER");
+			exampleRow2.createCell(3).setCellValue("ACTIVE");
+			exampleRow2.createCell(4).setCellValue("station-uuid-1");
+			exampleRow2.createCell(5).setCellValue("VIEW_ONLY");
+			
+			// Add notes row
+			Row notesRow = sheet.createRow(4);
+			Cell notesCell = notesRow.createCell(0);
+			notesCell.setCellValue("Notes:");
+			
+			Row note1 = sheet.createRow(5);
+			note1.createCell(0).setCellValue("- email: Required, must be valid email format");
+			Row note2 = sheet.createRow(6);
+			note2.createCell(0).setCellValue("- password: Optional, will be auto-generated if empty");
+			Row note3 = sheet.createRow(7);
+			note3.createCell(0).setCellValue("- role: Required, one of: ADMIN, SALES_REP, TRAFFIC_MANAGER, PROGRAM_DIRECTOR");
+			Row note4 = sheet.createRow(8);
+			note4.createCell(0).setCellValue("- status: Optional, defaults to ACTIVE. Options: ACTIVE, INACTIVE, SUSPENDED");
+			Row note5 = sheet.createRow(9);
+			note5.createCell(0).setCellValue("- station_ids: Optional, semicolon-separated list of station UUIDs");
+			Row note6 = sheet.createRow(10);
+			note6.createCell(0).setCellValue("- permission_level: Optional, defaults to FULL_ACCESS. Options: FULL_ACCESS, VIEW_ONLY, CUSTOM");
+			
+			// Auto-size columns
+			for (int i = 0; i < headers.length; i++) {
+				sheet.autoSizeColumn(i);
+			}
+			
+			// Write to byte array
+			java.io.ByteArrayOutputStream outputStream = new java.io.ByteArrayOutputStream();
+			workbook.write(outputStream);
+			return outputStream.toByteArray();
+		} catch (Exception e) {
+			logger.error("Error generating Excel template", e);
+			throw new RuntimeException("Failed to generate Excel template", e);
+		}
 	}
 
 }

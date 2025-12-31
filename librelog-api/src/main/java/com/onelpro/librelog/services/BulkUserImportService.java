@@ -25,5 +25,19 @@ public interface BulkUserImportService {
 	 */
 	BulkUserImportResponseDTO validateImportFile(BulkUserImportRequestDTO request);
 
+	/**
+	 * Generates a CSV template file for bulk user import.
+	 *
+	 * @return the CSV template as a byte array
+	 */
+	byte[] generateCsvTemplate();
+
+	/**
+	 * Generates an Excel template file for bulk user import.
+	 *
+	 * @return the Excel template as a byte array
+	 */
+	byte[] generateExcelTemplate();
+
 }
 
