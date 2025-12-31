@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LibreTime Integration Settings - LibreLog</title>
+    <link rel="stylesheet" href="css/libretime-integration.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>LibreTime Integration Settings</h1>
+            <p class="subtitle">Configure and manage the integration between LibreLog and LibreTime</p>
+        </header>
+
+        <nav class="settings-nav" role="navigation" aria-label="Settings sections">
+            <ul>
+                <li><a href="#connection-settings" class="nav-link" aria-current="page">Connection</a></li>
+                <li><a href="#sync-settings" class="nav-link">Synchronization</a></li>
+                <li><a href="#file-settings" class="nav-link">File Settings</a></li>
+                <li><a href="#log-settings" class="nav-link">Log Generation</a></li>
+                <li><a href="#webhook-settings" class="nav-link">Webhooks</a></li>
+                <li><a href="#api-testing" class="nav-link">API Testing</a></li>
+                <li><a href="#sync-status" class="nav-link">Sync Status</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <!-- Connection Settings Section -->
+            <section id="connection-settings" class="settings-section" aria-labelledby="connection-heading">
+                <h2 id="connection-heading">Connection Settings</h2>
+                <form id="connection-form" class="settings-form">
+                    <div class="form-group">
+                        <label for="api-base-url">
+                            API Base URL
+                            <span class="required" aria-label="required">*</span>
+                        </label>
+                        <input 
+                            type="url" 
+                            id="api-base-url" 
+                            name="apiBaseUrl" 
+                            required
+                            aria-required="true"
+                            aria-describedby="api-url-help"
+                            placeholder="https://studio-qa.gayphx.com/api/v2/"
+                            pattern="https?://.+"
+                        >
+                        <small id="api-url-help" class="help-text">
+                            Enter the base URL for the LibreTime API (e.g., https://studio-qa.gayphx.com/api/v2/)
+                        </small>
+                        <span class="error-message" id="api-url-error" role="alert" aria-live="polite"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="jwt-token">
+                            JWT Token
+                            <span class="required" aria-label="required">*</span>
+                        </label>
+                        <div class="input-with-button">
+                            <input 
+                                type="password" 
+                                id="jwt-token" 
+                                name="jwtToken" 
+                                required
+                                aria-required="true"
+                                aria-describedby="jwt-token-help"
+                                placeholder="Enter JWT authentication token"
+                            >
+                            <button 
+                                type="button" 
+                                id="toggle-jwt-visibility" 
+                                class="icon-button"
+                                aria-label="Toggle JWT token visibility"
+                                title="Show/Hide token"
+                            >
+                                <span class="icon-eye" aria-hidden="true">👁</span>
+                            </button>
+                        </div>
+                        <small id="jwt-token-help" class="help-text">
+                            Enter your JWT authentication token. The token will be encrypted before storage.
+                        </small>
+                        <span class="error-message" id="jwt-token-error" role="alert" aria-live="polite"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="connection-status" id="connection-status" role="status" aria-live="polite">
+                            <span class="status-indicator" id="status-indicator" aria-hidden="true"></span>
+                            <span class="status-text" id="status-text">Not tested</span>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" id="test-connection-btn" class="btn btn-secondary">
+                            Test Connection
+                        </button>
+                        <button type="submit" id="save-connection-btn" class="btn btn-primary">
+                            Save Configuration
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Synchronization Settings Section -->
+            <section id="sync-settings" class="settings-section" aria-labelledby="sync-heading">
+                <h2 id="sync-heading">Synchronization Settings</h2>
+                <form id="sync-form" class="settings-form">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input 
+                                type="checkbox" 
+                                id="sync-enabled" 
+                                name="syncEnabled"
+                                aria-describedby="sync-enabled-help"
+                            >
+                            <span>Enable automatic synchronization</span>
+                        </label>
+                        <small id="sync-enabled-help" class="help-text">
+                            When enabled, files will be automatically synchronized between LibreLog and LibreTime
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sync-frequency">
+                            Sync Frequency
+                            <span class="required" aria-label="required">*</span>
+                        </label>
+                        <select 
+                            id="sync-frequency" 
+                            name="syncFrequency" 
+                            required
+                            aria-required="true"
+                            aria-describedby="sync-frequency-help"
+                        >
+                            <option value="REAL_TIME">Real-time</option>
+                            <option value="FIVE_MINUTES">Every 5 minutes</option>
+                            <option value="FIFTEEN_MINUTES">Every 15 minutes</option>
+                            <option value="HOURLY">Hourly</option>
+                            <option value="MANUAL">Manual only</option>
+                        </select>
+                        <small id="sync-frequency-help" class="help-text">
+                            How often files should be synchronized automatically
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <fieldset>
+                            <legend>Sync Direction <span class="required" aria-label="required">*</span></legend>
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input 
+                                        type="radio" 
+                                        name="syncDirection" 
+                                        value="BIDIRECTIONAL" 
+                                        checked
+                                        required
+                                        aria-required="true"
+                                    >
+                                    <span>Bidirectional (LibreLog ↔ LibreTime)</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input 
+                                        type="radio" 
+                                        name="syncDirection" 
+                                        value="LIBRELOG_TO_LIBRETIME"
+                                        required
+                                        aria-required="true"
+                                    >
+                                    <span>LibreLog → LibreTime only</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input 
+                                        type="radio" 
+                                        name="syncDirection" 
+                                        value="LIBRETIME_TO_LIBRELOG"
+                                        required
+                                        aria-required="true"
+                                    >
+                                    <span>LibreTime → LibreLog only</span>
+                                </label>
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="conflict-resolution">
+                            Conflict Resolution
+                            <span class="required" aria-label="required">*</span>
+                        </label>
+                        <select 
+                            id="conflict-resolution" 
+                            name="conflictResolution" 
+                            required
+                            aria-required="true"
+                            aria-describedby="conflict-resolution-help"
+                        >
+                            <option value="LAST_WRITE_WINS">Last write wins</option>
+                            <option value="MANUAL">Manual resolution</option>
+                            <option value="LIBRELOG_PRIORITY">LibreLog priority</option>
+                            <option value="LIBRETIME_PRIORITY">LibreTime priority</option>
+                        </select>
+                        <small id="conflict-resolution-help" class="help-text">
+                            How to handle conflicts when the same file is modified in both systems
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="sync-info">
+                            <p>
+                                <strong>Last Sync:</strong> 
+                                <span id="last-sync-time">Never</span>
+                            </p>
+                            <p>
+                                <strong>Next Sync:</strong> 
+                                <span id="next-sync-time">Not scheduled</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" id="sync-now-btn" class="btn btn-secondary">
+                            Sync Now
+                        </button>
+                        <button type="submit" id="save-sync-btn" class="btn btn-primary">
+                            Save Settings
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- File Settings Section -->
+            <section id="file-settings" class="settings-section" aria-labelledby="file-heading">
+                <h2 id="file-heading">File Settings</h2>
+                <form id="file-form" class="settings-form">
+                    <div class="form-group">
+                        <fieldset>
+                            <legend>Supported File Formats</legend>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="supportedFormats" value="MP3" checked>
+                                    <span>MP3</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="supportedFormats" value="WAV" checked>
+                                    <span>WAV</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="supportedFormats" value="FLAC" checked>
+                                    <span>FLAC</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="supportedFormats" value="OGG" checked>
+                                    <span>OGG</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="supportedFormats" value="AAC" checked>
+                                    <span>AAC</span>
+                                </label>
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="max-file-size">
+                            Maximum File Size (MB)
+                            <span class="required" aria-label="required">*</span>
+                        </label>
+                        <input 
+                            type="number" 
+                            id="max-file-size" 
+                            name="maxFileSizeMb" 
+                            min="1" 
+                            max="5000" 
+                            value="500"
+                            required
+                            aria-required="true"
+                            aria-describedby="max-file-size-help"
+                        >
+                        <small id="max-file-size-help" class="help-text">
+                            Maximum file size in megabytes (1-5000 MB)
+                        </small>
+                        <span class="error-message" id="max-file-size-error" role="alert" aria-live="polite"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input 
+                                type="checkbox" 
+                                id="metadata-sync" 
+                                name="metadataSync"
+                                checked
+                                aria-describedby="metadata-sync-help"
+                            >
+                            <span>Automatically sync metadata</span>
+                        </label>
+                        <small id="metadata-sync-help" class="help-text">
+                            When enabled, file metadata (cue points, duration, tags) will be synchronized with files
+                        </small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" id="save-file-btn" class="btn btn-primary">
+                            Save Settings
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Log Generation Settings Section -->
+            <section id="log-settings" class="settings-section" aria-labelledby="log-heading">
+                <h2 id="log-heading">Log Generation Settings</h2>
+                <form id="log-form" class="settings-form">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input 
+                                type="checkbox" 
+                                id="auto-export" 
+                                name="autoExport"
+                                aria-describedby="auto-export-help"
+                            >
+                            <span>Enable automatic log generation</span>
+                        </label>
+                        <small id="auto-export-help" class="help-text">
+                            When enabled, logs will be automatically generated from clock templates and exported to LibreTime
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="validation-level">
+                            Validation Level
+                        </label>
+                        <select 
+                            id="validation-level" 
+                            name="validationLevel"
+                            aria-describedby="validation-level-help"
+                        >
+                            <option value="STRICT">Strict</option>
+                            <option value="MODERATE" selected>Moderate</option>
+                            <option value="LENIENT">Lenient</option>
+                        </select>
+                        <small id="validation-level-help" class="help-text">
+                            How strictly to validate clock templates before export
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input 
+                                type="checkbox" 
+                                id="preview-toggle" 
+                                name="previewToggle"
+                                aria-describedby="preview-toggle-help"
+                            >
+                            <span>Preview before export</span>
+                        </label>
+                        <small id="preview-toggle-help" class="help-text">
+                            Show a preview of the generated log before applying it to LibreTime
+                        </small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" id="save-log-btn" class="btn btn-primary">
+                            Save Settings
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Webhook Settings Section -->
+            <section id="webhook-settings" class="settings-section" aria-labelledby="webhook-heading">
+                <h2 id="webhook-heading">Webhook Settings</h2>
+                <form id="webhook-form" class="settings-form">
+                    <div class="form-group">
+                        <label for="webhook-url">
+                            Webhook URL
+                        </label>
+                        <input 
+                            type="url" 
+                            id="webhook-url" 
+                            name="webhookUrl"
+                            aria-describedby="webhook-url-help"
+                            placeholder="https://your-server.com/webhook/libretime"
+                            pattern="https?://.+"
+                        >
+                        <small id="webhook-url-help" class="help-text">
+                            URL where LibreTime will send notifications (optional)
+                        </small>
+                        <span class="error-message" id="webhook-url-error" role="alert" aria-live="polite"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="webhook-secret">
+                            Webhook Secret
+                        </label>
+                        <div class="input-with-button">
+                            <input 
+                                type="password" 
+                                id="webhook-secret" 
+                                name="webhookSecret"
+                                aria-describedby="webhook-secret-help"
+                                placeholder="Enter webhook secret for security"
+                            >
+                            <button 
+                                type="button" 
+                                id="toggle-webhook-visibility" 
+                                class="icon-button"
+                                aria-label="Toggle webhook secret visibility"
+                                title="Show/Hide secret"
+                            >
+                                <span class="icon-eye" aria-hidden="true">👁</span>
+                            </button>
+                        </div>
+                        <small id="webhook-secret-help" class="help-text">
+                            Secret token for verifying webhook requests (optional)
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input 
+                                type="checkbox" 
+                                id="webhook-enabled" 
+                                name="webhookEnabled"
+                                aria-describedby="webhook-enabled-help"
+                            >
+                            <span>Enable webhook notifications</span>
+                        </label>
+                        <small id="webhook-enabled-help" class="help-text">
+                            When enabled, LibreTime will send notifications to the configured webhook URL
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="webhook-status" id="webhook-status" role="status" aria-live="polite">
+                            <p>
+                                <strong>Delivery Status:</strong> 
+                                <span id="webhook-delivery-status">Not configured</span>
+                            </p>
+                            <p>
+                                <strong>Last Notification:</strong> 
+                                <span id="webhook-last-notification">Never</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" id="test-webhook-btn" class="btn btn-secondary">
+                            Test Webhook
+                        </button>
+                        <button type="submit" id="save-webhook-btn" class="btn btn-primary">
+                            Save Settings
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- API Testing & Documentation Section -->
+            <section id="api-testing" class="settings-section" aria-labelledby="api-testing-heading">
+                <h2 id="api-testing-heading">API Testing & Documentation</h2>
+                <div class="api-testing-controls">
+                    <button type="button" id="discover-endpoints-btn" class="btn btn-secondary">
+                        Discover Endpoints
+                    </button>
+                    <button type="button" id="run-tests-btn" class="btn btn-secondary">
+                        Run All Tests
+                    </button>
+                    <button type="button" id="export-docs-btn" class="btn btn-secondary">
+                        Export Documentation
+                    </button>
+                </div>
+
+                <div class="test-results" id="test-results" role="region" aria-labelledby="test-results-heading">
+                    <h3 id="test-results-heading">Test Results</h3>
+                    <div class="test-summary" id="test-summary" role="status" aria-live="polite">
+                        <p>No tests run yet. Click "Run All Tests" to start testing.</p>
+                    </div>
+                    <div class="test-results-table-container">
+                        <table class="test-results-table" id="test-results-table" aria-label="API test results">
+                            <thead>
+                                <tr>
+                                    <th>Endpoint</th>
+                                    <th>Method</th>
+                                    <th>Status</th>
+                                    <th>Response Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="test-results-tbody">
+                                <tr>
+                                    <td colspan="5" class="no-results">No test results available</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bug-reports" id="bug-reports" role="region" aria-labelledby="bug-reports-heading">
+                    <h3 id="bug-reports-heading">Bug Reports</h3>
+                    <div id="bug-reports-content">
+                        <p>No bug reports available. Run tests to generate bug reports for broken endpoints.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sync Status & History Section -->
+            <section id="sync-status" class="settings-section" aria-labelledby="sync-status-heading">
+                <h2 id="sync-status-heading">Sync Status & History</h2>
+                
+                <div class="sync-statistics" id="sync-statistics" role="region" aria-labelledby="sync-stats-heading">
+                    <h3 id="sync-stats-heading">Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-label">Total Files</span>
+                            <span class="stat-value" id="stat-total-files">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Synced</span>
+                            <span class="stat-value" id="stat-synced-files">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Failed</span>
+                            <span class="stat-value" id="stat-failed-files">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Pending</span>
+                            <span class="stat-value" id="stat-pending-files">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Success Rate</span>
+                            <span class="stat-value" id="stat-success-rate">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sync-history" id="sync-history" role="region" aria-labelledby="sync-history-heading">
+                    <h3 id="sync-history-heading">Sync History</h3>
+                    <div class="history-filters">
+                        <label for="history-filter-type">Filter by Type:</label>
+                        <select id="history-filter-type">
+                            <option value="">All Types</option>
+                            <option value="FILE_UPLOAD">File Upload</option>
+                            <option value="FILE_DOWNLOAD">File Download</option>
+                            <option value="BATCH_SYNC">Batch Sync</option>
+                            <option value="LOG_EXPORT">Log Export</option>
+                            <option value="MANUAL">Manual</option>
+                        </select>
+                    </div>
+                    <div class="history-table-container">
+                        <table class="history-table" id="sync-history-table" aria-label="Sync history">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Items</th>
+                                    <th>Started</th>
+                                    <th>Completed</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sync-history-tbody">
+                                <tr>
+                                    <td colspan="6" class="no-results">No sync history available</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <div id="loading-overlay" class="loading-overlay" role="status" aria-live="polite" aria-busy="true" hidden>
+            <div class="loading-spinner"></div>
+            <p>Loading...</p>
+        </div>
+
+        <div id="notification" class="notification" role="alert" aria-live="polite" hidden></div>
+    </div>
+
+    <script src="js/libretime-integration.js"></script>
+</body>
+</html>
+
