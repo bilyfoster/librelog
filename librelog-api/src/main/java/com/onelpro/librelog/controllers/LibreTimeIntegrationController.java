@@ -1,0 +1,113 @@
+package com.onelpro.librelog.controllers;
+
+import com.onelpro.librelog.dto.ConnectionTestResponseDTO;
+import com.onelpro.librelog.dto.LibreTimeIntegrationConfigRequestDTO;
+import com.onelpro.librelog.dto.LibreTimeIntegrationConfigResponseDTO;
+import com.onelpro.librelog.services.LibreTimeIntegrationConfigService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+/**
+ * REST controller for LibreTime integration configuration management.
+ */
+@RestController
+@RequestMapping("/api/libretime/integration")
+@Tag(name = "LibreTime Integration", description = "LibreTime integration configuration and management endpoints")
+public class LibreTimeIntegrationController {
+
+	private static final Logger logger = LoggerFactory.getLogger(LibreTimeIntegrationController.class);
+
+	private final LibreTimeIntegrationConfigService configService;
+
+	public LibreTimeIntegrationController(LibreTimeIntegrationConfigService configService) {
+		this.configService = configService;
+	}
+
+	@GetMapping("/config")
+	@Operation(
+			summary = "Get integration configuration",
+			description = "Retrieves the current LibreTime integration configuration. Sensitive fields are masked."
+	)
+	@ApiResponse(responseCode = "200", description = "Configuration retrieved successfully")
+	@ApiResponse(responseCode = "404", description = "Configuration not found")
+	@PreAuthorize("hasPermission(null, 'LIBRETIME_INTEGRATION_VIEW')")
+	public ResponseEntity<LibreTimeIntegrationConfigResponseDTO> getConfig() {
+		logger.info("GET /api/libretime/integration/config - Retrieving integration configuration");
+		LibreTimeIntegrationConfigResponseDTO config = configService.getConfig();
+		if (config == null) {
+			return ResponseEntity.notFound().build();
+		}
+		return ResponseEntity.ok(config);
+	}
+
+	@PutMapping("/config")
+	@Operation(
+			summary = "Update integration configuration",
+			description = "Updates the LibreTime integration configuration. Sensitive fields (JWT token, webhook secret) are encrypted before storage."
+	)
+	@ApiResponse(responseCode = "200", description = "Configuration updated successfully")
+	@ApiResponse(responseCode = "400", description = "Invalid request data")
+	@ApiResponse(responseCode = "404", description = "Configuration not found")
+	@PreAuthorize("hasPermission(null, 'LIBRETIME_INTEGRATION_CONFIGURE')")
+	public ResponseEntity<LibreTimeIntegrationConfigResponseDTO> updateConfig(
+			@Valid @RequestBody LibreTimeIntegrationConfigRequestDTO request,
+			@RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+		logger.info("PUT /api/libretime/integration/config - Updating integration configuration");
+		
+		// TODO: Get actual user ID from security context instead of header
+		if (userId == null) {
+			userId = UUID.randomUUID(); // Placeholder
+		}
+		
+		LibreTimeIntegrationConfigResponseDTO updatedConfig = configService.updateConfig(request, userId);
+		return ResponseEntity.ok(updatedConfig);
+	}
+
+	@PostMapping("/config")
+	@Operation(
+			summary = "Create integration configuration",
+			description = "Creates a new LibreTime integration configuration. Sensitive fields (JWT token, webhook secret) are encrypted before storage."
+	)
+	@ApiResponse(responseCode = "201", description = "Configuration created successfully")
+	@ApiResponse(responseCode = "400", description = "Invalid request data or configuration already exists")
+	@PreAuthorize("hasPermission(null, 'LIBRETIME_INTEGRATION_CONFIGURE')")
+	public ResponseEntity<LibreTimeIntegrationConfigResponseDTO> createConfig(
+			@Valid @RequestBody LibreTimeIntegrationConfigRequestDTO request,
+			@RequestHeader(value = "X-User-Id", required = false) UUID userId) {
+		logger.info("POST /api/libretime/integration/config - Creating integration configuration");
+		
+		// TODO: Get actual user ID from security context instead of header
+		if (userId == null) {
+			userId = UUID.randomUUID(); // Placeholder
+		}
+		
+		LibreTimeIntegrationConfigResponseDTO createdConfig = configService.saveConfig(request, userId);
+		return ResponseEntity.status(HttpStatus.CREATED).body(createdConfig);
+	}
+
+	@PostMapping("/test-connection")
+	@Operation(
+			summary = "Test LibreTime API connection",
+			description = "Tests the connection to LibreTime API using the current configuration. Returns connection status and response time."
+	)
+	@ApiResponse(responseCode = "200", description = "Connection test completed")
+	@ApiResponse(responseCode = "404", description = "Configuration not found")
+	@PreAuthorize("hasPermission(null, 'LIBRETIME_INTEGRATION_VIEW')")
+	public ResponseEntity<ConnectionTestResponseDTO> testConnection() {
+		logger.info("POST /api/libretime/integration/test-connection - Testing LibreTime API connection");
+		ConnectionTestResponseDTO result = configService.testConnection();
+		return ResponseEntity.ok(result);
+	}
+
+}
+
