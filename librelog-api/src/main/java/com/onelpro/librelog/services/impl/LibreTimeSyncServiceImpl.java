@@ -34,18 +34,18 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 	private final ClockBuilderService clockBuilderService;
 	private final LibreTimeClient libreTimeClient;
 	private final ObjectMapper objectMapper;
-	private final com.onelpro.librelog.services.LibreTimeFileSyncService fileSyncService;
+	private final org.springframework.beans.factory.ObjectProvider<com.onelpro.librelog.services.LibreTimeFileSyncService> fileSyncServiceProvider;
 
 	public LibreTimeSyncServiceImpl(
 			ClockBuilderService clockBuilderService,
 			LibreTimeClient libreTimeClient,
 			org.springframework.beans.factory.ObjectProvider<ObjectMapper> objectMapperProvider,
-			com.onelpro.librelog.services.LibreTimeFileSyncService fileSyncService) {
+			org.springframework.beans.factory.ObjectProvider<com.onelpro.librelog.services.LibreTimeFileSyncService> fileSyncServiceProvider) {
 		this.clockBuilderService = clockBuilderService;
 		this.libreTimeClient = libreTimeClient;
 		// Use ObjectMapper from provider, or create a new one if not available
 		this.objectMapper = objectMapperProvider.getIfAvailable(() -> new ObjectMapper());
-		this.fileSyncService = fileSyncService;
+		this.fileSyncServiceProvider = fileSyncServiceProvider;
 	}
 
 	@Override
@@ -135,11 +135,18 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 					// Check if file exists in LibreTime (if cart ID is provided)
 					if (asset.getLibreTimeCartId() != null) {
 						try {
-							com.onelpro.librelog.dto.SyncStatusResponseDTO syncStatus = 
-									fileSyncService.getSyncStatus(null, asset.getLibreTimeCartId());
-							if (syncStatus == null || syncStatus.getSyncStatus() == null) {
+							com.onelpro.librelog.services.LibreTimeFileSyncService fileSyncService = 
+									fileSyncServiceProvider.getIfAvailable();
+							if (fileSyncService != null) {
+								com.onelpro.librelog.dto.SyncStatusResponseDTO syncStatus = 
+										fileSyncService.getSyncStatus(null, asset.getLibreTimeCartId());
+								if (syncStatus == null || syncStatus.getSyncStatus() == null) {
+									result.addWarning("fixedAssets[" + totalItems + "].libreTimeCartId", 
+											"File existence in LibreTime not verified");
+								}
+							} else {
 								result.addWarning("fixedAssets[" + totalItems + "].libreTimeCartId", 
-										"File existence in LibreTime not verified");
+										"File sync service not available - cannot verify file existence in LibreTime");
 							}
 						} catch (Exception e) {
 							result.addWarning("fixedAssets[" + totalItems + "].libreTimeCartId", 
