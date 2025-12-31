@@ -42,17 +42,20 @@ public class LibreTimeFileSyncServiceImpl implements LibreTimeFileSyncService {
 	private final LibreTimeIntegrationConfigService configService;
 	private final LibreTimeHttpClient httpClient;
 	private final ObjectMapper objectMapper;
+	private final org.springframework.beans.factory.ObjectProvider<com.onelpro.librelog.services.LibreTimeSyncHistoryService> syncHistoryServiceProvider;
 
 	public LibreTimeFileSyncServiceImpl(
 			LibreTimeFileSyncStatusRepository syncStatusRepository,
 			LibreTimeIntegrationConfigService configService,
 			LibreTimeHttpClient httpClient,
-			org.springframework.beans.factory.ObjectProvider<ObjectMapper> objectMapperProvider) {
+			org.springframework.beans.factory.ObjectProvider<ObjectMapper> objectMapperProvider,
+			org.springframework.beans.factory.ObjectProvider<com.onelpro.librelog.services.LibreTimeSyncHistoryService> syncHistoryServiceProvider) {
 		this.syncStatusRepository = syncStatusRepository;
 		this.configService = configService;
 		this.httpClient = httpClient;
 		// Use ObjectMapper from provider, or create a new one if not available
 		this.objectMapper = objectMapperProvider.getIfAvailable(() -> new ObjectMapper());
+		this.syncHistoryServiceProvider = syncHistoryServiceProvider;
 	}
 
 	@Override
@@ -71,6 +74,25 @@ public class LibreTimeFileSyncServiceImpl implements LibreTimeFileSyncService {
 
 		// Configure HTTP client
 		configureHttpClient(config);
+
+		// Create sync history record
+		// Note: In a real implementation, we'd get the user ID from the security context
+		com.onelpro.librelog.services.LibreTimeSyncHistoryService syncHistoryService = 
+				syncHistoryServiceProvider.getIfAvailable();
+		java.util.UUID historyId = null;
+		if (syncHistoryService != null) {
+			try {
+				// TODO: Get actual user ID from security context
+				java.util.UUID userId = java.util.UUID.randomUUID(); // Placeholder
+				var history = syncHistoryService.createSyncHistory(
+						com.onelpro.librelog.enums.SyncType.FILE_UPLOAD,
+						userId,
+						null);
+				historyId = history.getId();
+			} catch (Exception e) {
+				logger.warn("Failed to create sync history record: {}", e.getMessage());
+			}
+		}
 
 		// Calculate file hash for conflict detection
 		String fileHash = calculateFileHash(request.getFileData());
@@ -106,6 +128,15 @@ public class LibreTimeFileSyncServiceImpl implements LibreTimeFileSyncService {
 				syncStatus.setUpdatedAt(LocalDateTime.now());
 				syncStatusRepository.save(syncStatus);
 
+				// Update sync history
+				if (syncHistoryService != null && historyId != null) {
+					try {
+						syncHistoryService.completeSyncHistory(historyId, "completed", 1, 0, null);
+					} catch (Exception e) {
+						logger.warn("Failed to update sync history record: {}", e.getMessage());
+					}
+				}
+
 				logger.info("File uploaded successfully to LibreTime. Cart ID: {}", cartId);
 				return FileUploadResponseDTO.builder()
 						.cartId(cartId)
@@ -126,6 +157,15 @@ public class LibreTimeFileSyncServiceImpl implements LibreTimeFileSyncService {
 			syncStatus.setSyncError(e.getMessage());
 			syncStatus.setUpdatedAt(LocalDateTime.now());
 			syncStatusRepository.save(syncStatus);
+
+			// Update sync history
+			if (syncHistoryService != null && historyId != null) {
+				try {
+					syncHistoryService.completeSyncHistory(historyId, "failed", 0, 1, e.getMessage());
+				} catch (Exception ex) {
+					logger.warn("Failed to update sync history record: {}", ex.getMessage());
+				}
+			}
 
 			return FileUploadResponseDTO.builder()
 					.fileName(request.getFileName())

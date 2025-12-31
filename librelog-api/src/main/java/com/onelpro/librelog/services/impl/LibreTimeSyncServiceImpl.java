@@ -35,17 +35,20 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 	private final LibreTimeClient libreTimeClient;
 	private final ObjectMapper objectMapper;
 	private final org.springframework.beans.factory.ObjectProvider<com.onelpro.librelog.services.LibreTimeFileSyncService> fileSyncServiceProvider;
+	private final org.springframework.beans.factory.ObjectProvider<com.onelpro.librelog.services.LibreTimeSyncHistoryService> syncHistoryServiceProvider;
 
 	public LibreTimeSyncServiceImpl(
 			ClockBuilderService clockBuilderService,
 			LibreTimeClient libreTimeClient,
 			org.springframework.beans.factory.ObjectProvider<ObjectMapper> objectMapperProvider,
-			org.springframework.beans.factory.ObjectProvider<com.onelpro.librelog.services.LibreTimeFileSyncService> fileSyncServiceProvider) {
+			org.springframework.beans.factory.ObjectProvider<com.onelpro.librelog.services.LibreTimeFileSyncService> fileSyncServiceProvider,
+			org.springframework.beans.factory.ObjectProvider<com.onelpro.librelog.services.LibreTimeSyncHistoryService> syncHistoryServiceProvider) {
 		this.clockBuilderService = clockBuilderService;
 		this.libreTimeClient = libreTimeClient;
 		// Use ObjectMapper from provider, or create a new one if not available
 		this.objectMapper = objectMapperProvider.getIfAvailable(() -> new ObjectMapper());
 		this.fileSyncServiceProvider = fileSyncServiceProvider;
+		this.syncHistoryServiceProvider = syncHistoryServiceProvider;
 	}
 
 	@Override
@@ -355,6 +358,24 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 	public ClockExportResultDTO pushClockToLibreTime(UUID clockTemplateId) {
 		logger.info("Pushing clock template {} to LibreTime API", clockTemplateId);
 
+		// Create sync history record
+		com.onelpro.librelog.services.LibreTimeSyncHistoryService syncHistoryService = 
+				syncHistoryServiceProvider.getIfAvailable();
+		java.util.UUID historyId = null;
+		if (syncHistoryService != null) {
+			try {
+				// TODO: Get actual user ID from security context
+				java.util.UUID userId = java.util.UUID.randomUUID(); // Placeholder
+				var history = syncHistoryService.createSyncHistory(
+						com.onelpro.librelog.enums.SyncType.LOG_EXPORT,
+						userId,
+						null);
+				historyId = history.getId();
+			} catch (Exception e) {
+				logger.warn("Failed to create sync history record: {}", e.getMessage());
+			}
+		}
+
 		ClockExportResultDTO result = ClockExportResultDTO.builder()
 				.clockTemplateId(clockTemplateId)
 				.success(false)
@@ -374,6 +395,16 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 				result.addFailure("validation", error.getMessage());
 			}
 			result.setFailedShowInstances(validation.getInvalidItems());
+			
+			// Update sync history
+			if (syncHistoryService != null && historyId != null) {
+				try {
+					syncHistoryService.completeSyncHistory(historyId, "failed", 0, result.getFailedShowInstances(), 
+							"Validation failed");
+				} catch (Exception e) {
+					logger.warn("Failed to update sync history record: {}", e.getMessage());
+				}
+			}
 			return result;
 		}
 
@@ -401,16 +432,46 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 			result.setMessage("Clock template exported successfully to LibreTime");
 			result.setSuccessfulShowInstances(result.getTotalShowInstances());
 
+			// Update sync history
+			if (syncHistoryService != null && historyId != null) {
+				try {
+					syncHistoryService.completeSyncHistory(historyId, "completed", 
+							result.getSuccessfulShowInstances(), result.getFailedShowInstances(), null);
+				} catch (Exception e) {
+					logger.warn("Failed to update sync history record: {}", e.getMessage());
+				}
+			}
+
 		} catch (JsonProcessingException e) {
 			logger.error("Failed to serialize clock export to JSON: {}", e.getMessage());
 			result.setMessage("Failed to serialize clock export: " + e.getMessage());
 			result.addFailure("serialization", "Failed to serialize clock export: " + e.getMessage());
 			result.setFailedShowInstances(result.getTotalShowInstances());
+			
+			// Update sync history
+			if (syncHistoryService != null && historyId != null) {
+				try {
+					syncHistoryService.completeSyncHistory(historyId, "failed", 0, result.getFailedShowInstances(), 
+							e.getMessage());
+				} catch (Exception ex) {
+					logger.warn("Failed to update sync history record: {}", ex.getMessage());
+				}
+			}
 		} catch (Exception e) {
 			logger.error("Failed to push clock to LibreTime: {}", e.getMessage());
 			result.setMessage("Failed to push clock to LibreTime: " + e.getMessage());
 			result.addFailure("api", "Failed to push clock to LibreTime: " + e.getMessage());
 			result.setFailedShowInstances(result.getTotalShowInstances());
+			
+			// Update sync history
+			if (syncHistoryService != null && historyId != null) {
+				try {
+					syncHistoryService.completeSyncHistory(historyId, "failed", 0, result.getFailedShowInstances(), 
+							e.getMessage());
+				} catch (Exception ex) {
+					logger.warn("Failed to update sync history record: {}", ex.getMessage());
+				}
+			}
 		}
 
 		return result;
