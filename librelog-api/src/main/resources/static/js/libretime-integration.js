@@ -9,6 +9,7 @@ const API_BASE = '/api/libretime';
 // Global state
 let currentConfig = null;
 let authToken = null;
+let userPermissions = [];
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -27,20 +28,26 @@ function init() {
         return;
     }
 
-    // Setup event listeners
-    setupEventListeners();
-    
-    // Load current configuration
-    loadConfiguration();
-    
-    // Load sync statistics
-    loadSyncStatistics();
-    
-    // Load sync history
-    loadSyncHistory();
-    
-    // Setup smooth scrolling for navigation
-    setupNavigation();
+    // Load user permissions
+    loadUserPermissions().then(() => {
+        // Setup event listeners
+        setupEventListeners();
+        
+        // Apply permission-based UI visibility
+        applyPermissions();
+        
+        // Load current configuration
+        loadConfiguration();
+        
+        // Load sync statistics
+        loadSyncStatistics();
+        
+        // Load sync history
+        loadSyncHistory();
+        
+        // Setup smooth scrolling for navigation
+        setupNavigation();
+    });
 }
 
 function setupEventListeners() {
@@ -652,6 +659,109 @@ function displaySyncHistory(history) {
             </tr>
         `;
     }).join('');
+}
+
+// Permission Functions
+async function loadUserPermissions() {
+    try {
+        // Get user info which should include permissions
+        const response = await fetch('/api/auth/me', {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            const userInfo = await response.json();
+            // Extract permissions from user info (adjust based on your API structure)
+            userPermissions = userInfo.permissions || [];
+        } else {
+            // If permissions endpoint doesn't exist, check role-based access
+            const userRole = localStorage.getItem('userRole');
+            if (userRole === 'ADMIN') {
+                // Admin has all permissions
+                userPermissions = [
+                    'LIBRETIME_INTEGRATION_VIEW',
+                    'LIBRETIME_INTEGRATION_CONFIGURE',
+                    'LIBRETIME_INTEGRATION_TEST',
+                    'LIBRETIME_INTEGRATION_SYNC',
+                    'LIBRETIME_INTEGRATION_EXPORT_LOGS'
+                ];
+            } else if (userRole === 'OPERATIONS') {
+                // Operations has VIEW and SYNC
+                userPermissions = [
+                    'LIBRETIME_INTEGRATION_VIEW',
+                    'LIBRETIME_INTEGRATION_SYNC'
+                ];
+            } else {
+                // Default: VIEW only
+                userPermissions = ['LIBRETIME_INTEGRATION_VIEW'];
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load user permissions:', error);
+        // Default to VIEW only on error
+        userPermissions = ['LIBRETIME_INTEGRATION_VIEW'];
+    }
+}
+
+function hasPermission(permission) {
+    return userPermissions.includes(permission);
+}
+
+function applyPermissions() {
+    // Hide/disable features based on permissions
+    
+    // Connection settings - requires VIEW
+    if (!hasPermission('LIBRETIME_INTEGRATION_VIEW')) {
+        document.getElementById('connection-settings')?.setAttribute('hidden', 'true');
+    }
+    
+    // Configure button - requires CONFIGURE
+    const saveConnectionBtn = document.getElementById('save-connection-btn');
+    if (saveConnectionBtn && !hasPermission('LIBRETIME_INTEGRATION_CONFIGURE')) {
+        saveConnectionBtn.disabled = true;
+        saveConnectionBtn.title = 'You do not have permission to configure integration';
+    }
+    
+    // Sync settings - requires VIEW
+    if (!hasPermission('LIBRETIME_INTEGRATION_VIEW')) {
+        document.getElementById('sync-settings')?.setAttribute('hidden', 'true');
+    }
+    
+    // Sync Now button - requires SYNC
+    const syncNowBtn = document.getElementById('sync-now-btn');
+    if (syncNowBtn && !hasPermission('LIBRETIME_INTEGRATION_SYNC')) {
+        syncNowBtn.disabled = true;
+        syncNowBtn.title = 'You do not have permission to trigger synchronization';
+    }
+    
+    // File upload - requires SYNC
+    const uploadSection = document.querySelector('#file-settings .form-actions');
+    if (uploadSection && !hasPermission('LIBRETIME_INTEGRATION_SYNC')) {
+        uploadSection.querySelector('button')?.setAttribute('disabled', 'true');
+    }
+    
+    // API Testing - requires TEST
+    if (!hasPermission('LIBRETIME_INTEGRATION_TEST')) {
+        document.getElementById('api-testing')?.setAttribute('hidden', 'true');
+    } else {
+        const discoverBtn = document.getElementById('discover-endpoints-btn');
+        const runTestsBtn = document.getElementById('run-tests-btn');
+        if (discoverBtn && !hasPermission('LIBRETIME_INTEGRATION_TEST')) {
+            discoverBtn.disabled = true;
+        }
+        if (runTestsBtn && !hasPermission('LIBRETIME_INTEGRATION_TEST')) {
+            runTestsBtn.disabled = true;
+        }
+    }
+    
+    // Export Documentation - requires EXPORT_LOGS
+    const exportDocsBtn = document.getElementById('export-docs-btn');
+    if (exportDocsBtn && !hasPermission('LIBRETIME_INTEGRATION_EXPORT_LOGS')) {
+        exportDocsBtn.disabled = true;
+        exportDocsBtn.title = 'You do not have permission to export documentation';
+    }
 }
 
 // Utility Functions

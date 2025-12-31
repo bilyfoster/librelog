@@ -52,6 +52,18 @@ public interface PermissionService {
 	Map<ModuleType, List<ActionType>> getEffectivePermissions(UUID userId, UUID stationId);
 
 	/**
+	 * Checks if a user has a global permission for a module and action.
+	 * Global permissions are checked across all stations the user has access to.
+	 * If the user has the permission for any station, this returns true.
+	 *
+	 * @param userId the user ID
+	 * @param moduleType the module type
+	 * @param actionType the action type
+	 * @return true if the user has permission for any station, false otherwise
+	 */
+	boolean hasGlobalPermission(UUID userId, ModuleType moduleType, ActionType actionType);
+
+	/**
 	 * Evicts all permission-related caches.
 	 * Should be called when user permissions or assignments change.
 	 */

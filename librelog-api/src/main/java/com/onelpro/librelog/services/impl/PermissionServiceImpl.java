@@ -248,12 +248,22 @@ public class PermissionServiceImpl implements PermissionService {
 				permissions.put(ModuleType.LOGS, List.of(ActionType.VIEW));
 				break;
 			case OPERATIONS:
-				// Operations can view most modules
+				// Operations can view most modules and sync LibreTime integration
 				permissions.put(ModuleType.ORDERS, List.of(ActionType.VIEW));
 				permissions.put(ModuleType.LOGS, List.of(ActionType.VIEW));
 				permissions.put(ModuleType.INVENTORY, List.of(ActionType.VIEW));
 				permissions.put(ModuleType.REPORTS, List.of(ActionType.VIEW));
+				permissions.put(ModuleType.LIBRETIME_INTEGRATION, List.of(ActionType.VIEW, ActionType.CREATE)); // VIEW and SYNC
 				break;
+		}
+
+		// Add LibreTime integration permissions for all roles that should have access
+		// Administrators already have all permissions via the ADMIN case above
+		// Operations role gets VIEW and SYNC (CREATE) as defined above
+		// For other roles, add VIEW only if they don't already have it
+		if (role != UserRole.ADMIN && !permissions.containsKey(ModuleType.LIBRETIME_INTEGRATION)) {
+			// Default: VIEW only for roles that don't have explicit LibreTime permissions
+			permissions.put(ModuleType.LIBRETIME_INTEGRATION, List.of(ActionType.VIEW));
 		}
 
 		return permissions;
@@ -352,6 +362,38 @@ public class PermissionServiceImpl implements PermissionService {
 	@Transactional
 	public void evictAllPermissionCaches() {
 		logger.info("Evicting all permission-related caches");
+	}
+
+	@Override
+	@Cacheable(value = "globalPermissions", key = "#userId + '_' + #moduleType + '_' + #actionType")
+	public boolean hasGlobalPermission(UUID userId, ModuleType moduleType, ActionType actionType) {
+		logger.debug("Checking global permission for user {} for {}:{}", userId, moduleType, actionType);
+
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new NotFoundException("User not found with id: " + userId));
+
+		// Admin users have all permissions
+		if (user.getRole() == UserRole.ADMIN) {
+			logger.debug("User {} is ADMIN, granting global permission", userId);
+			return true;
+		}
+
+		// Check tenant-level permissions first
+		if (hasTenantLevelPermission(user, moduleType, actionType)) {
+			return true;
+		}
+
+		// Check if user has permission for any station
+		List<UUID> userStations = getUserStations(userId);
+		for (UUID stationId : userStations) {
+			if (hasPermission(userId, stationId, moduleType, actionType)) {
+				logger.debug("User {} has permission for {}:{} at station {}", userId, moduleType, actionType, stationId);
+				return true;
+			}
+		}
+
+		logger.debug("User {} does not have global permission for {}:{}", userId, moduleType, actionType);
+		return false;
 	}
 
 }

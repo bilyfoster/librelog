@@ -48,6 +48,11 @@ public enum ModuleType {
 	/**
 	 * Global Configuration and Rate Card Templates module.
 	 */
-	SYSTEM_SETTINGS
+	SYSTEM_SETTINGS,
+	
+	/**
+	 * LibreTime Integration module for API integration, file synchronization, and clock export.
+	 */
+	LIBRETIME_INTEGRATION
 }
 

@@ -2,6 +2,9 @@ package com.onelpro.librelog.config;
 
 import com.onelpro.librelog.dto.ErrorResponseDTO;
 import com.onelpro.librelog.exceptions.BadRequestException;
+import com.onelpro.librelog.exceptions.FileSyncException;
+import com.onelpro.librelog.exceptions.LibreTimeApiException;
+import com.onelpro.librelog.exceptions.LibreTimeConnectionException;
 import com.onelpro.librelog.exceptions.NotFoundException;
 import com.onelpro.librelog.exceptions.UnauthorizedException;
 import com.onelpro.librelog.exceptions.ValidationException;
@@ -104,6 +107,49 @@ public class GlobalExceptionHandler {
 		errorResponse.put("path", request.getDescription(false).replace("uri=", ""));
 
 		return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+	}
+
+	@ExceptionHandler(LibreTimeConnectionException.class)
+	public ResponseEntity<ErrorResponseDTO> handleLibreTimeConnectionException(
+			LibreTimeConnectionException ex, WebRequest request) {
+		logger.error("LibreTime connection error: {}", ex.getMessage(), ex);
+		ErrorResponseDTO errorResponse = ErrorResponseDTO.builder()
+				.message("Failed to connect to LibreTime API: " + ex.getMessage())
+				.error("LibreTime Connection Error")
+				.status(HttpStatus.SERVICE_UNAVAILABLE.value())
+				.timestamp(LocalDateTime.now())
+				.path(request.getDescription(false).replace("uri=", ""))
+				.build();
+		return new ResponseEntity<>(errorResponse, HttpStatus.SERVICE_UNAVAILABLE);
+	}
+
+	@ExceptionHandler(LibreTimeApiException.class)
+	public ResponseEntity<ErrorResponseDTO> handleLibreTimeApiException(
+			LibreTimeApiException ex, WebRequest request) {
+		logger.error("LibreTime API error: {} - Status: {}", ex.getMessage(), ex.getStatusCode(), ex);
+		HttpStatus status = ex.getStatusCode() != null ? ex.getStatusCode() : HttpStatus.INTERNAL_SERVER_ERROR;
+		ErrorResponseDTO errorResponse = ErrorResponseDTO.builder()
+				.message("LibreTime API returned an error: " + ex.getMessage())
+				.error("LibreTime API Error")
+				.status(status.value())
+				.timestamp(LocalDateTime.now())
+				.path(request.getDescription(false).replace("uri=", ""))
+				.build();
+		return new ResponseEntity<>(errorResponse, status);
+	}
+
+	@ExceptionHandler(FileSyncException.class)
+	public ResponseEntity<ErrorResponseDTO> handleFileSyncException(
+			FileSyncException ex, WebRequest request) {
+		logger.error("File sync error: {} - File: {}, Operation: {}", ex.getMessage(), ex.getFileId(), ex.getOperation(), ex);
+		ErrorResponseDTO errorResponse = ErrorResponseDTO.builder()
+				.message("File synchronization failed: " + ex.getMessage())
+				.error("File Sync Error")
+				.status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+				.timestamp(LocalDateTime.now())
+				.path(request.getDescription(false).replace("uri=", ""))
+				.build();
+		return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 
 	@ExceptionHandler(Exception.class)

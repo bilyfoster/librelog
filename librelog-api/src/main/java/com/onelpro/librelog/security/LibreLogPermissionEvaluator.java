@@ -39,6 +39,12 @@ public class LibreLogPermissionEvaluator implements PermissionEvaluator {
 			return false;
 		}
 
+		// Handle LibreTime integration permissions (global, no station context)
+		String permissionStr = permission != null ? permission.toString() : "";
+		if (permissionStr.startsWith("LIBRETIME_INTEGRATION_")) {
+			return checkLibreTimePermission(userId, permissionStr);
+		}
+
 		// If targetDomainObject is a UUID (station ID), check station-specific permission
 		if (targetDomainObject instanceof UUID) {
 			UUID stationId = (UUID) targetDomainObject;
@@ -56,7 +62,12 @@ public class LibreLogPermissionEvaluator implements PermissionEvaluator {
 			}
 		}
 
-		// For other types, return false (can be extended later)
+		// If targetDomainObject is null, check global permission (for LibreTime integration)
+		if (targetDomainObject == null && permissionStr.startsWith("LIBRETIME_INTEGRATION_")) {
+			return checkLibreTimePermission(userId, permissionStr);
+		}
+
+		// For other types, return false
 		return false;
 	}
 
@@ -101,6 +112,7 @@ public class LibreLogPermissionEvaluator implements PermissionEvaluator {
 		}
 
 		String permissionStr = permission.toString();
+		
 		if (!permissionStr.contains(":")) {
 			// Simple permission check - just check if user can access the station
 			if ("ACCESS".equalsIgnoreCase(permissionStr)) {
@@ -123,6 +135,37 @@ public class LibreLogPermissionEvaluator implements PermissionEvaluator {
 			logger.warn("Invalid permission format: {}", permissionStr);
 			return false;
 		}
+	}
+	
+	/**
+	 * Checks LibreTime integration permissions.
+	 * These are global permissions that don't require a station context.
+	 * Maps permission strings to ModuleType:LIBRETIME_INTEGRATION and appropriate ActionType.
+	 */
+	private boolean checkLibreTimePermission(UUID userId, String permissionStr) {
+		// Map LibreTime permission strings to ModuleType and ActionType
+		// LIBRETIME_INTEGRATION_VIEW -> LIBRETIME_INTEGRATION:VIEW
+		// LIBRETIME_INTEGRATION_CONFIGURE -> LIBRETIME_INTEGRATION:EDIT
+		// LIBRETIME_INTEGRATION_TEST -> LIBRETIME_INTEGRATION:VIEW (testing is a form of viewing)
+		// LIBRETIME_INTEGRATION_SYNC -> LIBRETIME_INTEGRATION:CREATE (sync creates/updates data)
+		// LIBRETIME_INTEGRATION_EXPORT_LOGS -> LIBRETIME_INTEGRATION:CREATE
+		
+		ActionType actionType;
+		if (permissionStr.endsWith("_VIEW") || permissionStr.endsWith("_TEST")) {
+			actionType = ActionType.VIEW;
+		} else if (permissionStr.endsWith("_CONFIGURE")) {
+			actionType = ActionType.EDIT;
+		} else if (permissionStr.endsWith("_SYNC") || permissionStr.endsWith("_EXPORT_LOGS")) {
+			actionType = ActionType.CREATE;
+		} else {
+			logger.warn("Unknown LibreTime permission: {}", permissionStr);
+			return false;
+		}
+		
+		// Check if user has permission for LIBRETIME_INTEGRATION module with the mapped action
+		// For global permissions, we check against all stations the user has access to
+		// If user has LIBRETIME_INTEGRATION:ACTION_TYPE permission for any station, grant access
+		return permissionService.hasGlobalPermission(userId, ModuleType.LIBRETIME_INTEGRATION, actionType);
 	}
 
 	/**
