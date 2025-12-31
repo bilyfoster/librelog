@@ -11,11 +11,14 @@ import com.onelpro.librelog.repositories.ClusterRepository;
 import com.onelpro.librelog.repositories.MarketRepository;
 import com.onelpro.librelog.repositories.OrganizationRepository;
 import com.onelpro.librelog.repositories.StationRepository;
+import com.onelpro.librelog.services.PermissionService;
+import com.onelpro.librelog.utils.SecurityContextUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
@@ -27,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -46,15 +50,20 @@ class StationServiceImplTest {
 	@Mock
 	private ClusterRepository clusterRepository;
 
+	@Mock
+	private PermissionService permissionService;
+
 	@InjectMocks
 	private StationServiceImpl stationService;
 
 	private StationRequestDTO requestDTO;
 	private Station testStation;
 	private Organization testOrganization;
+	private UUID testUserId;
 
 	@BeforeEach
 	void setUp() {
+		testUserId = UUID.randomUUID();
 		UUID orgId = UUID.randomUUID();
 		testOrganization = Organization.builder()
 				.id(orgId)
@@ -110,11 +119,16 @@ class StationServiceImplTest {
 	@Test
 	void getById_When_StationExists_Expect_Success() {
 		when(stationRepository.findById(testStation.getId())).thenReturn(Optional.of(testStation));
+		when(permissionService.canAccessStation(testUserId, testStation.getId())).thenReturn(true);
 
-		StationResponseDTO response = stationService.getById(testStation.getId());
+		try (MockedStatic<SecurityContextUtils> mockedUtils = mockStatic(SecurityContextUtils.class)) {
+			mockedUtils.when(SecurityContextUtils::getCurrentUserId).thenReturn(testUserId);
 
-		assertNotNull(response);
-		assertEquals(testStation.getId(), response.getId());
+			StationResponseDTO response = stationService.getById(testStation.getId());
+
+			assertNotNull(response);
+			assertEquals(testStation.getId(), response.getId());
+		}
 	}
 
 	@Test
@@ -122,7 +136,11 @@ class StationServiceImplTest {
 		UUID nonExistentId = UUID.randomUUID();
 		when(stationRepository.findById(nonExistentId)).thenReturn(Optional.empty());
 
-		assertThrows(NotFoundException.class, () -> stationService.getById(nonExistentId));
+		try (MockedStatic<SecurityContextUtils> mockedUtils = mockStatic(SecurityContextUtils.class)) {
+			mockedUtils.when(SecurityContextUtils::getCurrentUserId).thenReturn(testUserId);
+
+			assertThrows(NotFoundException.class, () -> stationService.getById(nonExistentId));
+		}
 	}
 
 	@Test
@@ -136,11 +154,16 @@ class StationServiceImplTest {
 				.isActive(true)
 				.build();
 		when(stationRepository.findAll()).thenReturn(List.of(testStation, station2));
+		when(permissionService.getUserStations(testUserId)).thenReturn(List.of(testStation.getId(), station2.getId()));
 
-		List<StationResponseDTO> response = stationService.getAll();
+		try (MockedStatic<SecurityContextUtils> mockedUtils = mockStatic(SecurityContextUtils.class)) {
+			mockedUtils.when(SecurityContextUtils::getCurrentUserId).thenReturn(testUserId);
 
-		assertNotNull(response);
-		assertEquals(2, response.size());
+			List<StationResponseDTO> response = stationService.getAll();
+
+			assertNotNull(response);
+			assertEquals(2, response.size());
+		}
 	}
 
 	@Test
