@@ -6,13 +6,12 @@
 		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
 	<changeSet id="022-create-libretime-integration-config-table" author="librelog">
-		<comment>Create libretime_integration_config table for storing LibreTime API integration settings</comment>
-		
 		<preConditions onFail="MARK_RAN">
 			<not>
 				<tableExists tableName="libretime_integration_config"/>
 			</not>
 		</preConditions>
+		<comment>Create libretime_integration_config table for storing LibreTime API integration settings</comment>
 		
 		<createTable tableName="libretime_integration_config">
 			<column name="id" type="UUID">
@@ -78,13 +77,12 @@
 	</changeSet>
 
 	<changeSet id="022-create-libretime-api-endpoints-table" author="librelog">
-		<comment>Create libretime_api_endpoints table for storing discovered LibreTime API endpoint information</comment>
-		
 		<preConditions onFail="MARK_RAN">
 			<not>
 				<tableExists tableName="libretime_api_endpoints"/>
 			</not>
 		</preConditions>
+		<comment>Create libretime_api_endpoints table for storing discovered LibreTime API endpoint information</comment>
 		
 		<createTable tableName="libretime_api_endpoints">
 			<column name="id" type="UUID">
@@ -129,13 +127,12 @@
 	</changeSet>
 
 	<changeSet id="022-create-libretime-api-test-results-table" author="librelog">
-		<comment>Create libretime_api_test_results table for storing detailed API test results</comment>
-		
 		<preConditions onFail="MARK_RAN">
 			<not>
 				<tableExists tableName="libretime_api_test_results"/>
 			</not>
 		</preConditions>
+		<comment>Create libretime_api_test_results table for storing detailed API test results</comment>
 		
 		<createTable tableName="libretime_api_test_results">
 			<column name="id" type="UUID">
@@ -188,13 +185,12 @@
 	</changeSet>
 
 	<changeSet id="022-create-libretime-file-sync-status-table" author="librelog">
-		<comment>Create libretime_file_sync_status table for tracking file synchronization status</comment>
-		
 		<preConditions onFail="MARK_RAN">
 			<not>
 				<tableExists tableName="libretime_file_sync_status"/>
 			</not>
 		</preConditions>
+		<comment>Create libretime_file_sync_status table for tracking file synchronization status</comment>
 		
 		<createTable tableName="libretime_file_sync_status">
 			<column name="id" type="UUID">
@@ -247,13 +243,12 @@
 	</changeSet>
 
 	<changeSet id="022-create-libretime-sync-history-table" author="librelog">
-		<comment>Create libretime_sync_history table for maintaining sync operation history</comment>
-		
 		<preConditions onFail="MARK_RAN">
 			<not>
 				<tableExists tableName="libretime_sync_history"/>
 			</not>
 		</preConditions>
+		<comment>Create libretime_sync_history table for maintaining sync operation history</comment>
 		
 		<createTable tableName="libretime_sync_history">
 			<column name="id" type="UUID">
