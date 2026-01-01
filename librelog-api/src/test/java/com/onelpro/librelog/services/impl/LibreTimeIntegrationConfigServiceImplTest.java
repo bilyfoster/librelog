@@ -11,8 +11,10 @@ import com.onelpro.librelog.exceptions.BadRequestException;
 import com.onelpro.librelog.exceptions.NotFoundException;
 import com.onelpro.librelog.integrations.LibreTimeHttpClient;
 import com.onelpro.librelog.models.LibreTimeIntegrationConfig;
+import com.onelpro.librelog.models.Station;
 import com.onelpro.librelog.models.User;
 import com.onelpro.librelog.repositories.LibreTimeIntegrationConfigRepository;
+import com.onelpro.librelog.repositories.StationRepository;
 import com.onelpro.librelog.repositories.UserRepository;
 import com.onelpro.librelog.utils.EncryptionUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +47,9 @@ class LibreTimeIntegrationConfigServiceImplTest {
 	private UserRepository userRepository;
 
 	@Mock
+	private StationRepository stationRepository;
+
+	@Mock
 	private LibreTimeHttpClient httpClient;
 
 	@Mock
@@ -56,15 +61,24 @@ class LibreTimeIntegrationConfigServiceImplTest {
 	private LibreTimeIntegrationConfigRequestDTO requestDTO;
 	private LibreTimeIntegrationConfig configEntity;
 	private User testUser;
+	private Station testStation;
 	private UUID userId;
+	private UUID stationId;
 	private ObjectMapper objectMapper;
 
 	@BeforeEach
 	void setUp() {
 		userId = UUID.randomUUID();
+		stationId = UUID.randomUUID();
 		testUser = User.builder()
 				.id(userId)
 				.email("test@example.com")
+				.build();
+		
+		testStation = Station.builder()
+				.id(stationId)
+				.callSign("TEST")
+				.name("Test Station")
 				.build();
 
 		requestDTO = LibreTimeIntegrationConfigRequestDTO.builder()
@@ -83,6 +97,7 @@ class LibreTimeIntegrationConfigServiceImplTest {
 
 		configEntity = LibreTimeIntegrationConfig.builder()
 				.id(UUID.randomUUID())
+				.station(testStation)
 				.apiBaseUrl(requestDTO.getApiBaseUrl())
 				.jwtToken(EncryptionUtils.encrypt(requestDTO.getJwtToken()))
 				.syncEnabled(requestDTO.getSyncEnabled())
@@ -106,6 +121,7 @@ class LibreTimeIntegrationConfigServiceImplTest {
 		configService = new LibreTimeIntegrationConfigServiceImpl(
 				configRepository,
 				userRepository,
+				stationRepository,
 				httpClient,
 				objectMapperProvider
 		);
@@ -113,68 +129,69 @@ class LibreTimeIntegrationConfigServiceImplTest {
 
 	@Test
 	void getConfig_When_ConfigExists_Expect_ReturnsConfig() {
-		when(configRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.of(configEntity));
+		when(configRepository.findByStationId(stationId)).thenReturn(Optional.of(configEntity));
 
-		LibreTimeIntegrationConfigResponseDTO result = configService.getConfig();
+		LibreTimeIntegrationConfigResponseDTO result = configService.getConfig(stationId);
 
 		assertNotNull(result);
 		assertEquals(configEntity.getApiBaseUrl(), result.getApiBaseUrl());
 		assertEquals(configEntity.getSyncEnabled(), result.getSyncEnabled());
 		assertEquals(configEntity.getSyncFrequency(), result.getSyncFrequency());
-		verify(configRepository).findFirstByOrderByCreatedAtAsc();
+		verify(configRepository).findByStationId(stationId);
 	}
 
 	@Test
 	void getConfig_When_ConfigDoesNotExist_Expect_ReturnsNull() {
-		when(configRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.empty());
+		when(configRepository.findByStationId(stationId)).thenReturn(Optional.empty());
 
-		LibreTimeIntegrationConfigResponseDTO result = configService.getConfig();
+		LibreTimeIntegrationConfigResponseDTO result = configService.getConfig(stationId);
 
 		assertNull(result);
-		verify(configRepository).findFirstByOrderByCreatedAtAsc();
+		verify(configRepository).findByStationId(stationId);
 	}
 
 	@Test
 	void saveConfig_When_ValidRequest_Expect_SavesConfig() {
-		when(configRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.empty());
+		when(configRepository.findByStationId(stationId)).thenReturn(Optional.empty());
+		when(stationRepository.findById(stationId)).thenReturn(Optional.of(testStation));
 		when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
 		when(httpClient.validateBaseUrl(anyString())).thenReturn(true);
 		when(configRepository.save(any(LibreTimeIntegrationConfig.class))).thenReturn(configEntity);
 
-		LibreTimeIntegrationConfigResponseDTO result = configService.saveConfig(requestDTO, userId);
+		LibreTimeIntegrationConfigResponseDTO result = configService.saveConfig(stationId, requestDTO, userId);
 
 		assertNotNull(result);
 		verify(configRepository).save(any(LibreTimeIntegrationConfig.class));
-		verify(configRepository).findFirstByOrderByCreatedAtAsc();
+		verify(configRepository).findByStationId(stationId);
 		verify(httpClient).validateBaseUrl(requestDTO.getApiBaseUrl());
 	}
 
 	@Test
 	void saveConfig_When_ConfigAlreadyExists_Expect_ThrowsBadRequestException() {
-		when(configRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.of(configEntity));
+		when(configRepository.findByStationId(stationId)).thenReturn(Optional.of(configEntity));
 
-		assertThrows(BadRequestException.class, () -> configService.saveConfig(requestDTO, userId));
+		assertThrows(BadRequestException.class, () -> configService.saveConfig(stationId, requestDTO, userId));
 		verify(configRepository, never()).save(any());
 	}
 
 	@Test
 	void saveConfig_When_InvalidUrl_Expect_ThrowsBadRequestException() {
 		requestDTO.setApiBaseUrl("invalid-url");
-		when(configRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.empty());
+		when(configRepository.findByStationId(stationId)).thenReturn(Optional.empty());
 		when(httpClient.validateBaseUrl(anyString())).thenReturn(false);
 
-		assertThrows(BadRequestException.class, () -> configService.saveConfig(requestDTO, userId));
+		assertThrows(BadRequestException.class, () -> configService.saveConfig(stationId, requestDTO, userId));
 		verify(configRepository, never()).save(any());
 	}
 
 	@Test
 	void updateConfig_When_ConfigExists_Expect_UpdatesConfig() {
-		when(configRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.of(configEntity));
+		when(configRepository.findByStationId(stationId)).thenReturn(Optional.of(configEntity));
 		when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
 		when(httpClient.validateBaseUrl(anyString())).thenReturn(true);
 		when(configRepository.save(any(LibreTimeIntegrationConfig.class))).thenReturn(configEntity);
 
-		LibreTimeIntegrationConfigResponseDTO result = configService.updateConfig(requestDTO, userId);
+		LibreTimeIntegrationConfigResponseDTO result = configService.updateConfig(stationId, requestDTO, userId);
 
 		assertNotNull(result);
 		verify(configRepository).save(any(LibreTimeIntegrationConfig.class));
@@ -183,21 +200,21 @@ class LibreTimeIntegrationConfigServiceImplTest {
 
 	@Test
 	void updateConfig_When_ConfigDoesNotExist_Expect_ThrowsNotFoundException() {
-		when(configRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.empty());
+		when(configRepository.findByStationId(stationId)).thenReturn(Optional.empty());
 
-		assertThrows(NotFoundException.class, () -> configService.updateConfig(requestDTO, userId));
+		assertThrows(NotFoundException.class, () -> configService.updateConfig(stationId, requestDTO, userId));
 		verify(configRepository, never()).save(any());
 	}
 
 	@Test
 	void testConnection_When_ConnectionSuccessful_Expect_ReturnsSuccess() {
-		when(configRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.of(configEntity));
+		when(configRepository.findByStationId(stationId)).thenReturn(Optional.of(configEntity));
 		when(httpClient.validateBaseUrl(anyString())).thenReturn(true);
 		doNothing().when(httpClient).setBaseUrl(anyString());
 		doNothing().when(httpClient).setJwtToken(anyString());
 		when(httpClient.testConnection()).thenReturn(Mono.just(true));
 
-		ConnectionTestResponseDTO result = configService.testConnection();
+		ConnectionTestResponseDTO result = configService.testConnection(stationId);
 
 		assertNotNull(result);
 		assertTrue(result.getSuccess());
@@ -209,13 +226,13 @@ class LibreTimeIntegrationConfigServiceImplTest {
 
 	@Test
 	void testConnection_When_ConnectionFails_Expect_ReturnsFailure() {
-		when(configRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.of(configEntity));
+		when(configRepository.findByStationId(stationId)).thenReturn(Optional.of(configEntity));
 		when(httpClient.validateBaseUrl(anyString())).thenReturn(true);
 		doNothing().when(httpClient).setBaseUrl(anyString());
 		doNothing().when(httpClient).setJwtToken(anyString());
 		when(httpClient.testConnection()).thenReturn(Mono.just(false));
 
-		ConnectionTestResponseDTO result = configService.testConnection();
+		ConnectionTestResponseDTO result = configService.testConnection(stationId);
 
 		assertNotNull(result);
 		assertFalse(result.getSuccess());
@@ -227,17 +244,17 @@ class LibreTimeIntegrationConfigServiceImplTest {
 
 	@Test
 	void testConnection_When_ConfigDoesNotExist_Expect_ThrowsNotFoundException() {
-		when(configRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.empty());
+		when(configRepository.findByStationId(stationId)).thenReturn(Optional.empty());
 
-		assertThrows(NotFoundException.class, () -> configService.testConnection());
+		assertThrows(NotFoundException.class, () -> configService.testConnection(stationId));
 		verify(httpClient, never()).testConnection();
 	}
 
 	@Test
 	void getDecryptedJwtToken_When_ConfigExists_Expect_ReturnsDecryptedToken() {
-		when(configRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.of(configEntity));
+		when(configRepository.findByStationId(stationId)).thenReturn(Optional.of(configEntity));
 
-		String result = configService.getDecryptedJwtToken();
+		String result = configService.getDecryptedJwtToken(stationId);
 
 		assertNotNull(result);
 		assertEquals("test-jwt-token", result);
@@ -245,30 +262,30 @@ class LibreTimeIntegrationConfigServiceImplTest {
 
 	@Test
 	void getDecryptedJwtToken_When_ConfigDoesNotExist_Expect_ReturnsNull() {
-		when(configRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.empty());
+		when(configRepository.findByStationId(stationId)).thenReturn(Optional.empty());
 
 		// The service returns null when config doesn't exist (doesn't throw exception)
-		String result = configService.getDecryptedJwtToken();
+		String result = configService.getDecryptedJwtToken(stationId);
 		assertNull(result);
 	}
 
 	@Test
 	void saveConfig_When_InvalidFileSize_Expect_ThrowsBadRequestException() {
 		requestDTO.setMaxFileSizeMb(6000); // Exceeds max
-		when(configRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.empty());
+		when(configRepository.findByStationId(stationId)).thenReturn(Optional.empty());
 		when(httpClient.validateBaseUrl(anyString())).thenReturn(true);
 
-		assertThrows(BadRequestException.class, () -> configService.saveConfig(requestDTO, userId));
+		assertThrows(BadRequestException.class, () -> configService.saveConfig(stationId, requestDTO, userId));
 		verify(configRepository, never()).save(any());
 	}
 
 	@Test
 	void saveConfig_When_MissingRequiredFields_Expect_ThrowsBadRequestException() {
 		requestDTO.setSyncFrequency(null);
-		when(configRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.empty());
+		when(configRepository.findByStationId(stationId)).thenReturn(Optional.empty());
 		when(httpClient.validateBaseUrl(anyString())).thenReturn(true);
 
-		assertThrows(BadRequestException.class, () -> configService.saveConfig(requestDTO, userId));
+		assertThrows(BadRequestException.class, () -> configService.saveConfig(stationId, requestDTO, userId));
 		verify(configRepository, never()).save(any());
 	}
 
