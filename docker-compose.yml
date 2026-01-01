@@ -48,6 +48,12 @@ services:
       - "traefik.http.routers.librelog.entrypoints=websecure"
       - "traefik.http.routers.librelog.tls.certresolver=letsencrypt"
       - "traefik.http.routers.librelog.priority=10"
+      # HTTP to HTTPS redirect
+      - "traefik.http.routers.librelog-http.rule=Host(`log.gayphx.com`)"
+      - "traefik.http.routers.librelog-http.entrypoints=web"
+      - "traefik.http.routers.librelog-http.middlewares=librelog-redirect"
+      - "traefik.http.middlewares.librelog-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.librelog-redirect.redirectscheme.permanent=true"
       # Service
       - "traefik.http.services.librelog.loadbalancer.server.port=8080"
     restart: unless-stopped
