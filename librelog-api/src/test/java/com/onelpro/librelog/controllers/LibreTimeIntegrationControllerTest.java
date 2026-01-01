@@ -64,7 +64,7 @@ class LibreTimeIntegrationControllerTest {
 				.syncEnabled(true)
 				.syncFrequency(SyncFrequency.HOURLY)
 				.syncDirection(SyncDirection.LIBRELOG_TO_LIBRETIME)
-				.conflictResolution(ConflictResolution.KEEP_LATEST)
+				.conflictResolution(ConflictResolution.LAST_WRITE_WINS)
 				.webhookEnabled(false)
 				.maxFileSizeMb(500)
 				.supportedFormats(Arrays.asList("MP3", "WAV"))
