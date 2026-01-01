@@ -3,6 +3,7 @@ package com.onelpro.librelog.services;
 import com.onelpro.librelog.dto.ApiEndpointResponseDTO;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Service interface for discovering LibreTime API endpoints.
@@ -12,9 +13,10 @@ public interface LibreTimeApiDiscoveryService {
 	/**
 	 * Discovers available LibreTime API endpoints by testing common REST patterns.
 	 * 
+	 * @param stationId The station ID for which to discover endpoints
 	 * @return List of discovered endpoints
 	 */
-	List<ApiEndpointResponseDTO> discoverEndpoints();
+	List<ApiEndpointResponseDTO> discoverEndpoints(UUID stationId);
 
 	/**
 	 * Gets all discovered endpoints from the database.

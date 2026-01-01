@@ -15,16 +15,18 @@ public interface LibreTimeApiTestingService {
 	/**
 	 * Tests basic connectivity to LibreTime API.
 	 * 
+	 * @param stationId The station ID
 	 * @return Connection test result
 	 */
-	ApiTestResultResponseDTO testConnection();
+	ApiTestResultResponseDTO testConnection(UUID stationId);
 
 	/**
 	 * Tests authentication with LibreTime API.
 	 * 
+	 * @param stationId The station ID
 	 * @return Authentication test result
 	 */
-	ApiTestResultResponseDTO testAuthentication();
+	ApiTestResultResponseDTO testAuthentication(UUID stationId);
 
 	/**
 	 * Tests a specific endpoint.
@@ -37,9 +39,10 @@ public interface LibreTimeApiTestingService {
 	/**
 	 * Runs all tests for all discovered endpoints.
 	 * 
+	 * @param stationId The station ID
 	 * @return Summary of test results
 	 */
-	ApiTestSummaryResponseDTO runAllTests();
+	ApiTestSummaryResponseDTO runAllTests(UUID stationId);
 
 	/**
 	 * Generates a test report for all test results.

@@ -17,35 +17,39 @@ public interface LibreTimeFileSyncService {
 	/**
 	 * Uploads a file to LibreTime.
 	 * 
+	 * @param stationId The station ID
 	 * @param request The file upload request with file data and metadata
 	 * @return Upload response with cart ID and status
 	 */
-	FileUploadResponseDTO uploadFile(FileUploadRequestDTO request);
+	FileUploadResponseDTO uploadFile(UUID stationId, FileUploadRequestDTO request);
 
 	/**
 	 * Downloads a file from LibreTime.
 	 * 
+	 * @param stationId The station ID
 	 * @param cartId The LibreTime cart ID
 	 * @return Download response with file data and metadata
 	 */
-	FileDownloadResponseDTO downloadFile(String cartId);
+	FileDownloadResponseDTO downloadFile(UUID stationId, String cartId);
 
 	/**
 	 * Lists files from LibreTime with pagination.
 	 * 
+	 * @param stationId The station ID
 	 * @param page Page number (0-based)
 	 * @param size Page size
 	 * @return List response with files and pagination metadata
 	 */
-	FileListResponseDTO listFiles(int page, int size);
+	FileListResponseDTO listFiles(UUID stationId, int page, int size);
 
 	/**
 	 * Queries files from LibreTime by metadata criteria.
 	 * 
+	 * @param stationId The station ID
 	 * @param request The query request with filter criteria
 	 * @return List response with matching files
 	 */
-	FileListResponseDTO queryFiles(FileQueryRequestDTO request);
+	FileListResponseDTO queryFiles(UUID stationId, FileQueryRequestDTO request);
 
 	/**
 	 * Gets the sync status for a file.

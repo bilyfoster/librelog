@@ -56,13 +56,13 @@ public class LibreTimeApiDiscoveryServiceImpl implements LibreTimeApiDiscoverySe
 
 	@Override
 	@Transactional
-	public List<ApiEndpointResponseDTO> discoverEndpoints() {
-		logger.info("Starting LibreTime API endpoint discovery");
+	public List<ApiEndpointResponseDTO> discoverEndpoints(UUID stationId) {
+		logger.info("Starting LibreTime API endpoint discovery for station: {}", stationId);
 
 		// Ensure HTTP client is configured
 		try {
-			String jwtToken = configService.getDecryptedJwtToken();
-			com.onelpro.librelog.dto.LibreTimeIntegrationConfigResponseDTO config = configService.getConfig();
+			String jwtToken = configService.getDecryptedJwtToken(stationId);
+			com.onelpro.librelog.dto.LibreTimeIntegrationConfigResponseDTO config = configService.getConfig(stationId);
 			if (config == null) {
 				logger.warn("LibreTime integration not configured. Cannot discover endpoints.");
 				return List.of();

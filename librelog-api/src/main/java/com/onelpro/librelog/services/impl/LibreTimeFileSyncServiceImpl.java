@@ -60,20 +60,20 @@ public class LibreTimeFileSyncServiceImpl implements LibreTimeFileSyncService {
 
 	@Override
 	@Transactional
-	public FileUploadResponseDTO uploadFile(FileUploadRequestDTO request) {
-		logger.info("Uploading file to LibreTime: {}", request.getFileName());
+	public FileUploadResponseDTO uploadFile(UUID stationId, FileUploadRequestDTO request) {
+		logger.info("Uploading file to LibreTime for station {}: {}", stationId, request.getFileName());
 
 		// Validate file
-		validateFileUpload(request);
+		validateFileUpload(stationId, request);
 
 		// Get configuration
-		var config = configService.getConfig();
+		var config = configService.getConfig(stationId);
 		if (config == null) {
 			throw new BadRequestException("LibreTime integration not configured. Please configure it first.");
 		}
 
 		// Configure HTTP client
-		configureHttpClient(config);
+		configureHttpClient(stationId, config);
 
 		// Create sync history record
 		// Note: In a real implementation, we'd get the user ID from the security context
@@ -179,17 +179,17 @@ public class LibreTimeFileSyncServiceImpl implements LibreTimeFileSyncService {
 
 	@Override
 	@Transactional
-	public FileDownloadResponseDTO downloadFile(String cartId) {
-		logger.info("Downloading file from LibreTime. Cart ID: {}", cartId);
+	public FileDownloadResponseDTO downloadFile(UUID stationId, String cartId) {
+		logger.info("Downloading file from LibreTime for station {}. Cart ID: {}", stationId, cartId);
 
 		// Get configuration
-		var config = configService.getConfig();
+		var config = configService.getConfig(stationId);
 		if (config == null) {
 			throw new BadRequestException("LibreTime integration not configured. Please configure it first.");
 		}
 
 		// Configure HTTP client
-		configureHttpClient(config);
+		configureHttpClient(stationId, config);
 
 		// Find existing sync status
 		Optional<LibreTimeFileSyncStatus> existingStatus = syncStatusRepository.findByLibreTimeCartId(cartId);
@@ -263,17 +263,17 @@ public class LibreTimeFileSyncServiceImpl implements LibreTimeFileSyncService {
 	}
 
 	@Override
-	public FileListResponseDTO listFiles(int page, int size) {
-		logger.debug("Listing files from LibreTime. Page: {}, Size: {}", page, size);
+	public FileListResponseDTO listFiles(UUID stationId, int page, int size) {
+		logger.debug("Listing files from LibreTime for station {}. Page: {}, Size: {}", stationId, page, size);
 
 		// Get configuration
-		var config = configService.getConfig();
+		var config = configService.getConfig(stationId);
 		if (config == null) {
 			throw new BadRequestException("LibreTime integration not configured. Please configure it first.");
 		}
 
 		// Configure HTTP client
-		configureHttpClient(config);
+		configureHttpClient(stationId, config);
 
 		try {
 			String responseJson = httpClient.get("/api/v2/files?page=" + page + "&size=" + size).block();
@@ -305,17 +305,17 @@ public class LibreTimeFileSyncServiceImpl implements LibreTimeFileSyncService {
 	}
 
 	@Override
-	public FileListResponseDTO queryFiles(FileQueryRequestDTO request) {
-		logger.debug("Querying files from LibreTime with criteria");
+	public FileListResponseDTO queryFiles(UUID stationId, FileQueryRequestDTO request) {
+		logger.debug("Querying files from LibreTime for station {} with criteria", stationId);
 
 		// Get configuration
-		var config = configService.getConfig();
+		var config = configService.getConfig(stationId);
 		if (config == null) {
 			throw new BadRequestException("LibreTime integration not configured. Please configure it first.");
 		}
 
 		// Configure HTTP client
-		configureHttpClient(config);
+		configureHttpClient(stationId, config);
 
 		try {
 			// Build query string
@@ -391,7 +391,7 @@ public class LibreTimeFileSyncServiceImpl implements LibreTimeFileSyncService {
 	/**
 	 * Validates file upload request.
 	 */
-	private void validateFileUpload(FileUploadRequestDTO request) {
+	private void validateFileUpload(UUID stationId, FileUploadRequestDTO request) {
 		if (request.getFileName() == null || request.getFileName().isEmpty()) {
 			throw new BadRequestException("File name is required");
 		}
@@ -400,7 +400,7 @@ public class LibreTimeFileSyncServiceImpl implements LibreTimeFileSyncService {
 		}
 
 		// Get config for max file size
-		var config = configService.getConfig();
+		var config = configService.getConfig(stationId);
 		if (config != null && config.getMaxFileSizeMb() != null) {
 			long maxSizeBytes = config.getMaxFileSizeMb() * 1024L * 1024L;
 			if (request.getFileData().length > maxSizeBytes) {
@@ -412,9 +412,9 @@ public class LibreTimeFileSyncServiceImpl implements LibreTimeFileSyncService {
 	/**
 	 * Configures HTTP client with current integration config.
 	 */
-	private void configureHttpClient(com.onelpro.librelog.dto.LibreTimeIntegrationConfigResponseDTO config) {
+	private void configureHttpClient(UUID stationId, com.onelpro.librelog.dto.LibreTimeIntegrationConfigResponseDTO config) {
 		httpClient.setBaseUrl(config.getApiBaseUrl());
-		String decryptedToken = configService.getDecryptedJwtToken();
+		String decryptedToken = configService.getDecryptedJwtToken(stationId);
 		if (decryptedToken != null) {
 			httpClient.setJwtToken(decryptedToken);
 		}

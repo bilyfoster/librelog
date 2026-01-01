@@ -54,16 +54,16 @@ public class LibreTimeApiTestingServiceImpl implements LibreTimeApiTestingServic
 
 	@Override
 	@Transactional
-	public ApiTestResultResponseDTO testConnection() {
-		logger.info("Testing LibreTime API connection");
-		return performTest(null, TestType.CONNECTIVITY, null, null);
+	public ApiTestResultResponseDTO testConnection(UUID stationId) {
+		logger.info("Testing LibreTime API connection for station: {}", stationId);
+		return performTest(stationId, null, TestType.CONNECTIVITY, null, null);
 	}
 
 	@Override
 	@Transactional
-	public ApiTestResultResponseDTO testAuthentication() {
-		logger.info("Testing LibreTime API authentication");
-		return performTest(null, TestType.AUTHENTICATION, null, null);
+	public ApiTestResultResponseDTO testAuthentication(UUID stationId) {
+		logger.info("Testing LibreTime API authentication for station: {}", stationId);
+		return performTest(stationId, null, TestType.AUTHENTICATION, null, null);
 	}
 
 	@Override
@@ -83,11 +83,11 @@ public class LibreTimeApiTestingServiceImpl implements LibreTimeApiTestingServic
 		List<ApiTestResultResponseDTO> results = new ArrayList<>();
 
 		// Configure HTTP client
-		configureHttpClient();
+		configureHttpClient(stationId);
 
 		for (LibreTimeApiEndpoint endpoint : endpoints) {
 			try {
-				ApiTestResultResponseDTO result = performTest(endpoint, TestType.CRUD, null, null);
+				ApiTestResultResponseDTO result = performTest(stationId, endpoint, TestType.CRUD, null, null);
 				results.add(result);
 			} catch (Exception e) {
 				logger.error("Error testing endpoint {}: {}", endpoint.getId(), e.getMessage());
@@ -195,6 +195,7 @@ public class LibreTimeApiTestingServiceImpl implements LibreTimeApiTestingServic
 	/**
 	 * Performs a test on an endpoint.
 	 * 
+	 * @param stationId The station ID
 	 * @param endpoint The endpoint to test (null for connection/auth tests)
 	 * @param testType The type of test
 	 * @param requestPayload Optional request payload
@@ -202,11 +203,12 @@ public class LibreTimeApiTestingServiceImpl implements LibreTimeApiTestingServic
 	 * @return Test result DTO
 	 */
 	private ApiTestResultResponseDTO performTest(
+			UUID stationId,
 			LibreTimeApiEndpoint endpoint,
 			TestType testType,
 			String requestPayload,
 			String notes) {
-		configureHttpClient();
+		configureHttpClient(stationId);
 
 		long startTime = System.currentTimeMillis();
 		TestStatus status = TestStatus.FAILED;
@@ -298,11 +300,13 @@ public class LibreTimeApiTestingServiceImpl implements LibreTimeApiTestingServic
 
 	/**
 	 * Configures the HTTP client with current integration settings.
+	 * 
+	 * @param stationId The station ID
 	 */
-	private void configureHttpClient() {
+	private void configureHttpClient(UUID stationId) {
 		try {
-			String jwtToken = configService.getDecryptedJwtToken();
-			com.onelpro.librelog.dto.LibreTimeIntegrationConfigResponseDTO config = configService.getConfig();
+			String jwtToken = configService.getDecryptedJwtToken(stationId);
+			com.onelpro.librelog.dto.LibreTimeIntegrationConfigResponseDTO config = configService.getConfig(stationId);
 			if (config != null) {
 				httpClient.setBaseUrl(config.getApiBaseUrl());
 				httpClient.setJwtToken(jwtToken);
