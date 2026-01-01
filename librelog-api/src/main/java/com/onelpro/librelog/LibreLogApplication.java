@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * the complete lifecycle from inventory definition through order management,
  * traffic scheduling, placement automation, and financial operations.
  */
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.onelpro.librelog")
 @EnableScheduling
 public class LibreLogApplication {
 

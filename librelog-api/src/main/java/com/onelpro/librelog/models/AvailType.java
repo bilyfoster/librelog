@@ -22,7 +22,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "avail_types")
 @Data
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class AvailType {
