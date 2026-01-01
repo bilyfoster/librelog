@@ -317,13 +317,29 @@ function handleStationChange(event) {
     currentConfig = null;
     clearForms();
     
+    // Clear connection status
+    const statusIndicator = document.getElementById('status-indicator');
+    const statusText = document.getElementById('status-text');
+    if (statusIndicator && statusText) {
+        statusIndicator.className = 'status-indicator';
+        statusText.textContent = 'Not tested';
+    }
+    
     // Enable/disable forms based on station selection
     const forms = document.querySelectorAll('.settings-form');
+    const testButtons = document.querySelectorAll('#test-connection-btn, #test-webhook-btn, #discover-endpoints-btn, #run-tests-btn');
+    
     forms.forEach(form => {
-        const inputs = form.querySelectorAll('input, select, textarea, button');
+        const inputs = form.querySelectorAll('input, select, textarea');
         inputs.forEach(input => {
             input.disabled = !selectedStationId;
         });
+    });
+    
+    testButtons.forEach(btn => {
+        if (btn) {
+            btn.disabled = !selectedStationId;
+        }
     });
     
     // Load configuration for selected station
@@ -332,7 +348,7 @@ function handleStationChange(event) {
         loadSyncStatistics();
         loadSyncHistory();
     } else {
-        // Hide sections or show message
+        // Show message
         showNotification('Please select a station to configure LibreTime integration', 'info');
     }
 }
