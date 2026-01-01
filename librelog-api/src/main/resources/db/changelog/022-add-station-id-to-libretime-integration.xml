@@ -6,13 +6,13 @@
 		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
 	<changeSet id="022-add-station-id-to-libretime-integration" author="librelog">
-		<comment>Add station_id column to libretime_integration_config to make settings per-station</comment>
-		
 		<preConditions onFail="MARK_RAN">
 			<not>
 				<columnExists tableName="libretime_integration_config" columnName="station_id"/>
 			</not>
 		</preConditions>
+		
+		<comment>Add station_id column to libretime_integration_config to make settings per-station</comment>
 		
 		<addColumn tableName="libretime_integration_config">
 			<column name="station_id" type="UUID">
