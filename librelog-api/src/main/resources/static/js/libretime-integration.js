@@ -10,6 +10,8 @@ const API_BASE = '/api/libretime';
 let currentConfig = null;
 let authToken = null;
 let userPermissions = [];
+let selectedStationId = null;
+let stations = [];
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -36,21 +38,21 @@ function init() {
         // Apply permission-based UI visibility
         applyPermissions();
         
-        // Load current configuration
-        loadConfiguration();
-        
-        // Load sync statistics
-        loadSyncStatistics();
-        
-        // Load sync history
-        loadSyncHistory();
-        
-        // Setup smooth scrolling for navigation
-        setupNavigation();
+        // Load stations first, then load configuration when station is selected
+        loadStations().then(() => {
+            // Setup smooth scrolling for navigation
+            setupNavigation();
+        });
     });
 }
 
 function setupEventListeners() {
+    // Station selector
+    const stationSelector = document.getElementById('station-selector');
+    if (stationSelector) {
+        stationSelector.addEventListener('change', handleStationChange);
+    }
+    
     // Connection form
     const connectionForm = document.getElementById('connection-form');
     if (connectionForm) {
@@ -223,7 +225,13 @@ function togglePasswordVisibility(inputId, button) {
 
 // API Functions
 async function apiCall(endpoint, options = {}) {
-    const url = `${API_BASE}${endpoint}`;
+    // Add stationId to query parameters for LibreTime API calls
+    let url = `${API_BASE}${endpoint}`;
+    if (selectedStationId && endpoint.startsWith('/integration')) {
+        const separator = endpoint.includes('?') ? '&' : '?';
+        url = `${url}${separator}stationId=${selectedStationId}`;
+    }
+    
     const defaultOptions = {
         headers: {
             'Content-Type': 'application/json',
@@ -258,8 +266,95 @@ async function apiCall(endpoint, options = {}) {
     }
 }
 
+// Load Stations
+async function loadStations() {
+    try {
+        const response = await fetch('/api/stations', {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to load stations: ${response.statusText}`);
+        }
+        
+        stations = await response.json();
+        populateStationSelector();
+    } catch (error) {
+        console.error('Failed to load stations:', error);
+        showNotification('Failed to load stations: ' + error.message, 'error');
+    }
+}
+
+function populateStationSelector() {
+    const selector = document.getElementById('station-selector');
+    if (!selector) return;
+    
+    // Clear existing options except the first one
+    selector.innerHTML = '<option value="">-- Select a Station --</option>';
+    
+    // Add stations
+    stations.forEach(station => {
+        const option = document.createElement('option');
+        option.value = station.id;
+        option.textContent = `${station.callSign} - ${station.name || station.callSign}`;
+        selector.appendChild(option);
+    });
+    
+    // If there's only one station, auto-select it
+    if (stations.length === 1) {
+        selector.value = stations[0].id;
+        handleStationChange({ target: selector });
+    }
+}
+
+function handleStationChange(event) {
+    const stationId = event.target.value;
+    selectedStationId = stationId || null;
+    
+    // Clear current config
+    currentConfig = null;
+    clearForms();
+    
+    // Enable/disable forms based on station selection
+    const forms = document.querySelectorAll('.settings-form');
+    forms.forEach(form => {
+        const inputs = form.querySelectorAll('input, select, textarea, button');
+        inputs.forEach(input => {
+            input.disabled = !selectedStationId;
+        });
+    });
+    
+    // Load configuration for selected station
+    if (selectedStationId) {
+        loadConfiguration();
+        loadSyncStatistics();
+        loadSyncHistory();
+    } else {
+        // Hide sections or show message
+        showNotification('Please select a station to configure LibreTime integration', 'info');
+    }
+}
+
+function clearForms() {
+    // Clear all form inputs
+    document.querySelectorAll('.settings-form input, .settings-form select, .settings-form textarea').forEach(input => {
+        if (input.type === 'checkbox') {
+            input.checked = false;
+        } else {
+            input.value = '';
+        }
+    });
+}
+
 // Load Configuration
 async function loadConfiguration() {
+    if (!selectedStationId) {
+        console.log('No station selected, cannot load configuration');
+        return;
+    }
+    
     try {
         const config = await apiCall('/integration/config');
         currentConfig = config;
@@ -267,7 +362,8 @@ async function loadConfiguration() {
     } catch (error) {
         if (error.message.includes('404')) {
             // Configuration doesn't exist yet, that's okay
-            console.log('No configuration found, user can create one');
+            console.log('No configuration found for this station, user can create one');
+            currentConfig = null;
         } else {
             showNotification('Failed to load configuration: ' + error.message, 'error');
         }
@@ -331,6 +427,12 @@ function populateForms(config) {
 // Handle Form Submissions
 async function handleConnectionSubmit(e) {
     e.preventDefault();
+    
+    if (!selectedStationId) {
+        showNotification('Please select a station first', 'error');
+        document.getElementById('station-selector')?.focus();
+        return;
+    }
     
     if (!validateUrl(document.getElementById('api-base-url'))) {
         return;
@@ -397,6 +499,12 @@ async function handleWebhookSubmit(e) {
 
 // Test Connection
 async function testConnection() {
+    if (!selectedStationId) {
+        showNotification('Please select a station first', 'error');
+        document.getElementById('station-selector')?.focus();
+        return;
+    }
+    
     const btn = document.getElementById('test-connection-btn');
     const statusIndicator = document.getElementById('status-indicator');
     const statusText = document.getElementById('status-text');
@@ -610,6 +718,10 @@ function showErrorDetails(message) {
 
 // Load Sync Statistics
 async function loadSyncStatistics() {
+    if (!selectedStationId) {
+        return;
+    }
+    
     try {
         const stats = await apiCall('/sync-history/statistics');
         
@@ -626,6 +738,10 @@ async function loadSyncStatistics() {
 
 // Load Sync History
 async function loadSyncHistory() {
+    if (!selectedStationId) {
+        return;
+    }
+    
     try {
         const history = await apiCall('/sync-history');
         displaySyncHistory(history);

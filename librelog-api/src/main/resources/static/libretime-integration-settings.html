@@ -13,6 +13,29 @@
             <p class="subtitle">Configure and manage the integration between LibreLog and LibreTime</p>
         </header>
 
+        <!-- Station Selector -->
+        <div class="station-selector-container">
+            <div class="form-group">
+                <label for="station-selector">
+                    Station
+                    <span class="required" aria-label="required">*</span>
+                </label>
+                <select 
+                    id="station-selector" 
+                    name="stationId" 
+                    required
+                    aria-required="true"
+                    aria-describedby="station-selector-help"
+                >
+                    <option value="">-- Select a Station --</option>
+                </select>
+                <small id="station-selector-help" class="help-text">
+                    Select the station for which you want to configure LibreTime integration settings.
+                </small>
+                <span class="error-message" id="station-selector-error" role="alert" aria-live="polite"></span>
+            </div>
+        </div>
+
         <nav class="settings-nav" role="navigation" aria-label="Settings sections">
             <ul>
                 <li><a href="#connection-settings" class="nav-link" aria-current="page">Connection</a></li>
