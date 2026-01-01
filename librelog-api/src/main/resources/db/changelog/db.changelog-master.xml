@@ -674,6 +674,7 @@
 	<include file="db/changelog/016-create-user-sessions-table.xml"/>
 	<include file="db/changelog/017-create-user-market-assignments-table.xml"/>
 	<include file="db/changelog/018-create-user-cluster-assignments-table.xml"/>
+	<include file="db/changelog/004-libretime-integration-schema.xml"/>
 	<include file="db/changelog/019-add-wideorbit-fields.xml"/>
 	<include file="db/changelog/020-add-libretime-fields.xml"/>
 	<include file="db/changelog/021-add-fixed-asset-duration.xml"/>
