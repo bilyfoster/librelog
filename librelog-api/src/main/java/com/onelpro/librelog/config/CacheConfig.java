@@ -22,6 +22,7 @@ public class CacheConfig {
 				"userStations",
 				"stationAccess",
 				"effectivePermissions",
+				"globalPermissions",
 				"sessions"
 		));
 		return cacheManager;

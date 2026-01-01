@@ -5,9 +5,196 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LibreTime Integration Settings - LibreLog</title>
     <link rel="stylesheet" href="css/libretime-integration.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0f0f1e;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            background: rgba(26, 26, 46, 0.95);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-section {
+            margin-top: 1rem;
+        }
+
+        .nav-section-title {
+            padding: 0.75rem 1.5rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #888;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1.5rem;
+            color: #b0b0b0;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+        }
+
+        .nav-item.active {
+            background: rgba(102, 126, 234, 0.1);
+            color: #8b9aff;
+            border-left-color: #667eea;
+        }
+
+        .nav-item i {
+            width: 20px;
+            display: inline-block;
+            margin-right: 0.75rem;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(26, 26, 46, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .header h2 {
+            font-size: 1.5rem;
+            color: #d0d0d0;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-badge {
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.5);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .logout-btn {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+            color: #ff6b6b;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(220, 53, 69, 0.3);
+        }
+
+        .container {
+            width: 100%;
+            padding: 2rem;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h1>LibreLog</h1>
+        </div>
+        
+        <div class="nav-section">
+            <div class="nav-section-title">Configuration</div>
+            <a href="/dashboard.html" class="nav-item">
+                <i>📻</i> Stations
+            </a>
+            <a href="/dashboard.html" class="nav-item">
+                <i>🕐</i> Clock Templates
+            </a>
+            <a href="/dashboard.html" class="nav-item">
+                <i>⏰</i> Dayparts
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Orders & CRM</div>
+            <a href="/dashboard.html" class="nav-item">
+                <i>📋</i> Orders
+            </a>
+            <a href="/dashboard.html" class="nav-item">
+                <i>🏢</i> Advertisers
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Administration</div>
+            <a href="/dashboard.html" class="nav-item">
+                <i>👥</i> Users
+            </a>
+            <a href="/libretime-integration-settings.html" class="nav-item active">
+                <i>🔌</i> LibreTime Integration
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <h2>LibreTime Integration Settings</h2>
+            <div class="user-info">
+                <span class="user-badge" id="user-badge">Loading...</span>
+                <a href="/" class="logout-btn" onclick="localStorage.removeItem('authToken'); localStorage.removeItem('userRole');">Logout</a>
+            </div>
+        </div>
+        <div class="container">
         <header>
             <h1>LibreTime Integration Settings</h1>
             <p class="subtitle">Configure and manage the integration between LibreLog and LibreTime</p>
@@ -596,8 +783,45 @@
         </div>
 
         <div id="notification" class="notification" role="alert" aria-live="polite" hidden></div>
+        </div>
     </div>
 
+    <script>
+        // Load user info on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const authToken = localStorage.getItem('authToken');
+            if (!authToken) {
+                window.location.href = '/';
+                return;
+            }
+
+            // Load user info
+            fetch('/api/auth/me', {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error('Failed to load user info');
+            })
+            .then(user => {
+                const userBadge = document.getElementById('user-badge');
+                if (userBadge) {
+                    userBadge.textContent = `${user.email} (${user.role})`;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading user info:', error);
+                const userBadge = document.getElementById('user-badge');
+                if (userBadge) {
+                    userBadge.textContent = 'User';
+                }
+            });
+        });
+    </script>
     <script src="js/libretime-integration.js"></script>
 </body>
 </html>

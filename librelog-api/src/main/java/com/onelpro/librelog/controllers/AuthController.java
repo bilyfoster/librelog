@@ -3,7 +3,10 @@ package com.onelpro.librelog.controllers;
 import com.onelpro.librelog.dto.AuthResponseDTO;
 import com.onelpro.librelog.dto.LoginRequestDTO;
 import com.onelpro.librelog.dto.RegisterRequestDTO;
+import com.onelpro.librelog.dto.UserResponseDTO;
 import com.onelpro.librelog.services.AuthService;
+import com.onelpro.librelog.services.UserService;
+import com.onelpro.librelog.utils.SecurityContextUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,9 +32,11 @@ public class AuthController {
 	private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
 	private final AuthService authService;
+	private final UserService userService;
 
-	public AuthController(AuthService authService) {
+	public AuthController(AuthService authService, UserService userService) {
 		this.authService = authService;
+		this.userService = userService;
 	}
 
 	@PostMapping("/register")
@@ -56,6 +62,25 @@ public class AuthController {
 	public ResponseEntity<AuthResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
 		logger.info("Login request received for email: {}", request.getEmail());
 		AuthResponseDTO response = authService.login(request);
+		return ResponseEntity.ok(response);
+	}
+
+	@GetMapping("/me")
+	@Operation(
+			summary = "Get current user",
+			description = "Returns the currently authenticated user's information"
+	)
+	@ApiResponse(responseCode = "200", description = "User information retrieved successfully")
+	@ApiResponse(responseCode = "401", description = "Not authenticated")
+	@ApiResponse(responseCode = "404", description = "User not found")
+	public ResponseEntity<UserResponseDTO> getCurrentUser() {
+		java.util.UUID userId = SecurityContextUtils.getCurrentUserId();
+		if (userId == null) {
+			logger.warn("Get current user request received but user is not authenticated");
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+		logger.debug("Get current user request received for ID: {}", userId);
+		UserResponseDTO response = userService.getById(userId);
 		return ResponseEntity.ok(response);
 	}
 
