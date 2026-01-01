@@ -23,6 +23,7 @@ import java.util.UUID;
 public class LibreTimeIntegrationConfigResponseDTO {
 
 	private UUID id;
+	private UUID stationId;
 	private String apiBaseUrl;
 	private String jwtToken; // Masked (shows only last 4 characters)
 	private Boolean syncEnabled;

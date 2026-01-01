@@ -9,8 +9,10 @@ import com.onelpro.librelog.exceptions.BadRequestException;
 import com.onelpro.librelog.exceptions.NotFoundException;
 import com.onelpro.librelog.integrations.LibreTimeHttpClient;
 import com.onelpro.librelog.models.LibreTimeIntegrationConfig;
+import com.onelpro.librelog.models.Station;
 import com.onelpro.librelog.models.User;
 import com.onelpro.librelog.repositories.LibreTimeIntegrationConfigRepository;
+import com.onelpro.librelog.repositories.StationRepository;
 import com.onelpro.librelog.repositories.UserRepository;
 import com.onelpro.librelog.services.LibreTimeIntegrationConfigService;
 import com.onelpro.librelog.utils.EncryptionUtils;
@@ -34,25 +36,28 @@ public class LibreTimeIntegrationConfigServiceImpl implements LibreTimeIntegrati
 
 	private final LibreTimeIntegrationConfigRepository configRepository;
 	private final UserRepository userRepository;
+	private final StationRepository stationRepository;
 	private final LibreTimeHttpClient httpClient;
 	private final ObjectMapper objectMapper;
 
 	public LibreTimeIntegrationConfigServiceImpl(
 			LibreTimeIntegrationConfigRepository configRepository,
 			UserRepository userRepository,
+			StationRepository stationRepository,
 			LibreTimeHttpClient httpClient,
 			org.springframework.beans.factory.ObjectProvider<ObjectMapper> objectMapperProvider) {
 		this.configRepository = configRepository;
 		this.userRepository = userRepository;
+		this.stationRepository = stationRepository;
 		this.httpClient = httpClient;
 		// Use ObjectMapper from provider, or create a new one if not available
 		this.objectMapper = objectMapperProvider.getIfAvailable(() -> new ObjectMapper());
 	}
 
 	@Override
-	public LibreTimeIntegrationConfigResponseDTO getConfig() {
-		logger.debug("Fetching LibreTime integration configuration");
-		LibreTimeIntegrationConfig config = configRepository.findFirstByOrderByCreatedAtAsc()
+	public LibreTimeIntegrationConfigResponseDTO getConfig(UUID stationId) {
+		logger.debug("Fetching LibreTime integration configuration for station: {}", stationId);
+		LibreTimeIntegrationConfig config = configRepository.findByStationId(stationId)
 				.orElse(null);
 
 		if (config == null) {
@@ -64,13 +69,17 @@ public class LibreTimeIntegrationConfigServiceImpl implements LibreTimeIntegrati
 
 	@Override
 	@Transactional
-	public LibreTimeIntegrationConfigResponseDTO saveConfig(LibreTimeIntegrationConfigRequestDTO request, UUID userId) {
-		logger.info("Saving new LibreTime integration configuration by user: {}", userId);
+	public LibreTimeIntegrationConfigResponseDTO saveConfig(UUID stationId, LibreTimeIntegrationConfigRequestDTO request, UUID userId) {
+		logger.info("Saving new LibreTime integration configuration for station {} by user: {}", stationId, userId);
 
-		// Check if config already exists
-		if (configRepository.findFirstByOrderByCreatedAtAsc().isPresent()) {
-			throw new BadRequestException("Integration configuration already exists. Use update instead.");
+		// Check if config already exists for this station
+		if (configRepository.findByStationId(stationId).isPresent()) {
+			throw new BadRequestException("Integration configuration already exists for this station. Use update instead.");
 		}
+
+		// Get station
+		Station station = stationRepository.findById(stationId)
+				.orElseThrow(() -> new NotFoundException("Station not found with id: " + stationId));
 
 		// Validate request
 		validateConfigRequest(request);
@@ -80,7 +89,7 @@ public class LibreTimeIntegrationConfigServiceImpl implements LibreTimeIntegrati
 				.orElseThrow(() -> new NotFoundException("User not found with id: " + userId));
 
 		// Create entity
-		LibreTimeIntegrationConfig config = mapToEntity(request, user, null);
+		LibreTimeIntegrationConfig config = mapToEntity(station, request, user, null);
 		config.setCreatedAt(LocalDateTime.now());
 		config.setUpdatedAt(LocalDateTime.now());
 
@@ -108,12 +117,12 @@ public class LibreTimeIntegrationConfigServiceImpl implements LibreTimeIntegrati
 
 	@Override
 	@Transactional
-	public LibreTimeIntegrationConfigResponseDTO updateConfig(LibreTimeIntegrationConfigRequestDTO request, UUID userId) {
-		logger.info("Updating LibreTime integration configuration by user: {}", userId);
+	public LibreTimeIntegrationConfigResponseDTO updateConfig(UUID stationId, LibreTimeIntegrationConfigRequestDTO request, UUID userId) {
+		logger.info("Updating LibreTime integration configuration for station {} by user: {}", stationId, userId);
 
 		// Get existing config
-		LibreTimeIntegrationConfig config = configRepository.findFirstByOrderByCreatedAtAsc()
-				.orElseThrow(() -> new NotFoundException("Integration configuration not found. Create it first."));
+		LibreTimeIntegrationConfig config = configRepository.findByStationId(stationId)
+				.orElseThrow(() -> new NotFoundException("Integration configuration not found for this station. Create it first."));
 
 		// Validate request
 		validateConfigRequest(request);
@@ -159,8 +168,8 @@ public class LibreTimeIntegrationConfigServiceImpl implements LibreTimeIntegrati
 	}
 
 	@Override
-	public String getDecryptedJwtToken() {
-		LibreTimeIntegrationConfig config = configRepository.findFirstByOrderByCreatedAtAsc()
+	public String getDecryptedJwtToken(UUID stationId) {
+		LibreTimeIntegrationConfig config = configRepository.findByStationId(stationId)
 				.orElse(null);
 		if (config == null || config.getJwtToken() == null) {
 			return null;
@@ -174,18 +183,18 @@ public class LibreTimeIntegrationConfigServiceImpl implements LibreTimeIntegrati
 	}
 
 	@Override
-	public String getApiBaseUrl() {
-		LibreTimeIntegrationConfig config = configRepository.findFirstByOrderByCreatedAtAsc()
+	public String getApiBaseUrl(UUID stationId) {
+		LibreTimeIntegrationConfig config = configRepository.findByStationId(stationId)
 				.orElse(null);
 		return config != null ? config.getApiBaseUrl() : null;
 	}
 
 	@Override
-	public ConnectionTestResponseDTO testConnection() {
-		logger.info("Testing LibreTime API connection");
+	public ConnectionTestResponseDTO testConnection(UUID stationId) {
+		logger.info("Testing LibreTime API connection for station: {}", stationId);
 
-		LibreTimeIntegrationConfig config = configRepository.findFirstByOrderByCreatedAtAsc()
-				.orElseThrow(() -> new NotFoundException("Integration configuration not found. Please configure it first."));
+		LibreTimeIntegrationConfig config = configRepository.findByStationId(stationId)
+				.orElseThrow(() -> new NotFoundException("Integration configuration not found for this station. Please configure it first."));
 
 		long startTime = System.currentTimeMillis();
 
@@ -275,12 +284,14 @@ public class LibreTimeIntegrationConfigServiceImpl implements LibreTimeIntegrati
 	/**
 	 * Maps request DTO to entity.
 	 * 
+	 * @param station The station
 	 * @param request The request DTO
 	 * @param user The user creating/updating
 	 * @param existingConfig Existing config if updating, null if creating
 	 * @return Entity
 	 */
 	private LibreTimeIntegrationConfig mapToEntity(
+			Station station,
 			LibreTimeIntegrationConfigRequestDTO request,
 			User user,
 			LibreTimeIntegrationConfig existingConfig) {
@@ -289,6 +300,7 @@ public class LibreTimeIntegrationConfigServiceImpl implements LibreTimeIntegrati
 				: LibreTimeIntegrationConfig.builder();
 
 		return builder
+				.station(station)
 				.apiBaseUrl(request.getApiBaseUrl())
 				.syncEnabled(request.getSyncEnabled() != null ? request.getSyncEnabled() : false)
 				.syncFrequency(request.getSyncFrequency())
@@ -344,6 +356,7 @@ public class LibreTimeIntegrationConfigServiceImpl implements LibreTimeIntegrati
 
 		return LibreTimeIntegrationConfigResponseDTO.builder()
 				.id(config.getId())
+				.stationId(config.getStation() != null ? config.getStation().getId() : null)
 				.apiBaseUrl(config.getApiBaseUrl())
 				.jwtToken(maskedJwtToken)
 				.syncEnabled(config.getSyncEnabled())

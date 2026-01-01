@@ -86,5 +86,9 @@ public class LibreTimeIntegrationConfig {
 	@JoinColumn(name = "updated_by")
 	private User updatedBy;
 
+	@ManyToOne
+	@JoinColumn(name = "station_id", nullable = false)
+	private Station station;
+
 }
 

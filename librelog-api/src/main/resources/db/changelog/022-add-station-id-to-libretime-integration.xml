@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+	xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+	<changeSet id="022-add-station-id-to-libretime-integration" author="librelog">
+		<comment>Add station_id column to libretime_integration_config to make settings per-station</comment>
+		
+		<preConditions onFail="MARK_RAN">
+			<not>
+				<columnExists tableName="libretime_integration_config" columnName="station_id"/>
+			</not>
+		</preConditions>
+		
+		<addColumn tableName="libretime_integration_config">
+			<column name="station_id" type="UUID">
+				<constraints nullable="false"/>
+			</column>
+		</addColumn>
+		
+		<addForeignKeyConstraint
+			baseTableName="libretime_integration_config"
+			baseColumnNames="station_id"
+			constraintName="fk_libretime_integration_config_station"
+			referencedTableName="stations"
+			referencedColumnNames="id"
+			onDelete="CASCADE"/>
+		
+		<createIndex indexName="idx_libretime_integration_config_station_id" tableName="libretime_integration_config">
+			<column name="station_id"/>
+		</createIndex>
+		
+		<createIndex indexName="idx_libretime_integration_config_station_unique" tableName="libretime_integration_config" unique="true">
+			<column name="station_id"/>
+		</createIndex>
+		
+	</changeSet>
+
+</databaseChangeLog>
+

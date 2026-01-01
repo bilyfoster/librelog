@@ -15,11 +15,12 @@ import java.util.UUID;
 public interface LibreTimeIntegrationConfigRepository extends JpaRepository<LibreTimeIntegrationConfig, UUID> {
 
 	/**
-	 * Finds the first (and typically only) integration configuration.
+	 * Finds the integration configuration for a specific station.
 	 * 
+	 * @param stationId The station ID
 	 * @return Optional containing the configuration if found
 	 */
-	Optional<LibreTimeIntegrationConfig> findFirstByOrderByCreatedAtAsc();
+	Optional<LibreTimeIntegrationConfig> findByStationId(UUID stationId);
 
 	/**
 	 * Finds all configurations where sync is enabled.

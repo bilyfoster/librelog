@@ -678,5 +678,6 @@
 	<include file="db/changelog/019-add-wideorbit-fields.xml"/>
 	<include file="db/changelog/020-add-libretime-fields.xml"/>
 	<include file="db/changelog/021-add-fixed-asset-duration.xml"/>
+	<include file="db/changelog/022-add-station-id-to-libretime-integration.xml"/>
 
 </databaseChangeLog>
