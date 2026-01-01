@@ -858,8 +858,12 @@
         // Navigation
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
-                e.preventDefault();
                 const tab = e.currentTarget.dataset.tab;
+                // If it's a direct link (no data-tab), let it navigate normally
+                if (!tab) {
+                    return; // Allow default navigation
+                }
+                e.preventDefault();
                 switchTab(tab);
             });
         });
@@ -869,7 +873,10 @@
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
             });
-            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            const activeNavItem = document.querySelector(`[data-tab="${tabName}"]`);
+            if (activeNavItem) {
+                activeNavItem.classList.add('active');
+            }
 
             // Update content
             document.querySelectorAll('.tab-content').forEach(tab => {
