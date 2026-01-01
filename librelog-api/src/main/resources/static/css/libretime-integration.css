@@ -217,6 +217,35 @@ input::placeholder {
     margin-top: 0.25rem;
     font-size: 0.875rem;
     color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.help-text details {
+    margin-top: 0.5rem;
+}
+
+.help-text details summary {
+    cursor: pointer;
+    color: var(--primary-color);
+    font-weight: 600;
+    user-select: none;
+    transition: color 0.2s ease;
+}
+
+.help-text details summary:hover {
+    color: var(--primary-hover);
+}
+
+.help-text details[open] summary {
+    margin-bottom: 0.5rem;
+}
+
+.help-text code {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9em;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
 }
 
 .error-message {

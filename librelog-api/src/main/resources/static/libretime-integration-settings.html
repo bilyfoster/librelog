@@ -287,7 +287,32 @@
                             </button>
                         </div>
                         <small id="jwt-token-help" class="help-text">
-                            Enter your JWT authentication token. The token will be encrypted before storage.
+                            Enter your JWT authentication token from LibreTime. The token will be encrypted before storage.
+                            <details style="margin-top: 0.5rem;">
+                                <summary style="cursor: pointer; color: var(--primary-color); font-weight: 600; user-select: none;">
+                                    How to get your JWT token
+                                </summary>
+                                <div style="margin-top: 0.75rem; padding: 1rem; background: rgba(102, 126, 234, 0.1); border-radius: 6px; border-left: 3px solid var(--primary-color);">
+                                    <p style="margin-bottom: 0.75rem;"><strong>Method 1: Via LibreTime Web UI</strong></p>
+                                    <ol style="margin-left: 1.5rem; margin-bottom: 1rem; line-height: 1.8;">
+                                        <li>Log in to your LibreTime web interface</li>
+                                        <li>Navigate to <strong>Settings</strong> → <strong>API</strong> or <strong>User Settings</strong> → <strong>API Tokens</strong></li>
+                                        <li>Click <strong>Generate New Token</strong> or copy an existing token</li>
+                                        <li>Copy the token (it's a long string, typically starting with "eyJ")</li>
+                                        <li>Paste it in the field above</li>
+                                    </ol>
+                                    <p style="margin-bottom: 0.75rem;"><strong>Method 2: Via LibreTime API (if you have admin access)</strong></p>
+                                    <p style="margin-bottom: 0.5rem;">You can generate a token by making a POST request to:</p>
+                                    <code style="display: block; padding: 0.5rem; background: rgba(0, 0, 0, 0.3); border-radius: 4px; margin-bottom: 0.75rem; font-size: 0.85rem; word-break: break-all;">
+                                        POST {your-libretime-url}/api/v2/login<br>
+                                        Body: {"username": "your-username", "password": "your-password"}
+                                    </code>
+                                    <p style="margin-bottom: 0.5rem;">The response will include a JWT token in the <code>token</code> field.</p>
+                                    <p style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.9rem;">
+                                        <strong>Note:</strong> If you can't find the API token section in LibreTime, check your LibreTime version and documentation. Some versions may use API keys instead of JWT tokens. Contact your system administrator if you need assistance.
+                                    </p>
+                                </div>
+                            </details>
                         </small>
                         <span class="error-message" id="jwt-token-error" role="alert" aria-live="polite"></span>
                     </div>
