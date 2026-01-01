@@ -8,7 +8,7 @@ class ModuleTypeTest {
 	@Test
 	void values_When_EnumIsCalled_Expect_AllEnumValuesReturned() {
 		ModuleType[] values = ModuleType.values();
-		assertEquals(9, values.length, "ModuleType should have exactly 9 values");
+		assertEquals(10, values.length, "ModuleType should have exactly 10 values");
 		assertTrue(values[0] == ModuleType.ORDERS);
 		assertTrue(values[1] == ModuleType.LOGS);
 		assertTrue(values[2] == ModuleType.INVENTORY);
@@ -18,6 +18,7 @@ class ModuleTypeTest {
 		assertTrue(values[6] == ModuleType.CLOCK_TEMPLATES);
 		assertTrue(values[7] == ModuleType.USER_MANAGEMENT);
 		assertTrue(values[8] == ModuleType.SYSTEM_SETTINGS);
+		assertTrue(values[9] == ModuleType.LIBRETIME_INTEGRATION);
 	}
 
 	@Test
@@ -31,6 +32,7 @@ class ModuleTypeTest {
 		assertEquals(ModuleType.CLOCK_TEMPLATES, ModuleType.valueOf("CLOCK_TEMPLATES"));
 		assertEquals(ModuleType.USER_MANAGEMENT, ModuleType.valueOf("USER_MANAGEMENT"));
 		assertEquals(ModuleType.SYSTEM_SETTINGS, ModuleType.valueOf("SYSTEM_SETTINGS"));
+		assertEquals(ModuleType.LIBRETIME_INTEGRATION, ModuleType.valueOf("LIBRETIME_INTEGRATION"));
 	}
 }
 
