@@ -882,7 +882,10 @@
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
-            document.getElementById(tabName + 'Tab').classList.add('active');
+            const activeTab = document.getElementById(tabName + 'Tab');
+            if (activeTab) {
+                activeTab.classList.add('active');
+            }
 
             // Update page title
             const titles = {
