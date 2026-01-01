@@ -36,12 +36,15 @@ public class PermissionServiceImpl implements PermissionService {
 
 	private final UserRepository userRepository;
 	private final UserStationAssignmentRepository userStationAssignmentRepository;
+	private final com.onelpro.librelog.repositories.StationRepository stationRepository;
 
 	public PermissionServiceImpl(
 			UserRepository userRepository,
-			UserStationAssignmentRepository userStationAssignmentRepository) {
+			UserStationAssignmentRepository userStationAssignmentRepository,
+			com.onelpro.librelog.repositories.StationRepository stationRepository) {
 		this.userRepository = userRepository;
 		this.userStationAssignmentRepository = userStationAssignmentRepository;
+		this.stationRepository = stationRepository;
 	}
 
 	@Override
@@ -88,8 +91,9 @@ public class PermissionServiceImpl implements PermissionService {
 		// Admin users have access to all stations
 		if (user.getRole() == UserRole.ADMIN) {
 			logger.debug("User {} is ADMIN, returning all stations", userId);
-			// Return all station IDs (would need StationRepository for this)
-			// For now, return assigned stations only
+			return stationRepository.findAll().stream()
+					.map(station -> station.getId())
+					.collect(Collectors.toList());
 		}
 
 		return userStationAssignmentRepository.findByUserId(userId).stream()
