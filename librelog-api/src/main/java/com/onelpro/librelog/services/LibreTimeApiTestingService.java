@@ -31,10 +31,11 @@ public interface LibreTimeApiTestingService {
 	/**
 	 * Tests a specific endpoint.
 	 * 
+	 * @param stationId The station ID
 	 * @param endpointId The endpoint ID to test
 	 * @return Test result
 	 */
-	ApiTestResultResponseDTO testEndpoint(UUID endpointId);
+	ApiTestResultResponseDTO testEndpoint(UUID stationId, UUID endpointId);
 
 	/**
 	 * Runs all tests for all discovered endpoints.

@@ -68,17 +68,17 @@ public class LibreTimeApiTestingServiceImpl implements LibreTimeApiTestingServic
 
 	@Override
 	@Transactional
-	public ApiTestResultResponseDTO testEndpoint(UUID endpointId) {
-		logger.info("Testing endpoint: {}", endpointId);
+	public ApiTestResultResponseDTO testEndpoint(UUID stationId, UUID endpointId) {
+		logger.info("Testing endpoint {} for station: {}", endpointId, stationId);
 		LibreTimeApiEndpoint endpoint = endpointRepository.findById(endpointId)
 				.orElseThrow(() -> new com.onelpro.librelog.exceptions.NotFoundException("Endpoint not found: " + endpointId));
-		return performTest(endpoint, TestType.CRUD, null, null);
+		return performTest(stationId, endpoint, TestType.CRUD, null, null);
 	}
 
 	@Override
 	@Transactional
-	public ApiTestSummaryResponseDTO runAllTests() {
-		logger.info("Running all endpoint tests");
+	public ApiTestSummaryResponseDTO runAllTests(UUID stationId) {
+		logger.info("Running all endpoint tests for station: {}", stationId);
 		List<LibreTimeApiEndpoint> endpoints = endpointRepository.findAll();
 		List<ApiTestResultResponseDTO> results = new ArrayList<>();
 

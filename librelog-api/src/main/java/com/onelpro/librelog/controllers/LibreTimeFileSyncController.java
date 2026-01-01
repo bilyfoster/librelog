@@ -45,11 +45,12 @@ public class LibreTimeFileSyncController {
 	)
 	@ApiResponse(responseCode = "200", description = "File uploaded successfully")
 	@ApiResponse(responseCode = "400", description = "Invalid request data or file validation failed")
-	@PreAuthorize("hasPermission(null, 'LIBRETIME_INTEGRATION_SYNC')")
+	@PreAuthorize("hasPermission(#stationId, 'LIBRETIME_INTEGRATION_SYNC')")
 	public ResponseEntity<FileUploadResponseDTO> uploadFile(
+			@RequestParam UUID stationId,
 			@Valid @RequestBody FileUploadRequestDTO request) {
-		logger.info("POST /api/libretime/files/upload - Uploading file: {}", request.getFileName());
-		FileUploadResponseDTO response = fileSyncService.uploadFile(request);
+		logger.info("POST /api/libretime/files/upload - Uploading file for station {}: {}", stationId, request.getFileName());
+		FileUploadResponseDTO response = fileSyncService.uploadFile(stationId, request);
 		return ResponseEntity.ok(response);
 	}
 
@@ -60,10 +61,12 @@ public class LibreTimeFileSyncController {
 	)
 	@ApiResponse(responseCode = "200", description = "File downloaded successfully")
 	@ApiResponse(responseCode = "404", description = "File not found")
-	@PreAuthorize("hasPermission(null, 'LIBRETIME_INTEGRATION_VIEW')")
-	public ResponseEntity<FileDownloadResponseDTO> downloadFile(@PathVariable String cartId) {
-		logger.info("GET /api/libretime/files/download/{} - Downloading file", cartId);
-		FileDownloadResponseDTO response = fileSyncService.downloadFile(cartId);
+	@PreAuthorize("hasPermission(#stationId, 'LIBRETIME_INTEGRATION_VIEW')")
+	public ResponseEntity<FileDownloadResponseDTO> downloadFile(
+			@RequestParam UUID stationId,
+			@PathVariable String cartId) {
+		logger.info("GET /api/libretime/files/download/{} - Downloading file for station: {}", cartId, stationId);
+		FileDownloadResponseDTO response = fileSyncService.downloadFile(stationId, cartId);
 		return ResponseEntity.ok(response);
 	}
 
@@ -73,12 +76,13 @@ public class LibreTimeFileSyncController {
 			description = "Lists files from LibreTime with pagination support. Returns files and pagination metadata."
 	)
 	@ApiResponse(responseCode = "200", description = "Files retrieved successfully")
-	@PreAuthorize("hasPermission(null, 'LIBRETIME_INTEGRATION_VIEW')")
+	@PreAuthorize("hasPermission(#stationId, 'LIBRETIME_INTEGRATION_VIEW')")
 	public ResponseEntity<FileListResponseDTO> listFiles(
+			@RequestParam UUID stationId,
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "20") int size) {
-		logger.info("GET /api/libretime/files - Listing files (page: {}, size: {})", page, size);
-		FileListResponseDTO response = fileSyncService.listFiles(page, size);
+		logger.info("GET /api/libretime/files - Listing files for station {} (page: {}, size: {})", stationId, page, size);
+		FileListResponseDTO response = fileSyncService.listFiles(stationId, page, size);
 		return ResponseEntity.ok(response);
 	}
 
@@ -88,11 +92,12 @@ public class LibreTimeFileSyncController {
 			description = "Queries files from LibreTime by metadata criteria. Supports filtering and sorting."
 	)
 	@ApiResponse(responseCode = "200", description = "Query completed successfully")
-	@PreAuthorize("hasPermission(null, 'LIBRETIME_INTEGRATION_VIEW')")
+	@PreAuthorize("hasPermission(#stationId, 'LIBRETIME_INTEGRATION_VIEW')")
 	public ResponseEntity<FileListResponseDTO> queryFiles(
+			@RequestParam UUID stationId,
 			@Valid @RequestBody FileQueryRequestDTO request) {
-		logger.info("POST /api/libretime/files/query - Querying files with criteria");
-		FileListResponseDTO response = fileSyncService.queryFiles(request);
+		logger.info("POST /api/libretime/files/query - Querying files for station {} with criteria", stationId);
+		FileListResponseDTO response = fileSyncService.queryFiles(stationId, request);
 		return ResponseEntity.ok(response);
 	}
 

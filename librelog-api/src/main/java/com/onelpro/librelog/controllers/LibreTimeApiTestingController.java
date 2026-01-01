@@ -47,10 +47,11 @@ public class LibreTimeApiTestingController {
 			description = "Discovers available LibreTime API endpoints by testing common REST patterns. Returns list of discovered endpoints."
 	)
 	@ApiResponse(responseCode = "200", description = "Endpoint discovery completed")
-	@PreAuthorize("hasPermission(null, 'LIBRETIME_INTEGRATION_TEST')")
-	public ResponseEntity<List<ApiEndpointResponseDTO>> discoverEndpoints() {
-		logger.info("POST /api/libretime/testing/discover - Discovering API endpoints");
-		List<ApiEndpointResponseDTO> endpoints = discoveryService.discoverEndpoints();
+	@PreAuthorize("hasPermission(#stationId, 'LIBRETIME_INTEGRATION_TEST')")
+	public ResponseEntity<List<ApiEndpointResponseDTO>> discoverEndpoints(
+			@RequestParam UUID stationId) {
+		logger.info("POST /api/libretime/testing/discover - Discovering API endpoints for station: {}", stationId);
+		List<ApiEndpointResponseDTO> endpoints = discoveryService.discoverEndpoints(stationId);
 		return ResponseEntity.ok(endpoints);
 	}
 
@@ -90,10 +91,11 @@ public class LibreTimeApiTestingController {
 			description = "Tests basic connectivity to LibreTime API."
 	)
 	@ApiResponse(responseCode = "200", description = "Connection test completed")
-	@PreAuthorize("hasPermission(null, 'LIBRETIME_INTEGRATION_TEST')")
-	public ResponseEntity<ApiTestResultResponseDTO> testConnection() {
-		logger.info("POST /api/libretime/testing/test-connection - Testing API connection");
-		ApiTestResultResponseDTO result = testingService.testConnection();
+	@PreAuthorize("hasPermission(#stationId, 'LIBRETIME_INTEGRATION_TEST')")
+	public ResponseEntity<ApiTestResultResponseDTO> testConnection(
+			@RequestParam UUID stationId) {
+		logger.info("POST /api/libretime/testing/test-connection - Testing API connection for station: {}", stationId);
+		ApiTestResultResponseDTO result = testingService.testConnection(stationId);
 		return ResponseEntity.ok(result);
 	}
 
@@ -103,10 +105,11 @@ public class LibreTimeApiTestingController {
 			description = "Tests authentication with LibreTime API using JWT token."
 	)
 	@ApiResponse(responseCode = "200", description = "Authentication test completed")
-	@PreAuthorize("hasPermission(null, 'LIBRETIME_INTEGRATION_TEST')")
-	public ResponseEntity<ApiTestResultResponseDTO> testAuthentication() {
-		logger.info("POST /api/libretime/testing/test-authentication - Testing API authentication");
-		ApiTestResultResponseDTO result = testingService.testAuthentication();
+	@PreAuthorize("hasPermission(#stationId, 'LIBRETIME_INTEGRATION_TEST')")
+	public ResponseEntity<ApiTestResultResponseDTO> testAuthentication(
+			@RequestParam UUID stationId) {
+		logger.info("POST /api/libretime/testing/test-authentication - Testing API authentication for station: {}", stationId);
+		ApiTestResultResponseDTO result = testingService.testAuthentication(stationId);
 		return ResponseEntity.ok(result);
 	}
 
@@ -117,10 +120,12 @@ public class LibreTimeApiTestingController {
 	)
 	@ApiResponse(responseCode = "200", description = "Endpoint test completed")
 	@ApiResponse(responseCode = "404", description = "Endpoint not found")
-	@PreAuthorize("hasPermission(null, 'LIBRETIME_INTEGRATION_TEST')")
-	public ResponseEntity<ApiTestResultResponseDTO> testEndpoint(@PathVariable UUID endpointId) {
-		logger.info("POST /api/libretime/testing/test-endpoint/{} - Testing endpoint", endpointId);
-		ApiTestResultResponseDTO result = testingService.testEndpoint(endpointId);
+	@PreAuthorize("hasPermission(#stationId, 'LIBRETIME_INTEGRATION_TEST')")
+	public ResponseEntity<ApiTestResultResponseDTO> testEndpoint(
+			@RequestParam UUID stationId,
+			@PathVariable UUID endpointId) {
+		logger.info("POST /api/libretime/testing/test-endpoint/{} - Testing endpoint for station: {}", endpointId, stationId);
+		ApiTestResultResponseDTO result = testingService.testEndpoint(stationId, endpointId);
 		return ResponseEntity.ok(result);
 	}
 
@@ -130,10 +135,11 @@ public class LibreTimeApiTestingController {
 			description = "Runs tests for all discovered endpoints. Returns summary of test results."
 	)
 	@ApiResponse(responseCode = "200", description = "All tests completed")
-	@PreAuthorize("hasPermission(null, 'LIBRETIME_INTEGRATION_TEST')")
-	public ResponseEntity<ApiTestSummaryResponseDTO> runAllTests() {
-		logger.info("POST /api/libretime/testing/run-all-tests - Running all API tests");
-		ApiTestSummaryResponseDTO summary = testingService.runAllTests();
+	@PreAuthorize("hasPermission(#stationId, 'LIBRETIME_INTEGRATION_TEST')")
+	public ResponseEntity<ApiTestSummaryResponseDTO> runAllTests(
+			@RequestParam UUID stationId) {
+		logger.info("POST /api/libretime/testing/run-all-tests - Running all API tests for station: {}", stationId);
+		ApiTestSummaryResponseDTO summary = testingService.runAllTests(stationId);
 		return ResponseEntity.ok(summary);
 	}
 
@@ -145,12 +151,13 @@ public class LibreTimeApiTestingController {
 	@ApiResponse(responseCode = "200", description = "Test results retrieved successfully")
 	@PreAuthorize("hasPermission(null, 'LIBRETIME_INTEGRATION_VIEW')")
 	public ResponseEntity<ApiTestSummaryResponseDTO> getTestResults(
+			@RequestParam UUID stationId,
 			@RequestParam(required = false) UUID endpointId,
 			@RequestParam(required = false) String status) {
-		logger.info("GET /api/libretime/testing/test-results - Getting test results (endpointId: {}, status: {})", 
-				endpointId, status);
+		logger.info("GET /api/libretime/testing/test-results - Getting test results for station {} (endpointId: {}, status: {})", 
+				stationId, endpointId, status);
 		// For now, return all tests summary. In production, would filter by parameters
-		ApiTestSummaryResponseDTO summary = testingService.runAllTests();
+		ApiTestSummaryResponseDTO summary = testingService.runAllTests(stationId);
 		return ResponseEntity.ok(summary);
 	}
 
@@ -161,9 +168,10 @@ public class LibreTimeApiTestingController {
 	)
 	@ApiResponse(responseCode = "200", description = "Test summary retrieved successfully")
 	@PreAuthorize("hasPermission(null, 'LIBRETIME_INTEGRATION_VIEW')")
-	public ResponseEntity<ApiTestSummaryResponseDTO> getTestSummary() {
-		logger.info("GET /api/libretime/testing/test-summary - Getting test summary");
-		ApiTestSummaryResponseDTO summary = testingService.runAllTests();
+	public ResponseEntity<ApiTestSummaryResponseDTO> getTestSummary(
+			@RequestParam UUID stationId) {
+		logger.info("GET /api/libretime/testing/test-summary - Getting test summary for station: {}", stationId);
+		ApiTestSummaryResponseDTO summary = testingService.runAllTests(stationId);
 		return ResponseEntity.ok(summary);
 	}
 
