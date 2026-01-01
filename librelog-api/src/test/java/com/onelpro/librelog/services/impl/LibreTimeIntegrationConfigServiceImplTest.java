@@ -178,6 +178,7 @@ class LibreTimeIntegrationConfigServiceImplTest {
 	void saveConfig_When_InvalidUrl_Expect_ThrowsBadRequestException() {
 		requestDTO.setApiBaseUrl("invalid-url");
 		when(configRepository.findByStationId(stationId)).thenReturn(Optional.empty());
+		when(stationRepository.findById(stationId)).thenReturn(Optional.of(testStation));
 		when(httpClient.validateBaseUrl(anyString())).thenReturn(false);
 
 		assertThrows(BadRequestException.class, () -> configService.saveConfig(stationId, requestDTO, userId));
@@ -273,6 +274,7 @@ class LibreTimeIntegrationConfigServiceImplTest {
 	void saveConfig_When_InvalidFileSize_Expect_ThrowsBadRequestException() {
 		requestDTO.setMaxFileSizeMb(6000); // Exceeds max
 		when(configRepository.findByStationId(stationId)).thenReturn(Optional.empty());
+		when(stationRepository.findById(stationId)).thenReturn(Optional.of(testStation));
 		when(httpClient.validateBaseUrl(anyString())).thenReturn(true);
 
 		assertThrows(BadRequestException.class, () -> configService.saveConfig(stationId, requestDTO, userId));
@@ -283,6 +285,7 @@ class LibreTimeIntegrationConfigServiceImplTest {
 	void saveConfig_When_MissingRequiredFields_Expect_ThrowsBadRequestException() {
 		requestDTO.setSyncFrequency(null);
 		when(configRepository.findByStationId(stationId)).thenReturn(Optional.empty());
+		when(stationRepository.findById(stationId)).thenReturn(Optional.of(testStation));
 		when(httpClient.validateBaseUrl(anyString())).thenReturn(true);
 
 		assertThrows(BadRequestException.class, () -> configService.saveConfig(stationId, requestDTO, userId));

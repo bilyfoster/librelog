@@ -181,3 +181,4 @@ At 7:00 AM, the same pattern repeats:
 Remember: **00:00 = top of hour, 00:59 = end of hour**. The template repeats every hour!
 
 
+
