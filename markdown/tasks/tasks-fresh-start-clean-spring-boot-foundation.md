@@ -41,7 +41,7 @@ Based on Plan: `fresh_start_-_clean_spring_boot_foundation_01a0cba1.plan.md`
 
 - [x] 0.0 Archive Current Codebase and Prepare for Fresh Start
   - [x] 0.1 Create archive directory structure to preserve existing code
-  - [x] 0.2 Move librelog-web-api directory to archive/librelog-web-api-old
+  - [x] 0.2 Move librelog-web-api directory to archive/librelog-web-api-old (current module is named **librelog-api**)
   - [x] 0.3 Move librelog-liquibase directory to archive/librelog-liquibase-old
   - [x] 0.4 Clean up target directories and build artifacts
   - [x] 0.5 Document any valuable configurations or learnings from archived code

@@ -5,50 +5,50 @@ Based on PRD: `prd-python-to-java-backend-migration.md`
 ## Relevant Files
 
 ### Configuration Files
-- `librelog-web-api/pom.xml` - Maven POM with dependencies and JaCoCo configuration
-- `librelog-web-api/src/main/resources/application.properties` - Spring Boot application configuration
+- `librelog-api/pom.xml` - Maven POM with dependencies and JaCoCo configuration
+- `librelog-api/src/main/resources/application.properties` - Spring Boot application configuration
 - `librelog-liquibase/src/main/resources/db/changelog/db.changelog-master.xml` - Master Liquibase changelog
 
 ### Core Infrastructure
-- `librelog-web-api/src/main/java/com/onelpro/librelog/config/*.java` - Spring configuration classes
-- `librelog-web-api/src/main/java/com/onelpro/librelog/exceptions/*.java` - Custom exception classes
-- `librelog-web-api/src/main/java/com/onelpro/librelog/utils/*.java` - Utility classes
+- `librelog-api/src/main/java/com/onelpro/librelog/config/*.java` - Spring configuration classes
+- `librelog-api/src/main/java/com/onelpro/librelog/exceptions/*.java` - Custom exception classes
+- `librelog-api/src/main/java/com/onelpro/librelog/utils/*.java` - Utility classes
 
 ### Middleware
-- `librelog-web-api/src/main/java/com/onelpro/librelog/config/SecurityConfig.java` - Spring Security configuration
-- `librelog-web-api/src/main/java/com/onelpro/librelog/config/RateLimitConfig.java` - Rate limiting configuration
-- `librelog-web-api/src/main/java/com/onelpro/librelog/config/CorsConfig.java` - CORS configuration
-- `librelog-web-api/src/main/java/com/onelpro/librelog/config/LoggingConfig.java` - Logging configuration
+- `librelog-api/src/main/java/com/onelpro/librelog/config/SecurityConfig.java` - Spring Security configuration
+- `librelog-api/src/main/java/com/onelpro/librelog/config/RateLimitConfig.java` - Rate limiting configuration
+- `librelog-api/src/main/java/com/onelpro/librelog/config/CorsConfig.java` - CORS configuration
+- `librelog-api/src/main/java/com/onelpro/librelog/config/LoggingConfig.java` - Logging configuration
 
 ### Database Migrations
 - `librelog-liquibase/src/main/resources/db/changelog/001-initial-schema.xml` - Initial database schema
 - `librelog-liquibase/src/main/resources/db/changelog/002-*.xml` through `027-*.xml` - Converted Alembic migrations
 
 ### Domain Models (JPA Entities)
-- `librelog-web-api/src/main/java/com/onelpro/librelog/models/*.java` - All 59 JPA entity classes
-- `librelog-web-api/src/main/java/com/onelpro/librelog/enums/*.java` - Enum classes for entity fields
+- `librelog-api/src/main/java/com/onelpro/librelog/models/*.java` - All 59 JPA entity classes
+- `librelog-api/src/main/java/com/onelpro/librelog/enums/*.java` - Enum classes for entity fields
 
 ### Repositories
-- `librelog-web-api/src/main/java/com/onelpro/librelog/repositories/*.java` - Spring Data JPA repository interfaces
+- `librelog-api/src/main/java/com/onelpro/librelog/repositories/*.java` - Spring Data JPA repository interfaces
 
 ### Services
-- `librelog-web-api/src/main/java/com/onelpro/librelog/services/*.java` - Service interfaces (40+ services)
-- `librelog-web-api/src/main/java/com/onelpro/librelog/services/impl/*.java` - Service implementations
+- `librelog-api/src/main/java/com/onelpro/librelog/services/*.java` - Service interfaces (40+ services)
+- `librelog-api/src/main/java/com/onelpro/librelog/services/impl/*.java` - Service implementations
 
 ### DTOs
-- `librelog-web-api/src/main/java/com/onelpro/librelog/dto/*DTO.java` - Request/response DTOs
+- `librelog-api/src/main/java/com/onelpro/librelog/dto/*DTO.java` - Request/response DTOs
 
 ### Controllers
-- `librelog-web-api/src/main/java/com/onelpro/librelog/controllers/*Controller.java` - REST controllers (54 controllers)
+- `librelog-api/src/main/java/com/onelpro/librelog/controllers/*Controller.java` - REST controllers (54 controllers)
 
 ### Integrations
-- `librelog-web-api/src/main/java/com/onelpro/librelog/integrations/LibreTimeClient.java` - LibreTime integration client
-- `librelog-web-api/src/main/java/com/onelpro/librelog/integrations/AzuraCastClient.java` - AzuraCast integration client
+- `librelog-api/src/main/java/com/onelpro/librelog/integrations/LibreTimeClient.java` - LibreTime integration client
+- `librelog-api/src/main/java/com/onelpro/librelog/integrations/AzuraCastClient.java` - AzuraCast integration client
 
 ### Tests
-- `librelog-web-api/src/test/java/com/onelpro/librelog/**/*Test.java` - Unit tests
-- `librelog-web-api/src/test/java/com/onelpro/librelog/**/*IT.java` - Integration tests
-- `librelog-web-api/src/test/java/com/onelpro/librelog/config/TestcontainersConfiguration.java` - Testcontainers setup
+- `librelog-api/src/test/java/com/onelpro/librelog/**/*Test.java` - Unit tests
+- `librelog-api/src/test/java/com/onelpro/librelog/**/*IT.java` - Integration tests
+- `librelog-api/src/test/java/com/onelpro/librelog/config/TestcontainersConfiguration.java` - Testcontainers setup
 
 ## Tasks
 

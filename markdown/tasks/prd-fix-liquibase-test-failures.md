@@ -50,7 +50,7 @@ The LibreLog Spring Boot application is experiencing persistent test failures th
 
 - **Multi-Module Maven Project:**
   - `librelog-liquibase`: Contains all Liquibase changelog files in `src/main/resources/db/changelog/`
-  - `librelog-web-api`: Main Spring Boot application that depends on `librelog-liquibase`
+  - `librelog-api`: Main Spring Boot application (Liquibase changelogs live in `librelog-api/src/main/resources/db/changelog/`)
   
 - **Current Configuration:**
   - `LiquibaseConfig.java`: Custom configuration bean that attempts to resolve changelog from dependency JAR
@@ -112,9 +112,9 @@ The LibreLog Spring Boot application is experiencing persistent test failures th
 
 ### Configuration Files
 
-- `librelog-web-api/src/main/java/com/onelpro/librelog/config/LiquibaseConfig.java`
-- `librelog-web-api/src/main/resources/application.properties`
-- `librelog-web-api/src/test/java/com/onelpro/librelog/LibreLogApplicationPostgresTests.java`
+- `librelog-api/src/main/java/com/onelpro/librelog/config/LiquibaseConfig.java`
+- `librelog-api/src/main/resources/application.properties`
+- `librelog-api/src/test/java/com/onelpro/librelog/LibreLogApplicationPostgresTests.java`
 - `librelog-liquibase/src/main/resources/db/changelog/db.changelog-master.xml`
 
 ### Testing Requirements
