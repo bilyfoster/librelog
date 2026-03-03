@@ -3,7 +3,7 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # Copy the built JAR file
-    COPY librelog-api/target/librelog-api-0.0.13-SNAPSHOT.jar app.jar
+    COPY librelog-api/target/librelog-api-0.0.14-SNAPSHOT.jar app.jar
 
 # Expose the application port
 EXPOSE 8080
