@@ -3665,7 +3665,155 @@
             }
         });
         function openOrderModal() { showError('Order creation - Coming soon'); }
-        function openAdvertiserModal() { showError('Advertiser creation - Coming soon'); }
+        
+        // Advertiser Modal Functions
+        async function openAdvertiserModal() {
+            document.getElementById('advertiserModalTitle').textContent = 'Create Advertiser';
+            document.getElementById('advertiserForm').reset();
+            document.getElementById('advertiserId').value = '';
+            document.getElementById('advertiserIsActive').value = 'true';
+            await populateAdvertiserDropdowns();
+            document.getElementById('advertiserModal').classList.add('show');
+        }
+
+        function closeAdvertiserModal() {
+            document.getElementById('advertiserModal').classList.remove('show');
+        }
+
+        async function populateAdvertiserDropdowns() {
+            // Populate agencies
+            const agencySelect = document.getElementById('advertiserAgencyId');
+            agencySelect.innerHTML = '<option value="">None</option>';
+            try {
+                const response = await fetch('/api/agencies', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (response.ok) {
+                    const agencies = await response.json();
+                    agencies.forEach(agency => {
+                        const option = document.createElement('option');
+                        option.value = agency.id;
+                        option.textContent = agency.name;
+                        agencySelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading agencies:', error);
+            }
+
+            // Populate sales reps
+            const salesRepSelect = document.getElementById('advertiserSalesRepId');
+            salesRepSelect.innerHTML = '<option value="">None</option>';
+            try {
+                const response = await fetch('/api/sales-reps', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (response.ok) {
+                    const salesReps = await response.json();
+                    salesReps.forEach(rep => {
+                        const option = document.createElement('option');
+                        option.value = rep.id;
+                        option.textContent = `${rep.firstName} ${rep.lastName}`;
+                        salesRepSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading sales reps:', error);
+            }
+        }
+
+        async function editAdvertiser(id) {
+            try {
+                const response = await fetch(`/api/advertisers/${id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load advertiser');
+                const advertiser = await response.json();
+                
+                document.getElementById('advertiserModalTitle').textContent = 'Edit Advertiser';
+                document.getElementById('advertiserId').value = advertiser.id;
+                await populateAdvertiserDropdowns();
+                
+                document.getElementById('advertiserName').value = advertiser.name;
+                document.getElementById('advertiserLegalName').value = advertiser.legalName || '';
+                document.getElementById('advertiserEmail').value = advertiser.email || '';
+                document.getElementById('advertiserPhone').value = advertiser.phone || '';
+                document.getElementById('advertiserAgencyId').value = advertiser.agencyId || '';
+                document.getElementById('advertiserSalesRepId').value = advertiser.salesRepId || '';
+                document.getElementById('advertiserCreditLimit').value = advertiser.creditLimit || '';
+                document.getElementById('advertiserIsActive').value = advertiser.isActive !== false ? 'true' : 'false';
+                
+                document.getElementById('advertiserModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading advertiser:', error);
+                showError('Failed to load advertiser');
+            }
+        }
+
+        async function deleteAdvertiser(id, name) {
+            if (!confirm(`Are you sure you want to delete advertiser "${name}"?`)) return;
+            try {
+                const response = await fetch(`/api/advertisers/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete advertiser');
+                showSuccess('Advertiser deleted successfully');
+                loadAdvertisers();
+            } catch (error) {
+                console.error('Error deleting advertiser:', error);
+                showError('Failed to delete advertiser');
+            }
+        }
+
+        // Advertiser Form Submit Handler
+        document.getElementById('advertiserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('advertiserModalErrorMessage');
+            if (errorMsg) errorMsg.classList.remove('show');
+
+            const advertiserId = document.getElementById('advertiserId').value;
+            const advertiserData = {
+                name: document.getElementById('advertiserName').value,
+                legalName: document.getElementById('advertiserLegalName').value || null,
+                email: document.getElementById('advertiserEmail').value || null,
+                phone: document.getElementById('advertiserPhone').value || null,
+                agencyId: document.getElementById('advertiserAgencyId').value || null,
+                salesRepId: document.getElementById('advertiserSalesRepId').value || null,
+                creditLimit: document.getElementById('advertiserCreditLimit').value ? parseFloat(document.getElementById('advertiserCreditLimit').value) : null,
+                isActive: document.getElementById('advertiserIsActive').value === 'true'
+            };
+
+            try {
+                const url = advertiserId ? `/api/advertisers/${advertiserId}` : '/api/advertisers';
+                const method = advertiserId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(advertiserData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    throw new Error(errorData?.message || `Failed to ${advertiserId ? 'update' : 'create'} advertiser`);
+                }
+
+                showSuccess(`Advertiser ${advertiserId ? 'updated' : 'created'} successfully`);
+                closeAdvertiserModal();
+                loadAdvertisers();
+            } catch (error) {
+                console.error('Error saving advertiser:', error);
+                if (errorMsg) {
+                    errorMsg.textContent = error.message || 'Failed to save advertiser';
+                    errorMsg.classList.add('show');
+                }
+            }
+        });
+
         function openAgencyModal() { showError('Agency creation - Coming soon'); }
         function openSalesRepModal() { showError('Sales rep creation - Coming soon'); }
 
