@@ -22,5 +22,9 @@ public interface AdvertiserRepository extends JpaRepository<Advertiser, UUID> {
 
 	List<Advertiser> findByIsActive(Boolean isActive);
 
+	long countByIsActive(boolean isActive);
+
+	List<Advertiser> findTop5ByOrderByCreatedAtDesc();
+
 }
 

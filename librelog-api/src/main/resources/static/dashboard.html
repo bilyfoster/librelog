@@ -498,10 +498,13 @@
             <a href="#" class="nav-item" data-tab="markets">
                 <i>🌍</i> Markets
             </a>
+            <a href="#" class="nav-item active" data-tab="dashboard">
+                <i>📊</i> Dashboard
+            </a>
             <a href="#" class="nav-item" data-tab="clusters">
                 <i>🔗</i> Clusters
             </a>
-            <a href="#" class="nav-item active" data-tab="stations">
+            <a href="#" class="nav-item" data-tab="stations">
                 <i>📻</i> Stations
             </a>
             <a href="#" class="nav-item" data-tab="channels">
@@ -660,8 +663,78 @@
                 </div>
             </div>
 
+            <!-- Dashboard Tab -->
+            <div id="dashboardTab" class="tab-content active">
+                <h3 class="section-title">Dashboard Overview</h3>
+                
+                <!-- Stats Cards -->
+                <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                    <!-- Content Stats -->
+                    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem; border-radius: 8px; color: white;">
+                        <div style="font-size: 2rem; font-weight: bold;" id="statTotalTracks">-</div>
+                        <div style="opacity: 0.9;">Total Songs</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 1.5rem; border-radius: 8px; color: white;">
+                        <div style="font-size: 2rem; font-weight: bold;" id="statTotalSpots">-</div>
+                        <div style="opacity: 0.9;">Total Spots</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 1.5rem; border-radius: 8px; color: white;">
+                        <div style="font-size: 2rem; font-weight: bold;" id="statSpotsToday">-</div>
+                        <div style="opacity: 0.9;">Spots Today</div>
+                    </div>
+                    
+                    <!-- Business Stats -->
+                    <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); padding: 1.5rem; border-radius: 8px; color: #1a1a2e;">
+                        <div style="font-size: 2rem; font-weight: bold;" id="statTotalAdvertisers">-</div>
+                        <div style="opacity: 0.9;">Advertisers</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); padding: 1.5rem; border-radius: 8px; color: #1a1a2e;">
+                        <div style="font-size: 2rem; font-weight: bold;" id="statActiveCampaigns">-</div>
+                        <div style="opacity: 0.9;">Active Campaigns</div>
+                    </div>
+                    
+                    <!-- Billing Stats -->
+                    <div class="stat-card" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); padding: 1.5rem; border-radius: 8px; color: #1a1a2e;">
+                        <div style="font-size: 2rem; font-weight: bold;" id="statTotalRevenue">-</div>
+                        <div style="opacity: 0.9;">Total Revenue</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); padding: 1.5rem; border-radius: 8px; color: #1a1a2e;">
+                        <div style="font-size: 2rem; font-weight: bold;" id="statOutstandingRevenue">-</div>
+                        <div style="opacity: 0.9;">Outstanding</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); padding: 1.5rem; border-radius: 8px; color: #1a1a2e;">
+                        <div style="font-size: 2rem; font-weight: bold;" id="statOverdueInvoices">-</div>
+                        <div style="opacity: 0.9;">Overdue Invoices</div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity Section -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                    <!-- Recent Campaigns -->
+                    <div class="card" style="background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 8px;">
+                        <h4 style="margin-bottom: 1rem; color: #667eea;">Recent Campaigns</h4>
+                        <div id="recentCampaignsLoading">Loading...</div>
+                        <div id="recentCampaignsList"></div>
+                    </div>
+                    
+                    <!-- Today's Spots -->
+                    <div class="card" style="background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 8px;">
+                        <h4 style="margin-bottom: 1rem; color: #667eea;">Today's Spots</h4>
+                        <div id="todaySpotsLoading">Loading...</div>
+                        <div id="todaySpotsList"></div>
+                    </div>
+                    
+                    <!-- Overdue Invoices -->
+                    <div class="card" style="background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 8px;">
+                        <h4 style="margin-bottom: 1rem; color: #f5576c;">Overdue Invoices</h4>
+                        <div id="overdueInvoicesLoading">Loading...</div>
+                        <div id="overdueInvoicesList"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Stations Tab -->
-            <div id="stationsTab" class="tab-content active">
+            <div id="stationsTab" class="tab-content">
                 <div class="toolbar">
                     <h3 class="section-title">Stations</h3>
                     <button class="btn btn-primary" onclick="openStationModal()">+ Create Station</button>
@@ -1583,6 +1656,7 @@
 
             // Update page title
             const titles = {
+                'dashboard': 'Dashboard Overview',
                 'stations': 'Station Management',
                 'clocks': 'Clock Template Management',
                 'dayparts': 'Daypart Management',
@@ -1605,6 +1679,16 @@
         function updateHelpContent(tabName) {
             const helpContent = document.getElementById('helpContent');
             const helpTexts = {
+                'dashboard': {
+                    title: 'Dashboard Overview',
+                    description: 'The dashboard provides a quick overview of your station\'s key metrics including content counts, active campaigns, and billing information.',
+                    features: [
+                        'View total songs, spots, and advertisers',
+                        'See today\'s scheduled spots',
+                        'Track revenue and outstanding invoices',
+                        'Monitor recent campaign activity'
+                    ]
+                },
                 'stations': {
                     title: 'Station Management',
                     description: 'Stations represent broadcast stations in your system. Each station has a unique call sign, name, frequency, and market.',
@@ -1706,6 +1790,11 @@
                     document.getElementById('pageTitle').textContent = 'Cluster Management';
                     loadClustersForTable();
                     break;
+                case 'dashboard':
+                    document.getElementById('pageTitle').textContent = 'Dashboard';
+                    loadDashboardStats();
+                    loadRecentActivity();
+                    break;
                 case 'stations':
                     loadStations();
                     break;
@@ -1744,6 +1833,88 @@
         // Help panel toggle
         function toggleHelp() {
             document.getElementById('helpPanel').classList.toggle('open');
+        }
+
+        // Dashboard Functions
+        async function loadDashboardStats() {
+            try {
+                const response = await fetch('/api/dashboard/stats', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load dashboard stats');
+                const stats = await response.json();
+                displayDashboardStats(stats);
+            } catch (error) {
+                console.error('Error loading dashboard stats:', error);
+            }
+        }
+
+        function displayDashboardStats(stats) {
+            document.getElementById('statTotalTracks').textContent = stats.totalTracks || 0;
+            document.getElementById('statTotalSpots').textContent = stats.totalSpots || 0;
+            document.getElementById('statSpotsToday').textContent = stats.totalSpotsToday || 0;
+            document.getElementById('statTotalAdvertisers').textContent = stats.totalAdvertisers || 0;
+            document.getElementById('statActiveCampaigns').textContent = stats.activeCampaigns || 0;
+            document.getElementById('statTotalRevenue').textContent = '$' + (stats.totalRevenue || 0).toLocaleString();
+            document.getElementById('statOutstandingRevenue').textContent = '$' + (stats.outstandingRevenue || 0).toLocaleString();
+            document.getElementById('statOverdueInvoices').textContent = stats.overdueInvoices || 0;
+        }
+
+        async function loadRecentActivity() {
+            try {
+                const response = await fetch('/api/dashboard/recent-activity', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load recent activity');
+                const activity = await response.json();
+                displayRecentActivity(activity);
+            } catch (error) {
+                console.error('Error loading recent activity:', error);
+            }
+        }
+
+        function displayRecentActivity(activity) {
+            // Recent Campaigns
+            const campaignsList = document.getElementById('recentCampaignsList');
+            document.getElementById('recentCampaignsLoading').style.display = 'none';
+            if (activity.recentCampaigns && activity.recentCampaigns.length > 0) {
+                campaignsList.innerHTML = activity.recentCampaigns.map(c => `
+                    <div style="padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <div style="font-weight: 500;">${c.name}</div>
+                        <div style="font-size: 0.8rem; opacity: 0.7;">${c.advertiserName || 'No advertiser'} - ${c.status}</div>
+                    </div>
+                `).join('');
+            } else {
+                campaignsList.innerHTML = '<div style="opacity: 0.6;">No recent campaigns</div>';
+            }
+
+            // Today's Spots
+            const spotsList = document.getElementById('todaySpotsList');
+            document.getElementById('todaySpotsLoading').style.display = 'none';
+            if (activity.spotsToday && activity.spotsToday.length > 0) {
+                spotsList.innerHTML = activity.spotsToday.slice(0, 5).map(s => `
+                    <div style="padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <div style="font-weight: 500;">${s.scheduledTime} - ${s.daypart || 'Standard'}</div>
+                        <div style="font-size: 0.8rem; opacity: 0.7;">${s.status}</div>
+                    </div>
+                `).join('');
+            } else {
+                spotsList.innerHTML = '<div style="opacity: 0.6;">No spots scheduled today</div>';
+            }
+
+            // Overdue Invoices
+            const invoicesList = document.getElementById('overdueInvoicesList');
+            document.getElementById('overdueInvoicesLoading').style.display = 'none';
+            if (activity.overdueInvoices && activity.overdueInvoices.length > 0) {
+                invoicesList.innerHTML = activity.overdueInvoices.map(i => `
+                    <div style="padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <div style="font-weight: 500;">${i.invoiceNumber}</div>
+                        <div style="font-size: 0.8rem; opacity: 0.7;">$${i.balanceDue} - Due: ${i.dueDate}</div>
+                    </div>
+                `).join('');
+            } else {
+                invoicesList.innerHTML = '<div style="opacity: 0.6;">No overdue invoices</div>';
+            }
         }
 
         // Load user info

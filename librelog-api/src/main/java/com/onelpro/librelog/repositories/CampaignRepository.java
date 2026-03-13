@@ -63,9 +63,19 @@ public interface CampaignRepository extends JpaRepository<Campaign, UUID> {
 	long countByStationIdAndStatus(UUID stationId, CampaignStatus status);
 
 	/**
+	 * Count campaigns by status.
+	 */
+	long countByStatus(CampaignStatus status);
+
+	/**
 	 * Find campaign by ID with station details.
 	 */
 	@Query("SELECT c FROM Campaign c JOIN FETCH c.station WHERE c.id = :id")
 	Optional<Campaign> findByIdWithStation(@Param("id") UUID id);
+
+	/**
+	 * Find top 5 campaigns by creation date.
+	 */
+	List<Campaign> findTop5ByOrderByCreatedAtDesc();
 
 }

@@ -81,4 +81,9 @@ public interface SpotRepository extends JpaRepository<Spot, UUID> {
 	List<Spot> findByStationIdAndScheduledDateAndBreakNameOrderByBreakPositionAsc(
 			UUID stationId, LocalDate scheduledDate, String breakName);
 
+	/**
+	 * Find spots by scheduled date (for dashboard).
+	 */
+	List<Spot> findByScheduledDate(LocalDate scheduledDate);
+
 }
