@@ -679,5 +679,10 @@
 	<include file="db/changelog/020-add-libretime-fields.xml"/>
 	<include file="db/changelog/021-add-fixed-asset-duration.xml"/>
 	<include file="db/changelog/022-add-station-id-to-libretime-integration.xml"/>
+	<include file="db/changelog/023-create-campaigns-and-spots.xml"/>
+	<include file="db/changelog/024-create-tracks-table.xml"/>
+	<include file="db/changelog/025-create-voice-tracks-table.xml"/>
+	<include file="db/changelog/026-create-spot-copies-table.xml"/>
+	<include file="db/changelog/027-create-billing-tables.xml"/>
 
 </databaseChangeLog>

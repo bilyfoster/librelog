@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Tracks table for music library -->
+    <changeSet id="024-create-tracks-table" author="librelog">
+        <createTable tableName="tracks">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="title" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="artist" type="VARCHAR(255)"/>
+            <column name="album" type="VARCHAR(255)"/>
+            <column name="type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="genre" type="VARCHAR(100)"/>
+            <column name="duration_seconds" type="INTEGER"/>
+            <column name="filepath" type="TEXT"/>
+            <column name="libretime_id" type="VARCHAR(255)"/>
+            <column name="station_id" type="UUID"/>
+            <column name="isrc" type="VARCHAR(50)"/>
+            <column name="year" type="INTEGER"/>
+            <column name="bpm" type="INTEGER"/>
+            <column name="rating" type="INTEGER"/>
+            <column name="play_count" type="INTEGER"/>
+            <column name="last_played" type="TIMESTAMP"/>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP"/>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="tracks"
+                baseColumnNames="station_id"
+                constraintName="fk_tracks_station"
+                referencedTableName="stations"
+                referencedColumnNames="id"
+                onDelete="SET NULL"/>
+        <createIndex indexName="idx_tracks_title" tableName="tracks">
+            <column name="title"/>
+        </createIndex>
+        <createIndex indexName="idx_tracks_artist" tableName="tracks">
+            <column name="artist"/>
+        </createIndex>
+        <createIndex indexName="idx_tracks_type" tableName="tracks">
+            <column name="type"/>
+        </createIndex>
+        <createIndex indexName="idx_tracks_station_id" tableName="tracks">
+            <column name="station_id"/>
+        </createIndex>
+        <createIndex indexName="idx_tracks_libretime_id" tableName="tracks">
+            <column name="libretime_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

@@ -80,6 +80,19 @@ Inspect logs for the exited containers (`docker logs <container>`), fix config o
 
 ---
 
+## Feature testing and export to LibreTime
+
+**What is tested (automated):**
+- All **unit tests** (`*Test.java`) pass, including LibreTime **client**, **controllers**, and **service** tests. These use **mocks** – no real HTTP call to LibreTime.
+- **`mvn test`** does **not** run `*IT.java` (Surefire default). So **LibreTimeIntegrationIT** is not run in the normal build.
+- When run explicitly (`mvn test -Dtest=LibreTimeIntegrationIT`), **LibreTimeIntegrationIT** currently **fails** (11 tests: API returns 400/500 instead of expected 200/201/404/403). Needs investigation (e.g. station-scoped config, request shape, or test data).
+
+**What is not tested:**
+- **Export to LibreTime** (e.g. **push clock** to a live LibreTime instance) has **no end-to-end automated test**. The code path (`LibreTimeSyncServiceImpl.pushClockToLibreTime` → `libreTimeClient.exportClock()`) is only covered by unit tests with a mocked client.
+- **Manual/E2E:** To confirm export to LibreTime you need to: (1) have LibreTime API reachable and configured in LibreLog (station integration config), (2) use the UI or REST API to export a clock template, (3) verify in LibreTime that the show/playlist was created.
+
+---
+
 ## Test and build commands (quick reference)
 
 From repo root: `/home/jenkins/docker/librelog`

@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Campaigns table for advertising traffic -->
+    <changeSet id="023-create-campaigns-table" author="librelog">
+        <createTable tableName="campaigns">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="station_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="advertiser_id" type="UUID"/>
+            <column name="advertiser_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_spots" type="INTEGER"/>
+            <column name="spots_scheduled" type="INTEGER"/>
+            <column name="spots_aired" type="INTEGER"/>
+            <column name="budget" type="NUMERIC(19,2)"/>
+            <column name="notes" type="TEXT"/>
+            <column name="copy_instructions" type="TEXT"/>
+            <column name="sales_rep_name" type="VARCHAR(255)"/>
+            <column name="priority" type="INTEGER"/>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP"/>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="campaigns"
+                baseColumnNames="station_id"
+                constraintName="fk_campaigns_station"
+                referencedTableName="stations"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+                baseTableName="campaigns"
+                baseColumnNames="advertiser_id"
+                constraintName="fk_campaigns_advertiser"
+                referencedTableName="advertisers"
+                referencedColumnNames="id"
+                onDelete="SET NULL"/>
+        <createIndex indexName="idx_campaigns_station_id" tableName="campaigns">
+            <column name="station_id"/>
+        </createIndex>
+        <createIndex indexName="idx_campaigns_advertiser_id" tableName="campaigns">
+            <column name="advertiser_id"/>
+        </createIndex>
+        <createIndex indexName="idx_campaigns_status" tableName="campaigns">
+            <column name="status"/>
+        </createIndex>
+        <createIndex indexName="idx_campaigns_dates" tableName="campaigns">
+            <column name="start_date"/>
+            <column name="end_date"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Spots table for individual spot occurrences -->
+    <changeSet id="023-create-spots-table" author="librelog">
+        <createTable tableName="spots">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="campaign_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="station_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="scheduled_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="scheduled_time" type="VARCHAR(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="spot_length" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="actual_air_time" type="TIMESTAMP"/>
+            <column name="daypart" type="VARCHAR(50)"/>
+            <column name="break_name" type="VARCHAR(255)"/>
+            <column name="break_position" type="INTEGER"/>
+            <column name="asset_id" type="UUID"/>
+            <column name="asset_name" type="VARCHAR(255)"/>
+            <column name="makegood_of_id" type="UUID"/>
+            <column name="notes" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP"/>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="spots"
+                baseColumnNames="campaign_id"
+                constraintName="fk_spots_campaign"
+                referencedTableName="campaigns"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+                baseTableName="spots"
+                baseColumnNames="station_id"
+                constraintName="fk_spots_station"
+                referencedTableName="stations"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+        <createIndex indexName="idx_spots_campaign_id" tableName="spots">
+            <column name="campaign_id"/>
+        </createIndex>
+        <createIndex indexName="idx_spots_station_id" tableName="spots">
+            <column name="station_id"/>
+        </createIndex>
+        <createIndex indexName="idx_spots_scheduled_date" tableName="spots">
+            <column name="scheduled_date"/>
+        </createIndex>
+        <createIndex indexName="idx_spots_status" tableName="spots">
+            <column name="status"/>
+        </createIndex>
+        <createIndex indexName="idx_spots_station_date" tableName="spots">
+            <column name="station_id"/>
+            <column name="scheduled_date"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

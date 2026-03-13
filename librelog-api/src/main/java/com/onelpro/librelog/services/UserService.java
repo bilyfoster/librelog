@@ -1,5 +1,6 @@
 package com.onelpro.librelog.services;
 
+import com.onelpro.librelog.dto.ProfileUpdateRequestDTO;
 import com.onelpro.librelog.dto.UserDetailResponseDTO;
 import com.onelpro.librelog.dto.UserRequestDTO;
 import com.onelpro.librelog.dto.UserResponseDTO;
@@ -49,6 +50,16 @@ public interface UserService {
 	 */
 	UserResponseDTO updateUserWithStations(UUID userId, UserRequestDTO request,
 	                                       List<UserStationAssignmentRequestDTO> stationAssignments);
+
+	/**
+	 * Updates the current user's profile (self-service).
+	 * Users can update their email and password.
+	 *
+	 * @param userId the user ID
+	 * @param request the profile update request
+	 * @return the updated user information
+	 */
+	UserResponseDTO updateProfile(UUID userId, ProfileUpdateRequestDTO request);
 
 }
 

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Spot copies table for scripts -->
+    <changeSet id="026-create-spot-copies-table" author="librelog">
+        <createTable tableName="spot_copies">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="campaign_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version_number" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="script_text" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="instructions" type="TEXT"/>
+            <column name="duration_seconds" type="INTEGER"/>
+            <column name="status" type="VARCHAR(50)"/>
+            <column name="created_by" type="UUID"/>
+            <column name="approved_by" type="UUID"/>
+            <column name="approved_at" type="TIMESTAMP"/>
+            <column name="rejection_reason" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP"/>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="spot_copies"
+                baseColumnNames="campaign_id"
+                constraintName="fk_spot_copies_campaign"
+                referencedTableName="campaigns"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+        <createIndex indexName="idx_spot_copies_campaign_id" tableName="spot_copies">
+            <column name="campaign_id"/>
+        </createIndex>
+        <createIndex indexName="idx_spot_copies_version" tableName="spot_copies">
+            <column name="campaign_id"/>
+            <column name="version_number"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

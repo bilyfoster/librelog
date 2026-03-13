@@ -2,6 +2,7 @@ package com.onelpro.librelog.controllers;
 
 import com.onelpro.librelog.dto.AuthResponseDTO;
 import com.onelpro.librelog.dto.LoginRequestDTO;
+import com.onelpro.librelog.dto.ProfileUpdateRequestDTO;
 import com.onelpro.librelog.dto.RegisterRequestDTO;
 import com.onelpro.librelog.dto.UserResponseDTO;
 import com.onelpro.librelog.services.AuthService;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -81,6 +83,25 @@ public class AuthController {
 		}
 		logger.debug("Get current user request received for ID: {}", userId);
 		UserResponseDTO response = userService.getById(userId);
+		return ResponseEntity.ok(response);
+	}
+
+	@PutMapping("/profile")
+	@Operation(
+			summary = "Update current user profile",
+			description = "Updates the currently authenticated user's profile information"
+	)
+	@ApiResponse(responseCode = "200", description = "Profile updated successfully")
+	@ApiResponse(responseCode = "400", description = "Invalid request data")
+	@ApiResponse(responseCode = "401", description = "Not authenticated")
+	public ResponseEntity<UserResponseDTO> updateProfile(@Valid @RequestBody ProfileUpdateRequestDTO request) {
+		java.util.UUID userId = SecurityContextUtils.getCurrentUserId();
+		if (userId == null) {
+			logger.warn("Update profile request received but user is not authenticated");
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+		logger.info("Update profile request received for user ID: {}", userId);
+		UserResponseDTO response = userService.updateProfile(userId, request);
 		return ResponseEntity.ok(response);
 	}
 

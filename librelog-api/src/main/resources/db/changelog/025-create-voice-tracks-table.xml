@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Voice tracks table for DJ recorded segments -->
+    <changeSet id="025-create-voice-tracks-table" author="librelog">
+        <createTable tableName="voice_tracks">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="title" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="station_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="show_name" type="VARCHAR(255)"/>
+            <column name="segment_type" type="VARCHAR(50)"/>
+            <column name="file_url" type="TEXT"/>
+            <column name="file_path" type="TEXT"/>
+            <column name="duration_seconds" type="INTEGER"/>
+            <column name="scheduled_date" type="DATE"/>
+            <column name="scheduled_time" type="TIME"/>
+            <column name="script_text" type="TEXT"/>
+            <column name="recorded_text" type="TEXT"/>
+            <column name="status" type="VARCHAR(50)"/>
+            <column name="created_by" type="UUID"/>
+            <column name="recorded_by" type="UUID"/>
+            <column name="recorded_at" type="TIMESTAMP"/>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP"/>
+        </createTable>
+        <addForeignKeyConstraint
+                baseTableName="voice_tracks"
+                baseColumnNames="station_id"
+                constraintName="fk_voice_tracks_station"
+                referencedTableName="stations"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+        <createIndex indexName="idx_voice_tracks_station_id" tableName="voice_tracks">
+            <column name="station_id"/>
+        </createIndex>
+        <createIndex indexName="idx_voice_tracks_scheduled_date" tableName="voice_tracks">
+            <column name="scheduled_date"/>
+        </createIndex>
+        <createIndex indexName="idx_voice_tracks_status" tableName="voice_tracks">
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

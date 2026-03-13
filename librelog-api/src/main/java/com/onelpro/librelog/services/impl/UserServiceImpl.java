@@ -1,6 +1,7 @@
 package com.onelpro.librelog.services.impl;
 
 import com.onelpro.librelog.dto.*;
+import com.onelpro.librelog.dto.ProfileUpdateRequestDTO;
 import com.onelpro.librelog.enums.AuditActionType;
 import com.onelpro.librelog.exceptions.BadRequestException;
 import com.onelpro.librelog.exceptions.NotFoundException;
@@ -322,6 +323,64 @@ public class UserServiceImpl implements UserService {
 		}
 
 		return getUserWithAssignments(userId);
+	}
+
+	@Override
+	@Transactional
+	public UserResponseDTO updateProfile(UUID userId, ProfileUpdateRequestDTO request) {
+		logger.info("Updating profile for user ID: {}", userId);
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new NotFoundException("User not found with id: " + userId));
+
+		// Verify current password if trying to change password
+		if (request.getNewPassword() != null && !request.getNewPassword().trim().isEmpty()) {
+			if (request.getCurrentPassword() == null || !passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+				throw new BadRequestException("Current password is incorrect");
+			}
+			if (!PasswordValidator.isValid(request.getNewPassword())) {
+				throw new BadRequestException("Password must be between 8 and 128 characters long, contain at least one uppercase letter, one lowercase letter, one digit, and one special character.");
+			}
+			user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+		}
+
+		// Check if email is being changed and if it's already taken
+		if (request.getEmail() != null && !user.getEmail().equals(request.getEmail())) {
+			if (userRepository.existsByEmail(request.getEmail())) {
+				throw new BadRequestException("Email already registered");
+			}
+			user.setEmail(request.getEmail());
+		}
+
+		user.setUpdatedAt(LocalDateTime.now());
+
+		// Store previous value for audit log
+		Map<String, Object> previousValue = new HashMap<>();
+		previousValue.put("email", user.getEmail());
+
+		User updatedUser = userRepository.save(user);
+		logger.info("Profile updated successfully for user ID: {}", updatedUser.getId());
+
+		// Audit log
+		UUID currentUserId = getCurrentUserId();
+		Map<String, Object> newValue = new HashMap<>();
+		newValue.put("email", updatedUser.getEmail());
+		if (request.getNewPassword() != null && !request.getNewPassword().trim().isEmpty()) {
+			newValue.put("passwordChanged", true);
+		}
+
+		auditService.logAction(
+				AuditActionType.UPDATE,
+				"User",
+				updatedUser.getId(),
+				previousValue,
+				newValue,
+				currentUserId,
+				null,
+				getClientIpAddress(),
+				getUserAgent()
+		);
+
+		return mapToResponseDTO(updatedUser);
 	}
 
 	private UserResponseDTO mapToResponseDTO(User user) {
