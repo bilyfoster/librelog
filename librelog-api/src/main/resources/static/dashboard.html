@@ -1475,12 +1475,22 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="orderAgencyName">Agency Name</label>
-                    <input type="text" id="orderAgencyName">
+                    <label for="orderAgencyName">Agency 
+                        <small style="color: #888; font-weight: normal;">(auto-filled from advertiser)</small>
+                    </label>
+                    <input type="text" id="orderAgencyName" readonly style="background: rgba(255,255,255,0.05); cursor: not-allowed;">
                 </div>
                 <div class="form-group">
-                    <label for="orderSalesRepName">Sales Rep Name</label>
-                    <input type="text" id="orderSalesRepName">
+                    <label for="orderSalesRepName">Sales Rep
+                        <small style="color: #888; font-weight: normal;">(auto-filled from advertiser)</small>
+                    </label>
+                    <input type="text" id="orderSalesRepName" readonly style="background: rgba(255,255,255,0.05); cursor: not-allowed;">
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="orderOverrideAgencySalesRep" onchange="toggleAgencySalesRepEdit()">
+                    <label for="orderOverrideAgencySalesRep" style="margin: 0; font-weight: normal; color: #888;">
+                        Override agency/sales rep for this order
+                    </label>
                 </div>
                 <div class="form-group">
                     <label for="orderStartDate">Start Date *</label>
@@ -4193,6 +4203,44 @@
                 }
             } catch (error) {
                 console.error('Error loading advertisers:', error);
+            }
+            
+            // Add change event listener to auto-populate agency/sales rep
+            advertiserSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const agencyName = selectedOption.dataset.agencyName || '';
+                const salesRepName = selectedOption.dataset.salesRepName || '';
+                document.getElementById('orderAgencyName').value = agencyName;
+                document.getElementById('orderSalesRepName').value = salesRepName;
+            });
+        }
+
+        function toggleAgencySalesRepEdit() {
+            const overrideCheckbox = document.getElementById('orderOverrideAgencySalesRep');
+            const agencyInput = document.getElementById('orderAgencyName');
+            const salesRepInput = document.getElementById('orderSalesRepName');
+            
+            if (overrideCheckbox.checked) {
+                agencyInput.readOnly = false;
+                salesRepInput.readOnly = false;
+                agencyInput.style.background = '';
+                agencyInput.style.cursor = '';
+                salesRepInput.style.background = '';
+                salesRepInput.style.cursor = '';
+            } else {
+                agencyInput.readOnly = true;
+                salesRepInput.readOnly = true;
+                agencyInput.style.background = 'rgba(255,255,255,0.05)';
+                agencyInput.style.cursor = 'not-allowed';
+                salesRepInput.style.background = 'rgba(255,255,255,0.05)';
+                salesRepInput.style.cursor = 'not-allowed';
+                // Re-populate from selected advertiser
+                const advertiserSelect = document.getElementById('orderAdvertiserId');
+                const selectedOption = advertiserSelect.options[advertiserSelect.selectedIndex];
+                if (selectedOption) {
+                    document.getElementById('orderAgencyName').value = selectedOption.dataset.agencyName || '';
+                    document.getElementById('orderSalesRepName').value = selectedOption.dataset.salesRepName || '';
+                }
             }
         }
 
