@@ -538,6 +538,19 @@
         </div>
 
         <div class="nav-section">
+            <div class="nav-section-title">Campaigns & Traffic</div>
+            <a href="#" class="nav-item" data-tab="campaigns">
+                <i>📢</i> Campaigns
+            </a>
+            <a href="#" class="nav-item" data-tab="spots">
+                <i>🎧</i> Spots / Production
+            </a>
+            <a href="#" class="nav-item" data-tab="voice-tracks">
+                <i>🎙️</i> Voice Tracks
+            </a>
+        </div>
+
+        <div class="nav-section">
             <div class="nav-section-title">Administration</div>
             <a href="#" class="nav-item" data-tab="users">
                 <i>👥</i> Users
@@ -1007,6 +1020,99 @@
                 </div>
             </div>
 
+            <!-- Campaigns Tab -->
+            <div id="campaignsTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Advertising Campaigns</h3>
+                    <button class="btn btn-primary" onclick="openCampaignModal()">+ Create Campaign</button>
+                </div>
+                <div class="table-container">
+                    <div id="campaignsLoadingState" class="loading">Loading campaigns...</div>
+                    <div id="campaignsEmptyState" class="empty-state" style="display: none;">
+                        <p>No campaigns found.</p>
+                        <p>Campaigns group spots together for an advertiser. Create a campaign to start scheduling spots.</p>
+                    </div>
+                    <table id="campaignsTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Campaign Name</th>
+                                <th>Advertiser</th>
+                                <th>Station</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Status</th>
+                                <th>Spots</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="campaignsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Spots/Production Tab -->
+            <div id="spotsTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Spots & Production</h3>
+                    <button class="btn btn-primary" onclick="openSpotModal()">+ Create Spot</button>
+                </div>
+                <div class="info-box" style="background: rgba(102, 126, 234, 0.1); border-left: 4px solid #667eea; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                    <strong>🎧 Production Workflow:</strong> Spots are created from campaigns. Voice talent can view assigned spots, record audio, and mark them as ready for traffic.
+                </div>
+                <div class="table-container">
+                    <div id="spotsLoadingState" class="loading">Loading spots...</div>
+                    <div id="spotsEmptyState" class="empty-state" style="display: none;">
+                        <p>No spots found.</p>
+                        <p>Spots represent individual advertisements that will air. Create spots from campaigns.</p>
+                    </div>
+                    <table id="spotsTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Spot Name</th>
+                                <th>Campaign</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                                <th>Audio File</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="spotsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Voice Tracks Tab -->
+            <div id="voice-tracksTab" class="tab-content">
+                <div class="toolbar">
+                    <h3 class="section-title">Voice Tracks</h3>
+                    <button class="btn btn-primary" onclick="openVoiceTrackModal()">+ Create Voice Track</button>
+                </div>
+                <div class="info-box" style="background: rgba(102, 126, 234, 0.1); border-left: 4px solid #667eea; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                    <strong>🎙️ For DJs/Talent:</strong> Voice tracks let you record introductions, transitions, and station IDs. See what songs play before and after your voice track.
+                </div>
+                <div class="table-container">
+                    <div id="voiceTracksLoadingState" class="loading">Loading voice tracks...</div>
+                    <div id="voiceTracksEmptyState" class="empty-state" style="display: none;">
+                        <p>No voice tracks found.</p>
+                        <p>Voice tracks are pre-recorded DJ segments that play between songs.</p>
+                    </div>
+                    <table id="voiceTracksTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Station</th>
+                                <th>Duration</th>
+                                <th>Scheduled</th>
+                                <th>Song Before</th>
+                                <th>Song After</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="voiceTracksTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="footer">
                 <p>&copy; <span id="copyrightYear"></span> LibreLog. All rights reserved. | Version <span id="appVersion">Loading...</span></p>
             </div>
@@ -1363,8 +1469,10 @@
                     <select id="orderStationId" required></select>
                 </div>
                 <div class="form-group">
-                    <label for="orderAdvertiserName">Advertiser Name *</label>
-                    <input type="text" id="orderAdvertiserName" required>
+                    <label for="orderAdvertiserId">Advertiser *</label>
+                    <select id="orderAdvertiserId" required>
+                        <option value="">Select Advertiser</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="orderAgencyName">Agency Name</label>
@@ -1664,6 +1772,9 @@
                 'advertisers': 'Advertiser Management',
                 'agencies': 'Agency Management',
                 'sales-reps': 'Sales Representative Management',
+                'campaigns': 'Campaign Management',
+                'spots': 'Spots & Production',
+                'voice-tracks': 'Voice Tracks',
                 'users': 'User Management'
             };
             document.getElementById('pageTitle').textContent = titles[tabName] || 'Dashboard';
@@ -1752,6 +1863,36 @@
                         'Track commission rates'
                     ]
                 },
+                'campaigns': {
+                    title: 'Campaign Management',
+                    description: 'Campaigns group advertising spots together for an advertiser. They connect orders to the spots that will air on your station.',
+                    features: [
+                        'Create campaigns from orders',
+                        'Set start and end dates',
+                        'Track spot scheduling progress',
+                        'Manage advertiser relationships'
+                    ]
+                },
+                'spots': {
+                    title: 'Spots & Production',
+                    description: 'Spots are individual advertisements that will air on your station. The production workflow manages voice talent, audio recording, and approval.',
+                    features: [
+                        'Create spots from campaigns',
+                        'Assign to voice talent',
+                        'Upload and manage audio files',
+                        'Track production status (draft -> ready -> scheduled -> aired)'
+                    ]
+                },
+                'voice-tracks': {
+                    title: 'Voice Tracks',
+                    description: 'Voice tracks are pre-recorded DJ segments that play between songs. DJs can see what songs play before and after their voice tracks.',
+                    features: [
+                        'Create voice track slots',
+                        'See song before/after context',
+                        'Record directly in browser',
+                        'Schedule into daily logs'
+                    ]
+                },
                 'users': {
                     title: 'User Management',
                     description: 'Manage system users, their roles, and permissions. Users can have different roles with varying access levels.',
@@ -1823,6 +1964,18 @@
                     break;
                 case 'sales-reps':
                     loadSalesReps();
+                    break;
+                case 'campaigns':
+                    document.getElementById('pageTitle').textContent = 'Campaign Management';
+                    loadCampaigns();
+                    break;
+                case 'spots':
+                    document.getElementById('pageTitle').textContent = 'Spots & Production';
+                    loadSpots();
+                    break;
+                case 'voice-tracks':
+                    document.getElementById('pageTitle').textContent = 'Voice Tracks';
+                    loadVoiceTracks();
                     break;
                 case 'users':
                     loadUsers();
@@ -3221,7 +3374,9 @@
             }
             emptyState.style.display = 'none';
             table.style.display = 'table';
-            tableBody.innerHTML = salesReps.map(sr => `
+            tableBody.innerHTML = salesReps.map(sr => {
+                const fullName = `${sr.firstName} ${sr.lastName}`.replace(/'/g, "\\'");
+                return `
                 <tr>
                     <td>${sr.firstName} ${sr.lastName}</td>
                     <td>${sr.email}</td>
@@ -3230,12 +3385,183 @@
                     <td>
                         <div class="action-buttons">
                             <button class="btn btn-secondary btn-sm" onclick="editSalesRep('${sr.id}')">Edit</button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteSalesRep('${sr.id}', '${sr.firstName} ${sr.lastName}')">Delete</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteSalesRep('${sr.id}', '${fullName}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        // ============ CAMPAIGNS, SPOTS & VOICE TRACKS ============
+
+        async function loadCampaigns() {
+            try {
+                const response = await fetch('/api/campaigns', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load campaigns');
+                const campaigns = await response.json();
+                displayCampaigns(campaigns);
+            } catch (error) {
+                console.error('Error loading campaigns:', error);
+                showError('Failed to load campaigns');
+            }
+        }
+
+        function displayCampaigns(campaigns) {
+            const tableBody = document.getElementById('campaignsTableBody');
+            const loadingState = document.getElementById('campaignsLoadingState');
+            const emptyState = document.getElementById('campaignsEmptyState');
+            const table = document.getElementById('campaignsTable');
+
+            loadingState.style.display = 'none';
+            if (campaigns.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = campaigns.map(c => `
+                <tr>
+                    <td><strong>${c.name}</strong></td>
+                    <td>${c.advertiserName || '-'}</td>
+                    <td>${c.stationCallSign || '-'}</td>
+                    <td>${new Date(c.startDate).toLocaleDateString()}</td>
+                    <td>${new Date(c.endDate).toLocaleDateString()}</td>
+                    <td><span class="badge badge-${c.status.toLowerCase()}">${c.status}</span></td>
+                    <td>${c.spotsScheduled || 0} / ${c.totalSpots || 0}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editCampaign('${c.id}')">Edit</button>
+                            <button class="btn btn-primary btn-sm" onclick="viewCampaignSpots('${c.id}', '${c.name.replace(/'/g, "\\'")}')">View Spots</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteCampaign('${c.id}', '${c.name.replace(/'/g, "\\'")}')">Delete</button>
                         </div>
                     </td>
                 </tr>
             `).join('');
         }
+
+        async function loadSpots() {
+            try {
+                const response = await fetch('/api/spots', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load spots');
+                const spots = await response.json();
+                displaySpots(spots);
+            } catch (error) {
+                console.error('Error loading spots:', error);
+                showError('Failed to load spots');
+            }
+        }
+
+        function displaySpots(spots) {
+            const tableBody = document.getElementById('spotsTableBody');
+            const loadingState = document.getElementById('spotsLoadingState');
+            const emptyState = document.getElementById('spotsEmptyState');
+            const table = document.getElementById('spotsTable');
+
+            loadingState.style.display = 'none';
+            if (spots.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = spots.map(s => `
+                <tr>
+                    <td><strong>${s.name}</strong></td>
+                    <td>${s.campaignName || '-'}</td>
+                    <td>${s.durationSeconds ? s.durationSeconds + 's' : '-'}</td>
+                    <td><span class="badge badge-${(s.status || 'draft').toLowerCase()}">${s.status || 'DRAFT'}</span></td>
+                    <td>${s.audioFileUrl ? '✅ Ready' : '⏳ Pending'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editSpot('${s.id}')">Edit</button>
+                            <button class="btn btn-primary btn-sm" onclick="uploadSpotAudio('${s.id}')">Upload Audio</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteSpot('${s.id}', '${s.name.replace(/'/g, "\\'")}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadVoiceTracks() {
+            try {
+                const response = await fetch('/api/voice-tracks', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load voice tracks');
+                const voiceTracks = await response.json();
+                displayVoiceTracks(voiceTracks);
+            } catch (error) {
+                console.error('Error loading voice tracks:', error);
+                showError('Failed to load voice tracks');
+            }
+        }
+
+        function displayVoiceTracks(voiceTracks) {
+            const tableBody = document.getElementById('voiceTracksTableBody');
+            const loadingState = document.getElementById('voiceTracksLoadingState');
+            const emptyState = document.getElementById('voiceTracksEmptyState');
+            const table = document.getElementById('voiceTracksTable');
+
+            loadingState.style.display = 'none';
+            if (voiceTracks.length === 0) {
+                emptyState.style.display = 'block';
+                table.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tableBody.innerHTML = voiceTracks.map(vt => `
+                <tr>
+                    <td><strong>${vt.title}</strong></td>
+                    <td>${vt.stationCallSign || '-'}</td>
+                    <td>${vt.durationSeconds ? vt.durationSeconds + 's' : '-'}</td>
+                    <td>${vt.scheduledDate ? new Date(vt.scheduledDate).toLocaleString() : 'Not scheduled'}</td>
+                    <td>${vt.songBeforeTitle || '-'}</td>
+                    <td>${vt.songAfterTitle || '-'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editVoiceTrack('${vt.id}')">Edit</button>
+                            <button class="btn btn-primary btn-sm" onclick="recordVoiceTrack('${vt.id}')">Record</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteVoiceTrack('${vt.id}', '${vt.title.replace(/'/g, "\\'")}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Placeholder functions for new modals
+        function openCampaignModal() { showError('Campaign creation - UI in progress. API is ready at /api/campaigns'); }
+        function editCampaign(id) { showError('Campaign editing - UI in progress'); }
+        function deleteCampaign(id, name) { 
+            if (!confirm(`Delete campaign "${name}"?`)) return;
+            showError('Campaign deletion - UI in progress'); 
+        }
+        function viewCampaignSpots(campaignId, campaignName) {
+            switchTab('spots');
+            showSuccess(`Showing spots for campaign: ${campaignName}`);
+        }
+
+        function openSpotModal() { showError('Spot creation - UI in progress. API is ready at /api/spots'); }
+        function editSpot(id) { showError('Spot editing - UI in progress'); }
+        function deleteSpot(id, name) { 
+            if (!confirm(`Delete spot "${name}"?`)) return;
+            showError('Spot deletion - UI in progress'); 
+        }
+        function uploadSpotAudio(id) { showError('Audio upload - UI in progress'); }
+
+        function openVoiceTrackModal() { showError('Voice track creation - UI in progress. API is ready at /api/voice-tracks'); }
+        function editVoiceTrack(id) { showError('Voice track editing - UI in progress'); }
+        function deleteVoiceTrack(id, title) { 
+            if (!confirm(`Delete voice track "${title}"?`)) return;
+            showError('Voice track deletion - UI in progress'); 
+        }
+        function recordVoiceTrack(id) { showError('Voice recording interface - UI in progress'); }
 
         // User management (existing functions)
         async function loadUsers() {
@@ -3835,8 +4161,183 @@
                 }
             }
         });
-        function openOrderModal() { showError('Order creation - Coming soon'); }
-        
+        // Order Modal Functions
+        async function openOrderModal() {
+            document.getElementById('orderModalTitle').textContent = 'Create Order';
+            document.getElementById('orderForm').reset();
+            document.getElementById('orderId').value = '';
+            await populateOrderStationDropdown();
+            await populateOrderAdvertiserDropdown();
+            document.getElementById('orderModal').classList.add('show');
+        }
+
+        async function populateOrderAdvertiserDropdown() {
+            const advertiserSelect = document.getElementById('orderAdvertiserId');
+            advertiserSelect.innerHTML = '<option value="">Select Advertiser</option>';
+            try {
+                const response = await fetch('/api/advertisers', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (response.ok) {
+                    const advertisers = await response.json();
+                    advertisers.forEach(advertiser => {
+                        const option = document.createElement('option');
+                        option.value = advertiser.id;
+                        option.textContent = advertiser.name;
+                        option.dataset.agencyId = advertiser.agencyId || '';
+                        option.dataset.salesRepId = advertiser.salesRepId || '';
+                        option.dataset.agencyName = advertiser.agencyName || '';
+                        option.dataset.salesRepName = advertiser.salesRepName || '';
+                        advertiserSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading advertisers:', error);
+            }
+        }
+
+        function closeOrderModal() {
+            document.getElementById('orderModal').classList.remove('show');
+        }
+
+        async function populateOrderStationDropdown() {
+            const stationSelect = document.getElementById('orderStationId');
+            stationSelect.innerHTML = '<option value="">Select Station</option>';
+            try {
+                const response = await fetch('/api/stations', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (response.ok) {
+                    const stations = await response.json();
+                    stations.forEach(station => {
+                        const option = document.createElement('option');
+                        option.value = station.id;
+                        option.textContent = `${station.callSign} - ${station.name}`;
+                        stationSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading stations:', error);
+            }
+        }
+
+        async function editOrder(id) {
+            try {
+                const response = await fetch(`/api/orders/${id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load order');
+                const order = await response.json();
+                
+                document.getElementById('orderModalTitle').textContent = 'Edit Order';
+                document.getElementById('orderId').value = order.id;
+                await populateOrderStationDropdown();
+                await populateOrderAdvertiserDropdown();
+                
+                document.getElementById('orderStationId').value = order.stationId || '';
+                // For edit, we need to match by advertiser name since the API returns name not ID
+                // This is a workaround until the Order model is updated to use advertiserId
+                const advertiserSelect = document.getElementById('orderAdvertiserId');
+                let matched = false;
+                for (let option of advertiserSelect.options) {
+                    if (option.textContent === order.advertiserName) {
+                        advertiserSelect.value = option.value;
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched) {
+                    // If no match found, create a temporary option
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = order.advertiserName + ' (not in system)';
+                    advertiserSelect.appendChild(option);
+                    advertiserSelect.value = '';
+                }
+                document.getElementById('orderAgencyName').value = order.agencyName || '';
+                document.getElementById('orderSalesRepName').value = order.salesRepName || '';
+                document.getElementById('orderStartDate').value = order.startDate || '';
+                document.getElementById('orderEndDate').value = order.endDate || '';
+                document.getElementById('orderTotalSpots').value = order.totalSpots || '';
+                document.getElementById('orderTotalAmount').value = order.totalAmount || '';
+                document.getElementById('orderNotes').value = order.notes || '';
+                
+                document.getElementById('orderModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading order:', error);
+                showError('Failed to load order');
+            }
+        }
+
+        async function deleteOrder(id, orderNumber) {
+            if (!confirm(`Are you sure you want to delete order "${orderNumber}"?`)) return;
+            try {
+                const response = await fetch(`/api/orders/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete order');
+                showSuccess('Order deleted successfully');
+                loadOrders();
+            } catch (error) {
+                console.error('Error deleting order:', error);
+                showError('Failed to delete order');
+            }
+        }
+
+        // Order Form Submit Handler
+        document.getElementById('orderForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('orderModalErrorMessage');
+            if (errorMsg) errorMsg.classList.remove('show');
+
+            const orderId = document.getElementById('orderId').value;
+            const advertiserSelect = document.getElementById('orderAdvertiserId');
+            const advertiserName = advertiserSelect.options[advertiserSelect.selectedIndex].textContent;
+            const selectedOption = advertiserSelect.options[advertiserSelect.selectedIndex];
+            
+            const orderData = {
+                stationId: document.getElementById('orderStationId').value,
+                advertiserName: advertiserName === 'Select Advertiser' ? '' : advertiserName,
+                agencyName: document.getElementById('orderAgencyName').value || selectedOption.dataset.agencyName || null,
+                salesRepName: document.getElementById('orderSalesRepName').value || selectedOption.dataset.salesRepName || null,
+                startDate: document.getElementById('orderStartDate').value,
+                endDate: document.getElementById('orderEndDate').value,
+                totalSpots: document.getElementById('orderTotalSpots').value ? parseInt(document.getElementById('orderTotalSpots').value) : null,
+                totalAmount: document.getElementById('orderTotalAmount').value ? parseFloat(document.getElementById('orderTotalAmount').value) : null,
+                notes: document.getElementById('orderNotes').value || null
+            };
+
+            try {
+                const url = orderId ? `/api/orders/${orderId}` : '/api/orders';
+                const method = orderId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(orderData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    throw new Error(errorData?.message || `Failed to ${orderId ? 'update' : 'create'} order`);
+                }
+
+                showSuccess(`Order ${orderId ? 'updated' : 'created'} successfully`);
+                closeOrderModal();
+                loadOrders();
+            } catch (error) {
+                console.error('Error saving order:', error);
+                if (errorMsg) {
+                    errorMsg.textContent = error.message || 'Failed to save order';
+                    errorMsg.classList.add('show');
+                }
+            }
+        });
+
         // Advertiser Modal Functions
         async function openAdvertiserModal() {
             document.getElementById('advertiserModalTitle').textContent = 'Create Advertiser';
@@ -3985,8 +4486,204 @@
             }
         });
 
-        function openAgencyModal() { showError('Agency creation - Coming soon'); }
-        function openSalesRepModal() { showError('Sales rep creation - Coming soon'); }
+        // Agency Modal Functions
+        async function openAgencyModal() {
+            document.getElementById('agencyModalTitle').textContent = 'Create Agency';
+            document.getElementById('agencyForm').reset();
+            document.getElementById('agencyId').value = '';
+            document.getElementById('agencyIsActive').value = 'true';
+            document.getElementById('agencyModal').classList.add('show');
+        }
+
+        function closeAgencyModal() {
+            document.getElementById('agencyModal').classList.remove('show');
+        }
+
+        async function editAgency(id) {
+            try {
+                const response = await fetch(`/api/agencies/${id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load agency');
+                const agency = await response.json();
+                
+                document.getElementById('agencyModalTitle').textContent = 'Edit Agency';
+                document.getElementById('agencyId').value = agency.id;
+                document.getElementById('agencyName').value = agency.name || '';
+                document.getElementById('agencyLegalName').value = agency.legalName || '';
+                document.getElementById('agencyEmail').value = agency.email || '';
+                document.getElementById('agencyPhone').value = agency.phone || '';
+                document.getElementById('agencyIsActive').value = agency.isActive !== false ? 'true' : 'false';
+                
+                document.getElementById('agencyModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading agency:', error);
+                showError('Failed to load agency');
+            }
+        }
+
+        async function deleteAgency(id, name) {
+            if (!confirm(`Are you sure you want to delete agency "${name}"?`)) return;
+            try {
+                const response = await fetch(`/api/agencies/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete agency');
+                showSuccess('Agency deleted successfully');
+                loadAgencies();
+                // Also refresh advertisers since they reference agencies
+                loadAdvertisers();
+            } catch (error) {
+                console.error('Error deleting agency:', error);
+                showError('Failed to delete agency');
+            }
+        }
+
+        // Agency Form Submit Handler
+        document.getElementById('agencyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('agencyModalErrorMessage');
+            if (errorMsg) errorMsg.classList.remove('show');
+
+            const agencyId = document.getElementById('agencyId').value;
+            const agencyData = {
+                name: document.getElementById('agencyName').value,
+                legalName: document.getElementById('agencyLegalName').value || null,
+                email: document.getElementById('agencyEmail').value || null,
+                phone: document.getElementById('agencyPhone').value || null,
+                isActive: document.getElementById('agencyIsActive').value === 'true'
+            };
+
+            try {
+                const url = agencyId ? `/api/agencies/${agencyId}` : '/api/agencies';
+                const method = agencyId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(agencyData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    throw new Error(errorData?.message || `Failed to ${agencyId ? 'update' : 'create'} agency`);
+                }
+
+                showSuccess(`Agency ${agencyId ? 'updated' : 'created'} successfully`);
+                closeAgencyModal();
+                loadAgencies();
+            } catch (error) {
+                console.error('Error saving agency:', error);
+                if (errorMsg) {
+                    errorMsg.textContent = error.message || 'Failed to save agency';
+                    errorMsg.classList.add('show');
+                }
+            }
+        });
+
+        // Sales Rep Modal Functions
+        async function openSalesRepModal() {
+            document.getElementById('salesRepModalTitle').textContent = 'Create Sales Representative';
+            document.getElementById('salesRepForm').reset();
+            document.getElementById('salesRepId').value = '';
+            document.getElementById('salesRepIsActive').value = 'true';
+            document.getElementById('salesRepModal').classList.add('show');
+        }
+
+        function closeSalesRepModal() {
+            document.getElementById('salesRepModal').classList.remove('show');
+        }
+
+        async function editSalesRep(id) {
+            try {
+                const response = await fetch(`/api/sales-reps/${id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load sales rep');
+                const salesRep = await response.json();
+                
+                document.getElementById('salesRepModalTitle').textContent = 'Edit Sales Representative';
+                document.getElementById('salesRepId').value = salesRep.id;
+                document.getElementById('salesRepFirstName').value = salesRep.firstName || '';
+                document.getElementById('salesRepLastName').value = salesRep.lastName || '';
+                document.getElementById('salesRepEmail').value = salesRep.email || '';
+                document.getElementById('salesRepPhone').value = salesRep.phone || '';
+                document.getElementById('salesRepIsActive').value = salesRep.isActive !== false ? 'true' : 'false';
+                
+                document.getElementById('salesRepModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading sales rep:', error);
+                showError('Failed to load sales rep');
+            }
+        }
+
+        async function deleteSalesRep(id, name) {
+            const fullName = name || 'this sales rep';
+            if (!confirm(`Are you sure you want to delete sales rep "${fullName}"?`)) return;
+            try {
+                const response = await fetch(`/api/sales-reps/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete sales rep');
+                showSuccess('Sales rep deleted successfully');
+                loadSalesReps();
+                // Also refresh advertisers since they reference sales reps
+                loadAdvertisers();
+            } catch (error) {
+                console.error('Error deleting sales rep:', error);
+                showError('Failed to delete sales rep');
+            }
+        }
+
+        // Sales Rep Form Submit Handler
+        document.getElementById('salesRepForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('salesRepModalErrorMessage');
+            if (errorMsg) errorMsg.classList.remove('show');
+
+            const salesRepId = document.getElementById('salesRepId').value;
+            const salesRepData = {
+                firstName: document.getElementById('salesRepFirstName').value,
+                lastName: document.getElementById('salesRepLastName').value,
+                email: document.getElementById('salesRepEmail').value,
+                phone: document.getElementById('salesRepPhone').value || null,
+                isActive: document.getElementById('salesRepIsActive').value === 'true'
+            };
+
+            try {
+                const url = salesRepId ? `/api/sales-reps/${salesRepId}` : '/api/sales-reps';
+                const method = salesRepId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(salesRepData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    throw new Error(errorData?.message || `Failed to ${salesRepId ? 'update' : 'create'} sales rep`);
+                }
+
+                showSuccess(`Sales rep ${salesRepId ? 'updated' : 'created'} successfully`);
+                closeSalesRepModal();
+                loadSalesReps();
+            } catch (error) {
+                console.error('Error saving sales rep:', error);
+                if (errorMsg) {
+                    errorMsg.textContent = error.message || 'Failed to save sales rep';
+                    errorMsg.classList.add('show');
+                }
+            }
+        });
 
         function showError(message) {
             const errorDiv = document.getElementById('errorMessage');
