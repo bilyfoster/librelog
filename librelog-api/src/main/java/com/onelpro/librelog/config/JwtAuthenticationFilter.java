@@ -46,9 +46,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		if (path == null) {
 			return false;
 		}
+		
+		// Public endpoints that don't require JWT validation
+		boolean isPublicAuthEndpoint = path.equals("/api/auth/login") ||
+				path.equals("/api/auth/register") ||
+				path.equals("/api/auth/refresh") ||
+				path.equals("/api/auth/logout");
+		
 		return path.equals("/") ||
 				path.endsWith(".html") ||
-				path.startsWith("/api/auth/") ||
+				isPublicAuthEndpoint ||
 				path.startsWith("/swagger-ui/") ||
 				path.startsWith("/api-docs/") ||
 				path.startsWith("/actuator/") ||
