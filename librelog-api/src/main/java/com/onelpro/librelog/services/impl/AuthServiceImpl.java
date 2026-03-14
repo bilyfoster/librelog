@@ -82,21 +82,28 @@ public class AuthServiceImpl implements AuthService {
 
 	@Override
 	public AuthResponseDTO login(LoginRequestDTO request) {
-		logger.info("Login attempt for email: {}", request.getEmail());
+		String effectiveEmail = request.getEffectiveEmail();
+		
+		if (effectiveEmail == null || effectiveEmail.trim().isEmpty()) {
+			logger.warn("Login failed: email or username is required");
+			throw new UnauthorizedException("Email or username is required");
+		}
+		
+		logger.info("Login attempt for email: {}", effectiveEmail);
 
-		User user = userRepository.findByEmail(request.getEmail())
+		User user = userRepository.findByEmail(effectiveEmail)
 				.orElseThrow(() -> {
-					logger.warn("Login failed: user not found - {}", request.getEmail());
+					logger.warn("Login failed: user not found - {}", effectiveEmail);
 					return new UnauthorizedException("Invalid email or password");
 				});
 
 		if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-			logger.warn("Login failed: invalid password for user - {}", request.getEmail());
+			logger.warn("Login failed: invalid password for user - {}", effectiveEmail);
 			throw new UnauthorizedException("Invalid email or password");
 		}
 
 		if (user.getStatus() != UserStatus.ACTIVE) {
-			logger.warn("Login failed: user account is not active - {}", request.getEmail());
+			logger.warn("Login failed: user account is not active - {}", effectiveEmail);
 			throw new UnauthorizedException("Account is not active");
 		}
 

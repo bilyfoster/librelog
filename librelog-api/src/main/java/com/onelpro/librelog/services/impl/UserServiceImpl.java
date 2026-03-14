@@ -420,6 +420,7 @@ public class UserServiceImpl implements UserService {
 
 	/**
 	 * Gets the client IP address from the current HTTP request.
+	 * Returns null if request context is not available.
 	 */
 	private String getClientIpAddress() {
 		try {
@@ -433,13 +434,14 @@ public class UserServiceImpl implements UserService {
 				return request.getRemoteAddr();
 			}
 		} catch (Exception e) {
-			logger.warn("Failed to get client IP address", e);
+			logger.debug("Could not get client IP address: {}", e.getMessage());
 		}
 		return null;
 	}
 
 	/**
 	 * Gets the user agent from the current HTTP request.
+	 * Returns null if request context is not available.
 	 */
 	private String getUserAgent() {
 		try {
@@ -449,7 +451,7 @@ public class UserServiceImpl implements UserService {
 				return request.getHeader("User-Agent");
 			}
 		} catch (Exception e) {
-			logger.warn("Failed to get user agent", e);
+			logger.debug("Could not get user agent: {}", e.getMessage());
 		}
 		return null;
 	}
