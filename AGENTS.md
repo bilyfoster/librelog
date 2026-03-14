@@ -19,5 +19,5 @@ SUCCESS: Returns 200 with JWT token
 
 NEXT PRIORITIES:
 - ✅ Fix Order model (add advertiserId relationship) - DONE in v0.1.7
-- Fix Voice Track model (add song before/after context)
-- Implement Campaign from Order workflow
+- ✅ Fix Voice Track model (add song context) - DONE in v0.1.8
+- Implement Campaign from Order workflow - NEXT

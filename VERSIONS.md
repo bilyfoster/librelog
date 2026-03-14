@@ -92,6 +92,20 @@ curl https://log.gayphx.com/actuator/health
 
 ---
 
+### 0.1.8 (March 14, 2026)
+**Status**: Deployed ✅
+**Changes**:
+- Added song_before_id and song_after_id to voice_tracks table
+- VoiceTrack entity has @ManyToOne relationships to Track for song context
+- Added denormalized songBeforeTitle and songAfterTitle for display
+- VoiceTrackRequestDTO accepts songBeforeId and songAfterId
+- VoiceTrackResponseDTO includes full song context (ID, title, artist)
+- DJs can now see song context when recording voice tracks
+
+**Deployment Date**: March 14, 2026
+
+---
+
 ## Deployment Checklist
 
 - [ ] Version updated in pom.xml (parent)
