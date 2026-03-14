@@ -8,9 +8,15 @@ import com.onelpro.librelog.enums.OrderStatus;
 import com.onelpro.librelog.exceptions.BadRequestException;
 import com.onelpro.librelog.exceptions.ForbiddenException;
 import com.onelpro.librelog.exceptions.NotFoundException;
+import com.onelpro.librelog.models.Advertiser;
+import com.onelpro.librelog.models.Agency;
 import com.onelpro.librelog.models.Order;
+import com.onelpro.librelog.models.SalesRep;
 import com.onelpro.librelog.models.Station;
+import com.onelpro.librelog.repositories.AdvertiserRepository;
+import com.onelpro.librelog.repositories.AgencyRepository;
 import com.onelpro.librelog.repositories.OrderRepository;
+import com.onelpro.librelog.repositories.SalesRepRepository;
 import com.onelpro.librelog.repositories.StationRepository;
 import com.onelpro.librelog.services.OrderService;
 import com.onelpro.librelog.services.PermissionService;
@@ -36,14 +42,23 @@ public class OrderServiceImpl implements OrderService {
 
 	private final OrderRepository orderRepository;
 	private final StationRepository stationRepository;
+	private final AdvertiserRepository advertiserRepository;
+	private final AgencyRepository agencyRepository;
+	private final SalesRepRepository salesRepRepository;
 	private final PermissionService permissionService;
 
 	public OrderServiceImpl(
 			OrderRepository orderRepository,
 			StationRepository stationRepository,
+			AdvertiserRepository advertiserRepository,
+			AgencyRepository agencyRepository,
+			SalesRepRepository salesRepRepository,
 			PermissionService permissionService) {
 		this.orderRepository = orderRepository;
 		this.stationRepository = stationRepository;
+		this.advertiserRepository = advertiserRepository;
+		this.agencyRepository = agencyRepository;
+		this.salesRepRepository = salesRepRepository;
 		this.permissionService = permissionService;
 	}
 
@@ -75,14 +90,18 @@ public class OrderServiceImpl implements OrderService {
 					return new NotFoundException("Station not found with ID: " + request.getStationId());
 				});
 
+		// Resolve advertiser details
+		AdvertiserDetails details = resolveAdvertiserDetails(request);
+
 		String orderNumber = generateOrderNumber(station);
 
 		Order order = Order.builder()
 				.orderNumber(orderNumber)
 				.station(station)
-				.advertiserName(request.getAdvertiserName())
-				.agencyName(request.getAgencyName())
-				.salesRepName(request.getSalesRepName())
+				.advertiser(details.advertiser)
+				.advertiserName(details.advertiserName)
+				.agencyName(details.agencyName)
+				.salesRepName(details.salesRepName)
 				.status(OrderStatus.DRAFT)
 				.startDate(request.getStartDate())
 				.endDate(request.getEndDate())
@@ -230,10 +249,14 @@ public class OrderServiceImpl implements OrderService {
 					return new NotFoundException("Station not found with ID: " + request.getStationId());
 				});
 
+		// Resolve advertiser details
+		AdvertiserDetails details = resolveAdvertiserDetails(request);
+
 		order.setStation(station);
-		order.setAdvertiserName(request.getAdvertiserName());
-		order.setAgencyName(request.getAgencyName());
-		order.setSalesRepName(request.getSalesRepName());
+		order.setAdvertiser(details.advertiser);
+		order.setAdvertiserName(details.advertiserName);
+		order.setAgencyName(details.agencyName);
+		order.setSalesRepName(details.salesRepName);
 		order.setStartDate(request.getStartDate());
 		order.setEndDate(request.getEndDate());
 		order.setTotalSpots(request.getTotalSpots());
@@ -312,14 +335,27 @@ public class OrderServiceImpl implements OrderService {
 	}
 
 	private OrderResponseDTO mapToResponseDTO(Order order) {
+		// Extract IDs from related entities
+		UUID advertiserId = order.getAdvertiser() != null ? order.getAdvertiser().getId() : null;
+		UUID agencyId = null;
+		UUID salesRepId = null;
+		
+		if (order.getAdvertiser() != null) {
+			agencyId = order.getAdvertiser().getAgencyId();
+			salesRepId = order.getAdvertiser().getSalesRepId();
+		}
+		
 		return OrderResponseDTO.builder()
 				.id(order.getId())
 				.orderNumber(order.getOrderNumber())
 				.stationId(order.getStation().getId())
 				.stationCallSign(order.getStation().getCallSign())
 				.stationName(order.getStation().getName())
+				.advertiserId(advertiserId)
 				.advertiserName(order.getAdvertiserName())
+				.agencyId(agencyId)
 				.agencyName(order.getAgencyName())
+				.salesRepId(salesRepId)
 				.salesRepName(order.getSalesRepName())
 				.status(order.getStatus())
 				.startDate(order.getStartDate())
@@ -330,6 +366,56 @@ public class OrderServiceImpl implements OrderService {
 				.createdAt(order.getCreatedAt())
 				.updatedAt(order.getUpdatedAt())
 				.build();
+	}
+
+	/**
+	 * Resolves advertiser details from the request.
+	 * If advertiserId is provided, looks up the advertiser and auto-populates details.
+	 * Otherwise uses the provided name fields.
+	 */
+	private AdvertiserDetails resolveAdvertiserDetails(OrderRequestDTO request) {
+		if (request.getAdvertiserId() != null) {
+			Advertiser advertiser = advertiserRepository.findById(request.getAdvertiserId())
+					.orElseThrow(() -> {
+						logger.warn("Advertiser not found with ID: {}", request.getAdvertiserId());
+						return new NotFoundException("Advertiser not found with ID: " + request.getAdvertiserId());
+					});
+			
+			// Use provided names if explicitly set, otherwise auto-populate from advertiser
+			String advertiserName = request.getAdvertiserName() != null && !request.getAdvertiserName().trim().isEmpty() 
+					? request.getAdvertiserName() 
+					: advertiser.getName();
+			
+			// Get agency name from advertiser's agency if available
+			String agencyName = request.getAgencyName();
+			if ((agencyName == null || agencyName.trim().isEmpty()) && advertiser.getAgencyId() != null) {
+				agencyName = agencyRepository.findById(advertiser.getAgencyId())
+						.map(Agency::getName)
+						.orElse(null);
+			}
+			
+			// Get sales rep name from advertiser's sales rep if available
+			String salesRepName = request.getSalesRepName();
+			if ((salesRepName == null || salesRepName.trim().isEmpty()) && advertiser.getSalesRepId() != null) {
+				salesRepName = salesRepRepository.findById(advertiser.getSalesRepId())
+						.map(sr -> sr.getFirstName() + " " + sr.getLastName())
+						.orElse(null);
+			}
+			
+			return new AdvertiserDetails(advertiser, advertiserName, agencyName, salesRepName);
+		} else {
+			// No advertiser ID provided - use manual entry (backward compatibility)
+			if (request.getAdvertiserName() == null || request.getAdvertiserName().trim().isEmpty()) {
+				throw new BadRequestException("Either advertiserId or advertiserName is required");
+			}
+			return new AdvertiserDetails(null, request.getAdvertiserName(), request.getAgencyName(), request.getSalesRepName());
+		}
+	}
+
+	/**
+	 * Helper record to hold resolved advertiser details.
+	 */
+	private record AdvertiserDetails(Advertiser advertiser, String advertiserName, String agencyName, String salesRepName) {
 	}
 
 }

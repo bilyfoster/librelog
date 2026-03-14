@@ -24,8 +24,15 @@ public class OrderResponseDTO {
 	private UUID stationId;
 	private String stationCallSign;
 	private String stationName;
+	
+	// Advertiser relationship
+	private UUID advertiserId;
 	private String advertiserName;
+	
+	// Agency and Sales Rep (auto-populated from advertiser or manually set)
+	private UUID agencyId;
 	private String agencyName;
+	private UUID salesRepId;
 	private String salesRepName;
 	private OrderStatus status;
 	private LocalDate startDate;
