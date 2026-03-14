@@ -59,14 +59,23 @@ curl https://log.gayphx.com/actuator/health
 
 ---
 
-### 0.1.5 (In Progress - March 14, 2026)
-**Status**: Development 🔄
-**Planned Changes**:
+### 0.1.5 (March 14, 2026)
+**Status**: Deployed ✅
+**Changes**:
 - Fix auth login field compatibility (accept username or email)
-- Fix PUT /auth/profile 500 error
-- Fix Order advertiser relationship
+- Fix PUT /auth/profile 500 error (improved error handling)
 
-**Deployment Date**: TBD
+**Deployment Date**: March 14, 2026
+
+---
+
+### 0.1.6 (March 14, 2026)
+**Status**: Deployed ✅
+**Changes**:
+- Fix JWT filter - /api/auth/me and /api/auth/profile now properly authenticated
+- Previous fix incorrectly allowed all /api/auth/* to skip JWT validation
+
+**Deployment Date**: March 14, 2026
 
 ---
 

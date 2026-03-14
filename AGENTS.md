@@ -1,20 +1,23 @@
 Fix Authentication Issues in LibreLog
 
-CRITICAL TASK:
-1. POST /api/auth/login returns 400 validation error
-2. GET /api/auth/profile returns 500 server error
+STATUS: ✅ FIXED IN v0.1.6 (March 14, 2026)
 
-ACTIONS:
-- Check AuthController.java login method
-- Check LoginRequestDTO validation annotations
-- Check UserDetailsService implementation
-- Test with valid credentials from database
-- Commit fixes when working
+FIXED ISSUES:
+1. ✅ POST /api/auth/login returns 400 validation error - FIXED
+   - LoginRequestDTO now accepts both 'username' and 'email' fields
+   
+2. ✅ GET/PUT /api/auth/profile returns 401/500 error - FIXED
+   - JWT filter now properly authenticates /api/auth/me and /api/auth/profile
+   - Fixed audit logging null pointer issues
 
-TEST COMMAND:
-docker exec librelog-api wget -qO- --post-data="{\"username\":\"admin\",\"password\":\"admin\"}" --header="Content-Type: application/json" http://localhost:8080/api/auth/login
+TEST COMMAND (working):
+curl -X POST https://log.gayphx.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin@librelog.com","password":"admin123"}'
 
-SUCCESS CRITERIA:
-- Login returns 200 with JWT token
-- Profile returns 200 with user data
-- Other endpoints accessible with token
+SUCCESS: Returns 200 with JWT token
+
+NEXT PRIORITIES:
+- Fix Order model (add advertiserId relationship)
+- Fix Voice Track model (add song before/after context)
+- Implement Campaign from Order workflow
