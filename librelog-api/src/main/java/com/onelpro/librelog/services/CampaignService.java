@@ -51,4 +51,14 @@ public interface CampaignService {
 	 */
 	List<CampaignResponseDTO> getActiveCampaigns(UUID stationId);
 
+	/**
+	 * Create a campaign from an order.
+	 */
+	CampaignResponseDTO createFromOrder(UUID orderId);
+
+	/**
+	 * Get campaigns by order ID.
+	 */
+	List<CampaignResponseDTO> getByOrderId(UUID orderId);
+
 }

@@ -57,6 +57,13 @@ public class Campaign {
 	@Column(name = "advertiser_name", nullable = false)
 	private String advertiserName;
 
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "order_id")
+	private Order order;
+
+	@Column(name = "order_id", insertable = false, updatable = false)
+	private UUID orderId;
+
 	@Column(name = "start_date", nullable = false)
 	private LocalDate startDate;
 

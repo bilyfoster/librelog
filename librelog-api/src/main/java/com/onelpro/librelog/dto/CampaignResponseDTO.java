@@ -26,6 +26,7 @@ public class CampaignResponseDTO {
 	private String stationName;
 	private UUID advertiserId;
 	private String advertiserName;
+	private UUID orderId;
 	private LocalDate startDate;
 	private LocalDate endDate;
 	private CampaignStatus status;

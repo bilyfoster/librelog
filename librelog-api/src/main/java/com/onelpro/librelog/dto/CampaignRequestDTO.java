@@ -31,6 +31,8 @@ public class CampaignRequestDTO {
 
 	private String advertiserName;
 
+	private UUID orderId;
+
 	@NotNull(message = "Start date is required")
 	private LocalDate startDate;
 

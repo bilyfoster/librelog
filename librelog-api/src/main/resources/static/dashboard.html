@@ -1520,6 +1520,80 @@
         </div>
     </div>
 
+    <!-- Campaign Modal -->
+    <div id="campaignModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 id="campaignModalTitle">Create Campaign</h2>
+                <button class="close-btn" onclick="closeCampaignModal()">&times;</button>
+            </div>
+            <div class="error-message" id="campaignModalErrorMessage"></div>
+            <form id="campaignForm">
+                <input type="hidden" id="campaignId">
+                <input type="hidden" id="campaignOrderId">
+                <div class="form-group">
+                    <label for="campaignStationId">Station *</label>
+                    <select id="campaignStationId" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="campaignName">Campaign Name *</label>
+                    <input type="text" id="campaignName" required>
+                </div>
+                <div class="form-group">
+                    <label for="campaignAdvertiserId">Advertiser</label>
+                    <select id="campaignAdvertiserId">
+                        <option value="">Select Advertiser</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="campaignAdvertiserName">Advertiser Name *</label>
+                    <input type="text" id="campaignAdvertiserName" required>
+                </div>
+                <div class="form-group">
+                    <label for="campaignSalesRepName">Sales Rep</label>
+                    <input type="text" id="campaignSalesRepName">
+                </div>
+                <div class="form-group">
+                    <label for="campaignStartDate">Start Date *</label>
+                    <input type="date" id="campaignStartDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="campaignEndDate">End Date *</label>
+                    <input type="date" id="campaignEndDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="campaignTotalSpots">Total Spots</label>
+                    <input type="number" id="campaignTotalSpots" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="campaignBudget">Budget</label>
+                    <input type="number" id="campaignBudget" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="campaignStatus">Status</label>
+                    <select id="campaignStatus">
+                        <option value="DRAFT">Draft</option>
+                        <option value="ACTIVE">Active</option>
+                        <option value="PAUSED">Paused</option>
+                        <option value="COMPLETED">Completed</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="campaignCopyInstructions">Copy Instructions</label>
+                    <textarea id="campaignCopyInstructions" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="campaignNotes">Notes</label>
+                    <textarea id="campaignNotes" rows="3"></textarea>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeCampaignModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Advertiser Modal -->
     <div id="advertiserModal" class="modal">
         <div class="modal-content" style="max-width: 700px;">
@@ -3261,6 +3335,7 @@
                     <td>
                         <div class="action-buttons">
                             <button class="btn btn-secondary btn-sm" onclick="editOrder('${o.id}')">Edit</button>
+                            <button class="btn btn-primary btn-sm" onclick="createCampaignFromOrder('${o.id}', '${o.orderNumber}', '${o.advertiserName}', '${o.stationId}')">Create Campaign</button>
                             <button class="btn btn-danger btn-sm" onclick="deleteOrder('${o.id}', '${o.orderNumber}')">Delete</button>
                         </div>
                     </td>
@@ -3546,16 +3621,197 @@
         }
 
         // Placeholder functions for new modals
-        function openCampaignModal() { showError('Campaign creation - UI in progress. API is ready at /api/campaigns'); }
-        function editCampaign(id) { showError('Campaign editing - UI in progress'); }
-        function deleteCampaign(id, name) { 
-            if (!confirm(`Delete campaign "${name}"?`)) return;
-            showError('Campaign deletion - UI in progress'); 
+        async function openCampaignModal() {
+            document.getElementById('campaignModalTitle').textContent = 'Create Campaign';
+            document.getElementById('campaignForm').reset();
+            document.getElementById('campaignId').value = '';
+            document.getElementById('campaignOrderId').value = '';
+            await populateCampaignStationDropdown();
+            await populateCampaignAdvertiserDropdown();
+            document.getElementById('campaignModal').classList.add('show');
         }
+
+        async function createCampaignFromOrder(orderId, orderNumber, advertiserName, stationId) {
+            document.getElementById('campaignModalTitle').textContent = 'Create Campaign from Order';
+            document.getElementById('campaignForm').reset();
+            document.getElementById('campaignId').value = '';
+            document.getElementById('campaignOrderId').value = orderId;
+            await populateCampaignStationDropdown();
+            await populateCampaignAdvertiserDropdown();
+            
+            // Pre-populate from order data
+            document.getElementById('campaignStationId').value = stationId || '';
+            document.getElementById('campaignName').value = advertiserName + ' - ' + orderNumber;
+            document.getElementById('campaignAdvertiserName').value = advertiserName || '';
+            
+            document.getElementById('campaignModal').classList.add('show');
+        }
+
+        async function populateCampaignStationDropdown() {
+            const stationSelect = document.getElementById('campaignStationId');
+            stationSelect.innerHTML = '<option value="">Select Station</option>';
+            try {
+                const response = await fetch('/api/stations', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (response.ok) {
+                    const stations = await response.json();
+                    stations.forEach(station => {
+                        const option = document.createElement('option');
+                        option.value = station.id;
+                        option.textContent = `${station.callSign} - ${station.name}`;
+                        stationSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading stations:', error);
+            }
+        }
+
+        async function populateCampaignAdvertiserDropdown() {
+            const advertiserSelect = document.getElementById('campaignAdvertiserId');
+            advertiserSelect.innerHTML = '<option value="">Select Advertiser</option>';
+            try {
+                const response = await fetch('/api/advertisers', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (response.ok) {
+                    const advertisers = await response.json();
+                    advertisers.forEach(advertiser => {
+                        const option = document.createElement('option');
+                        option.value = advertiser.id;
+                        option.textContent = advertiser.name;
+                        option.dataset.name = advertiser.name;
+                        advertiserSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading advertisers:', error);
+            }
+            
+            // Add change event to auto-populate advertiser name
+            advertiserSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                if (selectedOption && selectedOption.dataset.name) {
+                    document.getElementById('campaignAdvertiserName').value = selectedOption.dataset.name;
+                }
+            });
+        }
+
+        function closeCampaignModal() {
+            document.getElementById('campaignModal').classList.remove('show');
+        }
+
+        async function editCampaign(id) {
+            try {
+                const response = await fetch(`/api/campaigns/${id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load campaign');
+                const campaign = await response.json();
+                
+                document.getElementById('campaignModalTitle').textContent = 'Edit Campaign';
+                document.getElementById('campaignId').value = campaign.id;
+                document.getElementById('campaignOrderId').value = campaign.orderId || '';
+                await populateCampaignStationDropdown();
+                await populateCampaignAdvertiserDropdown();
+                
+                document.getElementById('campaignStationId').value = campaign.stationId || '';
+                document.getElementById('campaignName').value = campaign.name || '';
+                document.getElementById('campaignAdvertiserId').value = campaign.advertiserId || '';
+                document.getElementById('campaignAdvertiserName').value = campaign.advertiserName || '';
+                document.getElementById('campaignSalesRepName').value = campaign.salesRepName || '';
+                document.getElementById('campaignStartDate').value = campaign.startDate || '';
+                document.getElementById('campaignEndDate').value = campaign.endDate || '';
+                document.getElementById('campaignTotalSpots').value = campaign.totalSpots || '';
+                document.getElementById('campaignBudget').value = campaign.budget || '';
+                document.getElementById('campaignStatus').value = campaign.status || 'DRAFT';
+                document.getElementById('campaignCopyInstructions').value = campaign.copyInstructions || '';
+                document.getElementById('campaignNotes').value = campaign.notes || '';
+                
+                document.getElementById('campaignModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading campaign:', error);
+                showError('Failed to load campaign');
+            }
+        }
+
+        async function deleteCampaign(id, name) { 
+            if (!confirm(`Delete campaign "${name}"?`)) return;
+            try {
+                const response = await fetch(`/api/campaigns/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete campaign');
+                showSuccess('Campaign deleted successfully');
+                loadCampaigns();
+            } catch (error) {
+                console.error('Error deleting campaign:', error);
+                showError('Failed to delete campaign');
+            }
+        }
+
         function viewCampaignSpots(campaignId, campaignName) {
             switchTab('spots');
             showSuccess(`Showing spots for campaign: ${campaignName}`);
         }
+
+        // Campaign Form Submit Handler
+        document.getElementById('campaignForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('campaignModalErrorMessage');
+            if (errorMsg) errorMsg.classList.remove('show');
+
+            const campaignId = document.getElementById('campaignId').value;
+            const orderId = document.getElementById('campaignOrderId').value;
+            const advertiserSelect = document.getElementById('campaignAdvertiserId');
+            
+            const campaignData = {
+                stationId: document.getElementById('campaignStationId').value,
+                name: document.getElementById('campaignName').value,
+                advertiserId: advertiserSelect.value || null,
+                advertiserName: document.getElementById('campaignAdvertiserName').value,
+                salesRepName: document.getElementById('campaignSalesRepName').value || null,
+                startDate: document.getElementById('campaignStartDate').value,
+                endDate: document.getElementById('campaignEndDate').value,
+                totalSpots: document.getElementById('campaignTotalSpots').value ? parseInt(document.getElementById('campaignTotalSpots').value) : null,
+                budget: document.getElementById('campaignBudget').value ? parseFloat(document.getElementById('campaignBudget').value) : null,
+                status: document.getElementById('campaignStatus').value,
+                copyInstructions: document.getElementById('campaignCopyInstructions').value || null,
+                notes: document.getElementById('campaignNotes').value || null,
+                orderId: orderId || null
+            };
+
+            try {
+                const url = campaignId ? `/api/campaigns/${campaignId}` : '/api/campaigns';
+                const method = campaignId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(campaignData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    throw new Error(errorData?.message || `Failed to ${campaignId ? 'update' : 'create'} campaign`);
+                }
+
+                closeCampaignModal();
+                showSuccess(`Campaign ${campaignId ? 'updated' : 'created'} successfully`);
+                loadCampaigns();
+            } catch (error) {
+                console.error(`Error ${campaignId ? 'updating' : 'creating'} campaign:`, error);
+                if (errorMsg) {
+                    errorMsg.textContent = error.message || `Failed to ${campaignId ? 'update' : 'create'} campaign`;
+                    errorMsg.classList.add('show');
+                }
+            }
+        });
 
         function openSpotModal() { showError('Spot creation - UI in progress. API is ready at /api/spots'); }
         function editSpot(id) { showError('Spot editing - UI in progress'); }

@@ -6,9 +6,11 @@ import com.onelpro.librelog.enums.CampaignStatus;
 import com.onelpro.librelog.exceptions.NotFoundException;
 import com.onelpro.librelog.models.Advertiser;
 import com.onelpro.librelog.models.Campaign;
+import com.onelpro.librelog.models.Order;
 import com.onelpro.librelog.models.Station;
 import com.onelpro.librelog.repositories.AdvertiserRepository;
 import com.onelpro.librelog.repositories.CampaignRepository;
+import com.onelpro.librelog.repositories.OrderRepository;
 import com.onelpro.librelog.repositories.StationRepository;
 import com.onelpro.librelog.services.CampaignService;
 import org.slf4j.Logger;
@@ -32,13 +34,16 @@ public class CampaignServiceImpl implements CampaignService {
 	private final CampaignRepository campaignRepository;
 	private final StationRepository stationRepository;
 	private final AdvertiserRepository advertiserRepository;
+	private final OrderRepository orderRepository;
 
 	public CampaignServiceImpl(CampaignRepository campaignRepository,
 	                           StationRepository stationRepository,
-	                           AdvertiserRepository advertiserRepository) {
+	                           AdvertiserRepository advertiserRepository,
+	                           OrderRepository orderRepository) {
 		this.campaignRepository = campaignRepository;
 		this.stationRepository = stationRepository;
 		this.advertiserRepository = advertiserRepository;
+		this.orderRepository = orderRepository;
 	}
 
 	@Override
@@ -55,9 +60,18 @@ public class CampaignServiceImpl implements CampaignService {
 					.orElseThrow(() -> new NotFoundException("Advertiser not found with id: " + request.getAdvertiserId()));
 		}
 
+		Order order = null;
+		if (request.getOrderId() != null) {
+			order = orderRepository.findById(request.getOrderId())
+					.orElseThrow(() -> new NotFoundException("Order not found with id: " + request.getOrderId()));
+		}
+
 		String advertiserName = request.getAdvertiserName();
 		if (advertiserName == null && advertiser != null) {
 			advertiserName = advertiser.getName();
+		}
+		if (advertiserName == null && order != null) {
+			advertiserName = order.getAdvertiserName();
 		}
 		if (advertiserName == null) {
 			advertiserName = "Unknown";
@@ -67,6 +81,7 @@ public class CampaignServiceImpl implements CampaignService {
 				.name(request.getName())
 				.station(station)
 				.advertiser(advertiser)
+				.order(order)
 				.advertiserName(advertiserName)
 				.startDate(request.getStartDate())
 				.endDate(request.getEndDate())
@@ -192,6 +207,50 @@ public class CampaignServiceImpl implements CampaignService {
 				.collect(Collectors.toList());
 	}
 
+	@Override
+	@Transactional
+	public CampaignResponseDTO createFromOrder(UUID orderId) {
+		logger.info("Creating campaign from order ID: {}", orderId);
+
+		Order order = orderRepository.findById(orderId)
+				.orElseThrow(() -> new NotFoundException("Order not found with id: " + orderId));
+
+		// Check if campaign already exists for this order
+		if (campaignRepository.existsByOrderId(orderId)) {
+			throw new IllegalStateException("Campaign already exists for order: " + orderId);
+		}
+
+		Campaign campaign = Campaign.builder()
+				.name(order.getAdvertiserName() + " - " + order.getOrderNumber())
+				.station(order.getStation())
+				.order(order)
+				.advertiserName(order.getAdvertiserName())
+				.salesRepName(order.getSalesRepName())
+				.startDate(order.getStartDate())
+				.endDate(order.getEndDate())
+				.totalSpots(order.getTotalSpots() != null ? order.getTotalSpots() : 0)
+				.spotsScheduled(0)
+				.spotsAired(0)
+				.status(CampaignStatus.DRAFT)
+				.createdAt(LocalDateTime.now())
+				.updatedAt(LocalDateTime.now())
+				.build();
+
+		Campaign saved = campaignRepository.save(campaign);
+		logger.info("Campaign created from order successfully with ID: {}", saved.getId());
+
+		return mapToResponseDTO(saved);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<CampaignResponseDTO> getByOrderId(UUID orderId) {
+		logger.debug("Fetching campaigns for order ID: {}", orderId);
+		return campaignRepository.findByOrderId(orderId).stream()
+				.map(this::mapToResponseDTO)
+				.collect(Collectors.toList());
+	}
+
 	private CampaignResponseDTO mapToResponseDTO(Campaign campaign) {
 		return CampaignResponseDTO.builder()
 				.id(campaign.getId())
@@ -200,6 +259,7 @@ public class CampaignServiceImpl implements CampaignService {
 				.stationName(campaign.getStation() != null ? campaign.getStation().getName() : null)
 				.advertiserId(campaign.getAdvertiser() != null ? campaign.getAdvertiser().getId() : null)
 				.advertiserName(campaign.getAdvertiserName())
+				.orderId(campaign.getOrder() != null ? campaign.getOrder().getId() : campaign.getOrderId())
 				.startDate(campaign.getStartDate())
 				.endDate(campaign.getEndDate())
 				.status(campaign.getStatus())

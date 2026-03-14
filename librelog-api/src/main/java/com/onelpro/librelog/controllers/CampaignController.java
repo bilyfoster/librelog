@@ -133,4 +133,30 @@ public class CampaignController {
 		return ResponseEntity.ok(response);
 	}
 
+	@PostMapping("/from-order/{orderId}")
+	@Operation(
+			summary = "Create campaign from order",
+			description = "Creates a new campaign pre-populated with data from an order"
+	)
+	@ApiResponse(responseCode = "201", description = "Campaign created successfully from order")
+	@ApiResponse(responseCode = "404", description = "Order not found")
+	@ApiResponse(responseCode = "409", description = "Campaign already exists for this order")
+	public ResponseEntity<CampaignResponseDTO> createFromOrder(@PathVariable UUID orderId) {
+		logger.info("POST /api/campaigns/from-order/{} - Creating campaign from order", orderId);
+		CampaignResponseDTO response = campaignService.createFromOrder(orderId);
+		return ResponseEntity.status(HttpStatus.CREATED).body(response);
+	}
+
+	@GetMapping("/by-order/{orderId}")
+	@Operation(
+			summary = "Get campaigns by order",
+			description = "Retrieves all campaigns associated with a specific order"
+	)
+	@ApiResponse(responseCode = "200", description = "Campaigns retrieved successfully")
+	public ResponseEntity<List<CampaignResponseDTO>> getByOrder(@PathVariable UUID orderId) {
+		logger.debug("GET /api/campaigns/by-order/{} - Fetching campaigns for order", orderId);
+		List<CampaignResponseDTO> response = campaignService.getByOrderId(orderId);
+		return ResponseEntity.ok(response);
+	}
+
 }

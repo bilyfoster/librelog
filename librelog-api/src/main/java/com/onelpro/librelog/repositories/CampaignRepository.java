@@ -78,4 +78,14 @@ public interface CampaignRepository extends JpaRepository<Campaign, UUID> {
 	 */
 	List<Campaign> findTop5ByOrderByCreatedAtDesc();
 
+	/**
+	 * Find campaigns by order ID.
+	 */
+	List<Campaign> findByOrderId(UUID orderId);
+
+	/**
+	 * Check if campaign exists for order.
+	 */
+	boolean existsByOrderId(UUID orderId);
+
 }
