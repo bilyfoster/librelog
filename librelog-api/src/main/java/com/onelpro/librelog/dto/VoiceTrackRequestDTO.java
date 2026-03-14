@@ -46,4 +46,16 @@ public class VoiceTrackRequestDTO {
 
 	private String status;
 
+	/**
+	 * ID of the song/track that plays BEFORE this voice track.
+	 * Provides context for DJ recording.
+	 */
+	private UUID songBeforeId;
+
+	/**
+	 * ID of the song/track that plays AFTER this voice track.
+	 * Provides context for DJ recording.
+	 */
+	private UUID songAfterId;
+
 }

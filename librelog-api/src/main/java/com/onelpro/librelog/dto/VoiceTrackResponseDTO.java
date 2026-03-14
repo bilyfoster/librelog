@@ -38,6 +38,19 @@ public class VoiceTrackResponseDTO {
 	private UUID recordedById;
 	private String recordedByName;
 	private LocalDateTime recordedAt;
+
+	/**
+	 * Song context for DJ recording.
+	 * songBefore = song playing before this voice track
+	 * songAfter = song playing after this voice track
+	 */
+	private UUID songBeforeId;
+	private String songBeforeTitle;
+	private String songBeforeArtist;
+	private UUID songAfterId;
+	private String songAfterTitle;
+	private String songAfterArtist;
+
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 

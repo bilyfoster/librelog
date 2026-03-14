@@ -4,8 +4,10 @@ import com.onelpro.librelog.dto.VoiceTrackRequestDTO;
 import com.onelpro.librelog.dto.VoiceTrackResponseDTO;
 import com.onelpro.librelog.exceptions.NotFoundException;
 import com.onelpro.librelog.models.Station;
+import com.onelpro.librelog.models.Track;
 import com.onelpro.librelog.models.VoiceTrack;
 import com.onelpro.librelog.repositories.StationRepository;
+import com.onelpro.librelog.repositories.TrackRepository;
 import com.onelpro.librelog.repositories.VoiceTrackRepository;
 import com.onelpro.librelog.services.VoiceTrackService;
 import org.slf4j.Logger;
@@ -29,11 +31,14 @@ public class VoiceTrackServiceImpl implements VoiceTrackService {
 
 	private final VoiceTrackRepository voiceTrackRepository;
 	private final StationRepository stationRepository;
+	private final TrackRepository trackRepository;
 
 	public VoiceTrackServiceImpl(VoiceTrackRepository voiceTrackRepository,
-	                             StationRepository stationRepository) {
+	                             StationRepository stationRepository,
+	                             TrackRepository trackRepository) {
 		this.voiceTrackRepository = voiceTrackRepository;
 		this.stationRepository = stationRepository;
+		this.trackRepository = trackRepository;
 	}
 
 	@Override
@@ -43,6 +48,9 @@ public class VoiceTrackServiceImpl implements VoiceTrackService {
 
 		Station station = stationRepository.findById(request.getStationId())
 				.orElseThrow(() -> new NotFoundException("Station not found with id: " + request.getStationId()));
+
+		// Resolve song context (before/after)
+		SongContext songContext = resolveSongContext(request);
 
 		VoiceTrack voiceTrack = VoiceTrack.builder()
 				.title(request.getTitle())
@@ -57,6 +65,10 @@ public class VoiceTrackServiceImpl implements VoiceTrackService {
 				.scriptText(request.getScriptText())
 				.recordedText(request.getRecordedText())
 				.status(request.getStatus() != null ? request.getStatus() : "DRAFT")
+				.songBefore(songContext.songBefore)
+				.songAfter(songContext.songAfter)
+				.songBeforeTitle(songContext.songBeforeTitle)
+				.songAfterTitle(songContext.songAfterTitle)
 				.createdAt(LocalDateTime.now())
 				.updatedAt(LocalDateTime.now())
 				.build();
@@ -116,6 +128,17 @@ public class VoiceTrackServiceImpl implements VoiceTrackService {
 			Station station = stationRepository.findById(request.getStationId())
 					.orElseThrow(() -> new NotFoundException("Station not found with id: " + request.getStationId()));
 			voiceTrack.setStation(station);
+		}
+
+		// Resolve song context if provided
+		SongContext songContext = resolveSongContext(request);
+		if (songContext.songBefore != null || request.getSongBeforeId() != null) {
+			voiceTrack.setSongBefore(songContext.songBefore);
+			voiceTrack.setSongBeforeTitle(songContext.songBeforeTitle);
+		}
+		if (songContext.songAfter != null || request.getSongAfterId() != null) {
+			voiceTrack.setSongAfter(songContext.songAfter);
+			voiceTrack.setSongAfterTitle(songContext.songAfterTitle);
 		}
 
 		voiceTrack.setTitle(request.getTitle());
@@ -191,6 +214,15 @@ public class VoiceTrackServiceImpl implements VoiceTrackService {
 	}
 
 	private VoiceTrackResponseDTO mapToResponseDTO(VoiceTrack voiceTrack) {
+		// Extract song context IDs and additional info
+		UUID songBeforeId = voiceTrack.getSongBefore() != null ? voiceTrack.getSongBefore().getId() : null;
+		String songBeforeTitle = voiceTrack.getSongBeforeTitle();
+		String songBeforeArtist = voiceTrack.getSongBefore() != null ? voiceTrack.getSongBefore().getArtist() : null;
+		
+		UUID songAfterId = voiceTrack.getSongAfter() != null ? voiceTrack.getSongAfter().getId() : null;
+		String songAfterTitle = voiceTrack.getSongAfterTitle();
+		String songAfterArtist = voiceTrack.getSongAfter() != null ? voiceTrack.getSongAfter().getArtist() : null;
+
 		return VoiceTrackResponseDTO.builder()
 				.id(voiceTrack.getId())
 				.title(voiceTrack.getTitle())
@@ -211,9 +243,48 @@ public class VoiceTrackServiceImpl implements VoiceTrackService {
 				.recordedById(voiceTrack.getRecordedBy() != null ? voiceTrack.getRecordedBy().getId() : null)
 				.recordedByName(voiceTrack.getRecordedBy() != null ? voiceTrack.getRecordedBy().getEmail() : null)
 				.recordedAt(voiceTrack.getRecordedAt())
+				.songBeforeId(songBeforeId)
+				.songBeforeTitle(songBeforeTitle)
+				.songBeforeArtist(songBeforeArtist)
+				.songAfterId(songAfterId)
+				.songAfterTitle(songAfterTitle)
+				.songAfterArtist(songAfterArtist)
 				.createdAt(voiceTrack.getCreatedAt())
 				.updatedAt(voiceTrack.getUpdatedAt())
 				.build();
+	}
+
+	/**
+	 * Resolves song context from the request.
+	 * Looks up tracks by ID and extracts titles for denormalization.
+	 */
+	private SongContext resolveSongContext(VoiceTrackRequestDTO request) {
+		Track songBefore = null;
+		Track songAfter = null;
+		String songBeforeTitle = null;
+		String songAfterTitle = null;
+
+		if (request.getSongBeforeId() != null) {
+			songBefore = trackRepository.findById(request.getSongBeforeId()).orElse(null);
+			if (songBefore != null) {
+				songBeforeTitle = songBefore.getTitle();
+			}
+		}
+
+		if (request.getSongAfterId() != null) {
+			songAfter = trackRepository.findById(request.getSongAfterId()).orElse(null);
+			if (songAfter != null) {
+				songAfterTitle = songAfter.getTitle();
+			}
+		}
+
+		return new SongContext(songBefore, songAfter, songBeforeTitle, songAfterTitle);
+	}
+
+	/**
+	 * Helper record to hold resolved song context.
+	 */
+	private record SongContext(Track songBefore, Track songAfter, String songBeforeTitle, String songAfterTitle) {
 	}
 
 }

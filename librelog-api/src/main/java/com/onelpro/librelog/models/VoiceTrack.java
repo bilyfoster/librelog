@@ -89,6 +89,34 @@ public class VoiceTrack {
 	@Column(name = "recorded_at")
 	private LocalDateTime recordedAt;
 
+	/**
+	 * Reference to the song/track that plays BEFORE this voice track.
+	 * Provides context for the DJ when recording.
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "song_before_id")
+	private Track songBefore;
+
+	/**
+	 * Reference to the song/track that plays AFTER this voice track.
+	 * Provides context for the DJ when recording.
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "song_after_id")
+	private Track songAfter;
+
+	/**
+	 * Denormalized title of the song before (for display without join).
+	 */
+	@Column(name = "song_before_title")
+	private String songBeforeTitle;
+
+	/**
+	 * Denormalized title of the song after (for display without join).
+	 */
+	@Column(name = "song_after_title")
+	private String songAfterTitle;
+
 	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;
 

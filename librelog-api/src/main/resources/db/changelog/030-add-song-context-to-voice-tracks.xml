@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="030-add-song-context-to-voice-tracks" author="librelog">
+        <comment>Add song before/after context to voice_tracks table for DJ recording context</comment>
+        
+        <!-- Add song_before_id column -->
+        <addColumn tableName="voice_tracks">
+            <column name="song_before_id" type="UUID">
+                <constraints nullable="true" foreignKeyName="fk_voice_tracks_song_before" 
+                             references="tracks(id)"/>
+            </column>
+        </addColumn>
+        
+        <!-- Add song_after_id column -->
+        <addColumn tableName="voice_tracks">
+            <column name="song_after_id" type="UUID">
+                <constraints nullable="true" foreignKeyName="fk_voice_tracks_song_after" 
+                             references="tracks(id)"/>
+            </column>
+        </addColumn>
+        
+        <!-- Add denormalized song titles for display -->
+        <addColumn tableName="voice_tracks">
+            <column name="song_before_title" type="VARCHAR(500)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        
+        <addColumn tableName="voice_tracks">
+            <column name="song_after_title" type="VARCHAR(500)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        
+        <!-- Create indexes for faster lookups -->
+        <createIndex indexName="idx_voice_tracks_song_before_id" tableName="voice_tracks">
+            <column name="song_before_id"/>
+        </createIndex>
+        
+        <createIndex indexName="idx_voice_tracks_song_after_id" tableName="voice_tracks">
+            <column name="song_after_id"/>
+        </createIndex>
+        
+    </changeSet>
+
+</databaseChangeLog>

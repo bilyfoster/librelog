@@ -686,5 +686,6 @@
 	<include file="db/changelog/027-create-billing-tables.xml"/>
 	<include file="db/changelog/028-add-order-id-to-campaigns.xml"/>
 	<include file="db/changelog/029-add-advertiser-to-orders.xml"/>
+	<include file="db/changelog/030-add-song-context-to-voice-tracks.xml"/>
 
 </databaseChangeLog>
