@@ -79,6 +79,19 @@ curl https://log.gayphx.com/actuator/health
 
 ---
 
+### 0.1.7 (March 14, 2026)
+**Status**: Deployed ✅
+**Changes**:
+- Added advertiser_id foreign key to orders table
+- Order model now has @ManyToOne relationship to Advertiser entity
+- OrderRequestDTO accepts advertiserId (auto-populates name, agency, sales rep)
+- OrderResponseDTO includes advertiserId, agencyId, salesRepId
+- Backward compatible - manual entry still works without advertiserId
+
+**Deployment Date**: March 14, 2026
+
+---
+
 ## Deployment Checklist
 
 - [ ] Version updated in pom.xml (parent)
