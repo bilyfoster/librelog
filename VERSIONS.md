@@ -106,6 +106,20 @@ curl https://log.gayphx.com/actuator/health
 
 ---
 
+### 0.1.9 (March 14, 2026)
+**Status**: Deployed ✅ MVP COMPLETE 🎉
+**Changes**:
+- POST /api/campaigns/from-order/{orderId} creates campaign from order
+- Auto-populates campaign: name, dates, spots, advertiser from order
+- GET /api/campaigns/by-order/{orderId} lists campaigns for an order
+- Prevents duplicate campaigns per order
+- Order → Campaign workflow now fully functional
+
+**MVP Status**: All critical fixes complete ✅
+**Deployment Date**: March 14, 2026
+
+---
+
 ## Deployment Checklist
 
 - [ ] Version updated in pom.xml (parent)
