@@ -828,8 +828,11 @@
                     <div class="clock-builder-header">
                         <div class="clock-builder-title" id="clockBuilderTitle">Clock Builder</div>
                         <div class="clock-builder-actions">
-                            <button class="btn btn-primary" onclick="startClockBuilderTour()" style="margin-right: 0.5rem;" title="Take a guided tour">
-                                📚 Start Tour
+                            <button class="btn btn-primary" onclick="showQuickStartModal()" style="margin-right: 0.5rem;" title="Apply a template">
+                                🕐 Quick Start
+                            </button>
+                            <button class="btn btn-secondary" onclick="showInlineHelp()" style="margin-right: 0.5rem;" title="Show help panel">
+                                ❓ Help
                             </button>
                             <button class="btn btn-secondary" onclick="addBreakToClock()">+ Add Break</button>
                             <button class="btn btn-secondary" onclick="addFixedAssetToClock()">+ Add Fixed Asset</button>
@@ -1068,11 +1071,12 @@
                     <table id="spotsTable" style="display: none;">
                         <thead>
                             <tr>
-                                <th>Spot Name</th>
+                                <th>Date</th>
+                                <th>Time</th>
                                 <th>Campaign</th>
-                                <th>Duration</th>
+                                <th>Length</th>
                                 <th>Status</th>
-                                <th>Audio File</th>
+                                <th>Audio Asset</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -1589,6 +1593,73 @@
                 <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                     <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
                     <button type="button" class="btn btn-secondary" onclick="closeCampaignModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Spot Modal -->
+    <div id="spotModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 id="spotModalTitle">Create Spot</h2>
+                <button class="close-btn" onclick="closeSpotModal()">&times;</button>
+            </div>
+            <div class="error-message" id="spotModalErrorMessage"></div>
+            <form id="spotForm">
+                <input type="hidden" id="spotId">
+                <div class="form-group">
+                    <label for="spotCampaignId">Campaign *</label>
+                    <select id="spotCampaignId" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="spotStationId">Station *</label>
+                    <select id="spotStationId" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="spotScheduledDate">Scheduled Date *</label>
+                    <input type="date" id="spotScheduledDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="spotScheduledTime">Scheduled Time *</label>
+                    <input type="time" id="spotScheduledTime" required>
+                </div>
+                <div class="form-group">
+                    <label for="spotLength">Spot Length (seconds) *</label>
+                    <select id="spotLength" required>
+                        <option value="15">15 seconds</option>
+                        <option value="30" selected>30 seconds</option>
+                        <option value="60">60 seconds</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="spotStatus">Status</label>
+                    <select id="spotStatus">
+                        <option value="SCHEDULED" selected>Scheduled</option>
+                        <option value="READY">Ready</option>
+                        <option value="AIRED">Aired</option>
+                        <option value="MISSED">Missed</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="spotDaypart">Daypart</label>
+                    <input type="text" id="spotDaypart" placeholder="e.g., Morning Drive">
+                </div>
+                <div class="form-group">
+                    <label for="spotBreakName">Break Name</label>
+                    <input type="text" id="spotBreakName" placeholder="e.g., Spot Break 1">
+                </div>
+                <div class="form-group">
+                    <label for="spotAssetName">Asset/Audio File Name</label>
+                    <input type="text" id="spotAssetName" placeholder="e.g., bobs_auto_june_2024.mp3">
+                </div>
+                <div class="form-group">
+                    <label for="spotNotes">Notes</label>
+                    <textarea id="spotNotes" rows="3"></textarea>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeSpotModal()" style="flex: 1;">Cancel</button>
                 </div>
             </form>
         </div>
@@ -3519,6 +3590,7 @@
                     <td>
                         <div class="action-buttons">
                             <button class="btn btn-secondary btn-sm" onclick="editCampaign('${c.id}')">Edit</button>
+                            <button class="btn btn-primary btn-sm" onclick="openSpotModalForCampaign('${c.id}')">+ Spot</button>
                             <button class="btn btn-primary btn-sm" onclick="viewCampaignSpots('${c.id}', '${c.name.replace(/'/g, "\\'")}')">View Spots</button>
                             <button class="btn btn-danger btn-sm" onclick="deleteCampaign('${c.id}', '${c.name.replace(/'/g, "\\'")}')">Delete</button>
                         </div>
@@ -3555,22 +3627,25 @@
             }
             emptyState.style.display = 'none';
             table.style.display = 'table';
-            tableBody.innerHTML = spots.map(s => `
+            tableBody.innerHTML = spots.map(s => {
+                const spotLabel = `${s.campaignName || 'Spot'} - ${s.scheduledDate} ${s.scheduledTime?.substring(0, 5) || ''}`;
+                return `
                 <tr>
-                    <td><strong>${s.name}</strong></td>
+                    <td>${s.scheduledDate}</td>
+                    <td>${s.scheduledTime ? s.scheduledTime.substring(0, 5) : '-'}</td>
                     <td>${s.campaignName || '-'}</td>
-                    <td>${s.durationSeconds ? s.durationSeconds + 's' : '-'}</td>
-                    <td><span class="badge badge-${(s.status || 'draft').toLowerCase()}">${s.status || 'DRAFT'}</span></td>
-                    <td>${s.audioFileUrl ? '✅ Ready' : '⏳ Pending'}</td>
+                    <td>${s.spotLength ? s.spotLength + 's' : '-'}</td>
+                    <td><span class="badge badge-${(s.status || 'scheduled').toLowerCase()}">${s.status || 'SCHEDULED'}</span></td>
+                    <td>${s.assetName ? '✅ ' + s.assetName : '⏳ Pending'}</td>
                     <td>
                         <div class="action-buttons">
                             <button class="btn btn-secondary btn-sm" onclick="editSpot('${s.id}')">Edit</button>
-                            <button class="btn btn-primary btn-sm" onclick="uploadSpotAudio('${s.id}')">Upload Audio</button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteSpot('${s.id}', '${s.name.replace(/'/g, "\\'")}')">Delete</button>
+                            <button class="btn btn-primary btn-sm" onclick="uploadSpotAudio('${s.id}')">Audio</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteSpot('${s.id}', '${spotLabel.replace(/'/g, "\\'")}')">Delete</button>
                         </div>
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         async function loadVoiceTracks() {
@@ -3752,9 +3827,22 @@
             }
         }
 
-        function viewCampaignSpots(campaignId, campaignName) {
+        async function viewCampaignSpots(campaignId, campaignName) {
             switchTab('spots');
-            showSuccess(`Showing spots for campaign: ${campaignName}`);
+            showSuccess(`Loading spots for campaign: ${campaignName}`);
+            
+            // Load spots filtered by campaign
+            try {
+                const response = await fetch(`/api/spots/campaign/${campaignId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load spots');
+                const spots = await response.json();
+                displaySpots(spots);
+            } catch (error) {
+                console.error('Error loading campaign spots:', error);
+                showError('Failed to load spots for campaign');
+            }
         }
 
         // Campaign Form Submit Handler
@@ -3813,13 +3901,193 @@
             }
         });
 
-        function openSpotModal() { showError('Spot creation - UI in progress. API is ready at /api/spots'); }
-        function editSpot(id) { showError('Spot editing - UI in progress'); }
-        function deleteSpot(id, name) { 
-            if (!confirm(`Delete spot "${name}"?`)) return;
-            showError('Spot deletion - UI in progress'); 
+        async function openSpotModal() {
+            document.getElementById('spotModalTitle').textContent = 'Create Spot';
+            document.getElementById('spotForm').reset();
+            document.getElementById('spotId').value = '';
+            await populateSpotCampaignDropdown();
+            await populateSpotStationDropdown();
+            // Set default date to today
+            document.getElementById('spotScheduledDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('spotModal').classList.add('show');
         }
-        function uploadSpotAudio(id) { showError('Audio upload - UI in progress'); }
+
+        async function openSpotModalForCampaign(campaignId) {
+            document.getElementById('spotModalTitle').textContent = 'Create Spot';
+            document.getElementById('spotForm').reset();
+            document.getElementById('spotId').value = '';
+            await populateSpotCampaignDropdown();
+            await populateSpotStationDropdown();
+            document.getElementById('spotCampaignId').value = campaignId;
+            document.getElementById('spotScheduledDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('spotModal').classList.add('show');
+        }
+
+        async function populateSpotCampaignDropdown() {
+            const campaignSelect = document.getElementById('spotCampaignId');
+            campaignSelect.innerHTML = '<option value="">Select Campaign</option>';
+            try {
+                const response = await fetch('/api/campaigns', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (response.ok) {
+                    const campaigns = await response.json();
+                    campaigns.forEach(campaign => {
+                        const option = document.createElement('option');
+                        option.value = campaign.id;
+                        option.textContent = `${campaign.name} (${campaign.advertiserName})`;
+                        campaignSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading campaigns:', error);
+            }
+        }
+
+        async function populateSpotStationDropdown() {
+            const stationSelect = document.getElementById('spotStationId');
+            stationSelect.innerHTML = '<option value="">Select Station</option>';
+            try {
+                const response = await fetch('/api/stations', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (response.ok) {
+                    const stations = await response.json();
+                    stations.forEach(station => {
+                        const option = document.createElement('option');
+                        option.value = station.id;
+                        option.textContent = `${station.callSign} - ${station.name}`;
+                        stationSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading stations:', error);
+            }
+        }
+
+        function closeSpotModal() {
+            document.getElementById('spotModal').classList.remove('show');
+        }
+
+        async function editSpot(id) {
+            try {
+                const response = await fetch(`/api/spots/${id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load spot');
+                const spot = await response.json();
+                
+                document.getElementById('spotModalTitle').textContent = 'Edit Spot';
+                document.getElementById('spotId').value = spot.id;
+                await populateSpotCampaignDropdown();
+                await populateSpotStationDropdown();
+                
+                document.getElementById('spotCampaignId').value = spot.campaignId || '';
+                document.getElementById('spotStationId').value = spot.stationId || '';
+                document.getElementById('spotScheduledDate').value = spot.scheduledDate || '';
+                document.getElementById('spotScheduledTime').value = spot.scheduledTime || '';
+                document.getElementById('spotLength').value = spot.spotLength || '30';
+                document.getElementById('spotStatus').value = spot.status || 'SCHEDULED';
+                document.getElementById('spotDaypart').value = spot.daypart || '';
+                document.getElementById('spotBreakName').value = spot.breakName || '';
+                document.getElementById('spotAssetName').value = spot.assetName || '';
+                document.getElementById('spotNotes').value = spot.notes || '';
+                
+                document.getElementById('spotModal').classList.add('show');
+            } catch (error) {
+                console.error('Error loading spot:', error);
+                showError('Failed to load spot');
+            }
+        }
+
+        async function deleteSpot(id, name) { 
+            if (!confirm(`Delete spot "${name}"?`)) return;
+            try {
+                const response = await fetch(`/api/spots/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to delete spot');
+                showSuccess('Spot deleted successfully');
+                loadSpots();
+            } catch (error) {
+                console.error('Error deleting spot:', error);
+                showError('Failed to delete spot');
+            }
+        }
+
+        function uploadSpotAudio(id) { 
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'audio/*';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                try {
+                    // For now, just show success - actual upload would require file storage setup
+                    showSuccess(`Audio file "${file.name}" selected for upload (file storage pending)`);
+                } catch (error) {
+                    console.error('Error uploading audio:', error);
+                    showError('Failed to upload audio');
+                }
+            };
+            input.click();
+        }
+
+        // Spot Form Submit Handler
+        document.getElementById('spotForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('spotModalErrorMessage');
+            if (errorMsg) errorMsg.classList.remove('show');
+
+            const spotId = document.getElementById('spotId').value;
+            
+            const spotData = {
+                campaignId: document.getElementById('spotCampaignId').value,
+                stationId: document.getElementById('spotStationId').value,
+                scheduledDate: document.getElementById('spotScheduledDate').value,
+                scheduledTime: document.getElementById('spotScheduledTime').value + ':00',
+                spotLength: parseInt(document.getElementById('spotLength').value),
+                status: document.getElementById('spotStatus').value,
+                daypart: document.getElementById('spotDaypart').value || null,
+                breakName: document.getElementById('spotBreakName').value || null,
+                assetName: document.getElementById('spotAssetName').value || null,
+                notes: document.getElementById('spotNotes').value || null
+            };
+
+            try {
+                const url = spotId ? `/api/spots/${spotId}` : '/api/spots';
+                const method = spotId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(spotData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    throw new Error(errorData?.message || `Failed to ${spotId ? 'update' : 'create'} spot`);
+                }
+
+                closeSpotModal();
+                showSuccess(`Spot ${spotId ? 'updated' : 'created'} successfully`);
+                loadSpots();
+            } catch (error) {
+                console.error(`Error ${spotId ? 'updating' : 'creating'} spot:`, error);
+                if (errorMsg) {
+                    errorMsg.textContent = error.message || `Failed to ${spotId ? 'update' : 'create'} spot`;
+                    errorMsg.classList.add('show');
+                }
+            }
+        });
 
         function openVoiceTrackModal() { showError('Voice track creation - UI in progress. API is ready at /api/voice-tracks'); }
         function editVoiceTrack(id) { showError('Voice track editing - UI in progress'); }
@@ -5026,6 +5294,7 @@
     <!-- Clock Builder Script -->
     <script src="/js/clock-builder.js"></script>
     <script src="/js/clock-builder-tour.js"></script>
+    <script src="/js/clock-builder-quickstart.js"></script>
     
     <!-- Properties Panel -->
     <div id="propertiesPanel" class="properties-panel">

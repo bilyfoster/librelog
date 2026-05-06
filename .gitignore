@@ -74,6 +74,10 @@ application-*.properties
 application-*.yml
 !application-*.yml.example
 
+# Spring Boot repackaged artifacts (should never be committed)
+**/BOOT-INF/
+**/META-INF/
+
 # Environment variables
 .env
 .env.local
