@@ -3,7 +3,17 @@ package com.onelpro.librelog.services.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onelpro.librelog.dto.*;
+import com.onelpro.librelog.enums.SpotStatus;
+import com.onelpro.librelog.enums.TrackType;
 import com.onelpro.librelog.integrations.LibreTimeClient;
+import com.onelpro.librelog.models.Channel;
+import com.onelpro.librelog.models.Spot;
+import com.onelpro.librelog.models.Track;
+import com.onelpro.librelog.models.VoiceTrack;
+import com.onelpro.librelog.repositories.ChannelRepository;
+import com.onelpro.librelog.repositories.SpotRepository;
+import com.onelpro.librelog.repositories.TrackRepository;
+import com.onelpro.librelog.repositories.VoiceTrackRepository;
 import com.onelpro.librelog.services.ClockBuilderService;
 import com.onelpro.librelog.services.LibreTimeSyncService;
 import org.slf4j.Logger;
@@ -13,10 +23,15 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -30,9 +45,17 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 	private static final Logger logger = LoggerFactory.getLogger(LibreTimeSyncServiceImpl.class);
 	private static final DateTimeFormatter ISO_DATE_TIME = DateTimeFormatter.ISO_DATE_TIME;
 	private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss");
+	private static final long MIN_SPOT_SEPARATION_MINUTES = 30;
+	private static final long MIN_ARTIST_SEPARATION_MINUTES = 90;
+	private static final long MIN_SONG_SEPARATION_MINUTES = 120;
+	private static final long MIN_INTERVIEW_SEPARATION_MINUTES = 60;
 
 	private final ClockBuilderService clockBuilderService;
 	private final LibreTimeClient libreTimeClient;
+	private final ChannelRepository channelRepository;
+	private final SpotRepository spotRepository;
+	private final TrackRepository trackRepository;
+	private final VoiceTrackRepository voiceTrackRepository;
 	private final ObjectMapper objectMapper;
 	private final org.springframework.beans.factory.ObjectProvider<com.onelpro.librelog.services.LibreTimeFileSyncService> fileSyncServiceProvider;
 	private final org.springframework.beans.factory.ObjectProvider<com.onelpro.librelog.services.LibreTimeSyncHistoryService> syncHistoryServiceProvider;
@@ -40,11 +63,19 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 	public LibreTimeSyncServiceImpl(
 			ClockBuilderService clockBuilderService,
 			LibreTimeClient libreTimeClient,
+			ChannelRepository channelRepository,
+			SpotRepository spotRepository,
+			TrackRepository trackRepository,
+			VoiceTrackRepository voiceTrackRepository,
 			org.springframework.beans.factory.ObjectProvider<ObjectMapper> objectMapperProvider,
 			org.springframework.beans.factory.ObjectProvider<com.onelpro.librelog.services.LibreTimeFileSyncService> fileSyncServiceProvider,
 			org.springframework.beans.factory.ObjectProvider<com.onelpro.librelog.services.LibreTimeSyncHistoryService> syncHistoryServiceProvider) {
 		this.clockBuilderService = clockBuilderService;
 		this.libreTimeClient = libreTimeClient;
+		this.channelRepository = channelRepository;
+		this.spotRepository = spotRepository;
+		this.trackRepository = trackRepository;
+		this.voiceTrackRepository = voiceTrackRepository;
 		// Use ObjectMapper from provider, or create a new one if not available
 		this.objectMapper = objectMapperProvider.getIfAvailable(() -> new ObjectMapper());
 		this.fileSyncServiceProvider = fileSyncServiceProvider;
@@ -482,55 +513,83 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 		logger.info("Generating log from clock template {} for date range {} to {}", 
 				clockTemplateId, startDate, endDate);
 
-		ClockTemplateWithBreaksDTO clock = clockBuilderService.getClockStructure(clockTemplateId);
-		List<LibreTimeExportDTO.LibreTimeShowInstance> showInstances = new ArrayList<>();
-
-		// Generate show instances for each day in the range
-		LocalDate currentDate = startDate;
-		while (!currentDate.isAfter(endDate)) {
-			List<LibreTimeExportDTO.LibreTimeShowInstance> dayInstances = generateShowInstancesForDate(clock, currentDate);
-			showInstances.addAll(dayInstances);
-			currentDate = currentDate.plusDays(1);
-		}
-
-		LibreTimeExportDTO log = LibreTimeExportDTO.builder()
-				.name(clock.getName() + " - " + startDate + " to " + endDate)
-				.description("Log generated from clock template: " + clock.getName() + " for date range " + startDate + " to " + endDate)
-				.showInstances(showInstances)
-				.build();
-
-		logger.info("Log generated successfully for clock template {} and date range {} to {}", 
+		GenerationResult result = generateLogInternal(clockTemplateId, startDate, endDate);
+		logger.info("Log generated successfully for clock template {} and date range {} to {}",
 				clockTemplateId, startDate, endDate);
-		return log;
+		return result.export();
 	}
 
 	@Override
 	public LibreTimeExportDTO generateLogFromClock(UUID clockTemplateId, LocalDate date) {
 		logger.info("Generating log from clock template {} for date {}", clockTemplateId, date);
+		GenerationResult result = generateLogInternal(clockTemplateId, date, date);
+		logger.info("Log generated successfully for clock template {} and date {}", clockTemplateId, date);
+		return result.export();
+	}
 
+	@Override
+	public SchedulingExceptionReportDTO generateSchedulingExceptionReport(
+			UUID clockTemplateId, LocalDate startDate, LocalDate endDate) {
+		logger.info("Generating scheduling exception report for clock template {} ({} to {})",
+				clockTemplateId, startDate, endDate);
+		GenerationResult result = generateLogInternal(clockTemplateId, startDate, endDate);
+		return result.exceptionReport();
+	}
+
+	private GenerationResult generateLogInternal(UUID clockTemplateId, LocalDate startDate, LocalDate endDate) {
 		ClockTemplateWithBreaksDTO clock = clockBuilderService.getClockStructure(clockTemplateId);
-
-		// Generate show instances for each hour of the day (24 hours)
 		List<LibreTimeExportDTO.LibreTimeShowInstance> showInstances = new ArrayList<>();
+		SchedulingContext context = new SchedulingContext();
+		UUID stationId = resolveStationId(clock);
+		List<SchedulingExceptionReportDTO.SchedulingExceptionItemDTO> exceptions = new ArrayList<>();
 
-		List<LibreTimeExportDTO.LibreTimeShowInstance> dayInstances = generateShowInstancesForDate(clock, date);
+		LocalDate currentDate = startDate;
+		while (!currentDate.isAfter(endDate)) {
+			List<LibreTimeExportDTO.LibreTimeShowInstance> dayInstances =
+					generateShowInstancesForDate(clock, currentDate, stationId, context, exceptions);
+			showInstances.addAll(dayInstances);
+			currentDate = currentDate.plusDays(1);
+		}
 
-		LibreTimeExportDTO log = LibreTimeExportDTO.builder()
-				.name(clock.getName() + " - " + date.toString())
-				.description("Daily log generated from clock template: " + clock.getName())
-				.showInstances(dayInstances)
+		LibreTimeExportDTO export = LibreTimeExportDTO.builder()
+				.name(clock.getName() + " - " + startDate + " to " + endDate)
+				.description("Log generated from clock template: " + clock.getName() + " for date range " + startDate + " to " + endDate)
+				.showInstances(showInstances)
 				.build();
 
-		logger.info("Log generated successfully for clock template {} and date {}", clockTemplateId, date);
-		return log;
+		SchedulingExceptionReportDTO report = SchedulingExceptionReportDTO.builder()
+				.clockTemplateId(clockTemplateId)
+				.startDate(startDate)
+				.endDate(endDate)
+				.totalHoursGenerated(showInstances.size())
+				.totalExceptions(exceptions.size())
+				.exceptions(exceptions)
+				.build();
+
+		return new GenerationResult(export, report);
 	}
 
 	/**
 	 * Generates show instances for a specific date (24 hours).
 	 */
 	private List<LibreTimeExportDTO.LibreTimeShowInstance> generateShowInstancesForDate(
-			ClockTemplateWithBreaksDTO clock, LocalDate date) {
+			ClockTemplateWithBreaksDTO clock,
+			LocalDate date,
+			UUID stationId,
+			SchedulingContext context,
+			List<SchedulingExceptionReportDTO.SchedulingExceptionItemDTO> exceptions) {
 		List<LibreTimeExportDTO.LibreTimeShowInstance> showInstances = new ArrayList<>();
+
+		List<Spot> daySpots = stationId != null
+				? spotRepository.findByStationAndDateAndStatuses(stationId, date,
+					List.of(SpotStatus.SCHEDULED, SpotStatus.CONFIRMED, SpotStatus.MAKEGOOD_SCHEDULED))
+				: List.of();
+		List<Track> tracks = stationId != null
+				? trackRepository.findByStationIdAndType(stationId, TrackType.MUSIC)
+				: List.of();
+		List<VoiceTrack> interviews = stationId != null
+				? voiceTrackRepository.findByStationIdAndScheduledDate(stationId, date)
+				: List.of();
 
 		for (int hour = 0; hour < 24; hour++) {
 			LocalDateTime startDateTime = date.atTime(hour, 0);
@@ -546,23 +605,29 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 			// Add breaks (same logic as exportClock)
 			if (clock.getBreaks() != null) {
 				for (BreakStructureResponseDTO breakItem : clock.getBreaks()) {
-					String itemType = "break";
-					if (breakItem.getLibreTimePlaylistId() != null) {
-						itemType = "playlist";
-					} else if (breakItem.getLibreTimeSmartBlockId() != null) {
-						itemType = "smart_block";
-					}
-					
-					LibreTimeExportDTO.LibreTimeItem item = LibreTimeExportDTO.LibreTimeItem.builder()
-							.type(itemType)
-							.name(breakItem.getName())
-							.startTime(breakItem.getStartTime().format(TIME_FORMAT))
-							.durationSeconds(breakItem.getDurationSeconds())
-							.transition(breakItem.getTransitionCode() != null ? 
-									breakItem.getTransitionCode().name() : "SEGUE")
-							.fadeIn(mapTransitionToFadeIn(breakItem.getTransitionCode()))
-							.fadeOut(mapTransitionToFadeOut(breakItem.getTransitionCode()))
-							.build();
+					LocalDateTime scheduledAt = date.atTime(breakItem.getStartTime());
+					Optional<LibreTimeExportDTO.LibreTimeItem> dynamicItem =
+							buildDynamicItemForBreak(
+									breakItem, scheduledAt, hour, daySpots, tracks, interviews, context, exceptions);
+					LibreTimeExportDTO.LibreTimeItem item = dynamicItem.orElseGet(() -> {
+						String itemType = "break";
+						if (breakItem.getLibreTimePlaylistId() != null) {
+							itemType = "playlist";
+						} else if (breakItem.getLibreTimeSmartBlockId() != null) {
+							itemType = "smart_block";
+						}
+
+						return LibreTimeExportDTO.LibreTimeItem.builder()
+								.type(itemType)
+								.name(breakItem.getName())
+								.startTime(breakItem.getStartTime().format(TIME_FORMAT))
+								.durationSeconds(breakItem.getDurationSeconds())
+								.transition(breakItem.getTransitionCode() != null ?
+										breakItem.getTransitionCode().name() : "SEGUE")
+								.fadeIn(mapTransitionToFadeIn(breakItem.getTransitionCode()))
+								.fadeOut(mapTransitionToFadeOut(breakItem.getTransitionCode()))
+								.build();
+					});
 					showInstance.getItems().add(item);
 				}
 			}
@@ -616,6 +681,232 @@ public class LibreTimeSyncServiceImpl implements LibreTimeSyncService {
 		}
 
 		return showInstances;
+	}
+
+	private Optional<LibreTimeExportDTO.LibreTimeItem> buildDynamicItemForBreak(
+			BreakStructureResponseDTO breakItem,
+			LocalDateTime scheduledAt,
+			int targetHour,
+			List<Spot> daySpots,
+			List<Track> tracks,
+			List<VoiceTrack> interviews,
+			SchedulingContext context,
+			List<SchedulingExceptionReportDTO.SchedulingExceptionItemDTO> exceptions) {
+
+		String profile = ((breakItem.getName() == null ? "" : breakItem.getName()) + " " +
+				(breakItem.getAvailTypeName() == null ? "" : breakItem.getAvailTypeName())).toLowerCase(Locale.ROOT);
+
+		if (profile.contains("spot") || profile.contains("commercial") || profile.contains("avail")) {
+			Optional<Spot> spot = pickSpot(daySpots, scheduledAt.toLocalDate(), targetHour, profile, scheduledAt, context);
+			if (spot.isEmpty()) {
+				recordException(exceptions, scheduledAt, breakItem, "SPOT", "No eligible spot for this hour/daypart or separation rule");
+				return Optional.empty();
+			}
+			return spot.map(s -> LibreTimeExportDTO.LibreTimeItem.builder()
+							.type("file")
+							.name(s.getAssetName() != null ? s.getAssetName() : "Spot " + s.getId())
+							.startTime(breakItem.getStartTime().format(TIME_FORMAT))
+							.durationSeconds(s.getSpotLength() != null ? s.getSpotLength() : breakItem.getDurationSeconds())
+							.transition("HARD_START")
+							.fadeIn("0")
+							.fadeOut("0")
+							.build());
+		}
+
+		if (profile.contains("interview") || profile.contains("voice")) {
+			Optional<VoiceTrack> interview = pickInterview(interviews, targetHour, scheduledAt, context);
+			if (interview.isEmpty()) {
+				recordException(exceptions, scheduledAt, breakItem, "INTERVIEW", "No eligible interview for this hour or interview separation");
+				return Optional.empty();
+			}
+			return interview.map(vt -> LibreTimeExportDTO.LibreTimeItem.builder()
+							.type("file")
+							.name(vt.getTitle())
+							.startTime(breakItem.getStartTime().format(TIME_FORMAT))
+							.durationSeconds(vt.getDurationSeconds() != null ? vt.getDurationSeconds() : breakItem.getDurationSeconds())
+							.transition("SEGUE")
+							.fadeIn("1000")
+							.fadeOut("1000")
+							.build());
+		}
+
+		if (profile.contains("music") || profile.contains("song")) {
+			Optional<Track> track = pickTrack(tracks, scheduledAt, context);
+			if (track.isEmpty()) {
+				recordException(exceptions, scheduledAt, breakItem, "MUSIC", "No eligible track due to song/artist separation");
+				return Optional.empty();
+			}
+			return track.map(t -> LibreTimeExportDTO.LibreTimeItem.builder()
+							.type("file")
+							.name(t.getArtist() != null && !t.getArtist().isBlank()
+									? t.getArtist() + " - " + t.getTitle()
+									: t.getTitle())
+							.startTime(breakItem.getStartTime().format(TIME_FORMAT))
+							.durationSeconds(t.getDurationSeconds() != null ? t.getDurationSeconds() : breakItem.getDurationSeconds())
+							.transition("SEGUE")
+							.fadeIn("1200")
+							.fadeOut("1200")
+							.build());
+		}
+
+		return Optional.empty();
+	}
+
+	private void recordException(
+			List<SchedulingExceptionReportDTO.SchedulingExceptionItemDTO> exceptions,
+			LocalDateTime scheduledAt,
+			BreakStructureResponseDTO breakItem,
+			String category,
+			String reason) {
+		exceptions.add(SchedulingExceptionReportDTO.SchedulingExceptionItemDTO.builder()
+				.date(scheduledAt.toLocalDate())
+				.hour(scheduledAt.getHour())
+				.breakName(breakItem.getName())
+				.category(category)
+				.reason(reason)
+				.build());
+	}
+
+	private Optional<Spot> pickSpot(
+			List<Spot> daySpots,
+			LocalDate date,
+			int targetHour,
+			String breakProfile,
+			LocalDateTime scheduledAt,
+			SchedulingContext context) {
+		return daySpots.stream()
+				.filter(spot -> isSpotEligible(spot, date, targetHour, breakProfile))
+				.filter(spot -> isSpotSeparated(spot, scheduledAt, context))
+				.findFirst()
+				.map(spot -> {
+					context.lastSpotAt.put(spot.getId(), scheduledAt);
+					return spot;
+				});
+	}
+
+	private boolean isSpotEligible(Spot spot, LocalDate date, int targetHour, String breakProfile) {
+		if (!date.equals(spot.getScheduledDate())) {
+			return false;
+		}
+		Integer spotHour = parseHour(spot.getScheduledTime());
+		if (spotHour != null && spotHour != targetHour) {
+			return false;
+		}
+		if (spot.getBreakName() != null && !spot.getBreakName().isBlank()) {
+			String breakName = spot.getBreakName().toLowerCase(Locale.ROOT);
+			if (!breakProfile.contains(breakName) && !breakName.contains("break")) {
+				return false;
+			}
+		}
+		return matchesDaypartHour(spot.getDaypart(), targetHour);
+	}
+
+	private boolean isSpotSeparated(Spot spot, LocalDateTime scheduledAt, SchedulingContext context) {
+		LocalDateTime last = context.lastSpotAt.get(spot.getId());
+		return last == null || ChronoUnit.MINUTES.between(last, scheduledAt) >= MIN_SPOT_SEPARATION_MINUTES;
+	}
+
+	private Optional<Track> pickTrack(List<Track> tracks, LocalDateTime scheduledAt, SchedulingContext context) {
+		return tracks.stream()
+				.filter(track -> isTrackSeparated(track, scheduledAt, context))
+				.findFirst()
+				.map(track -> {
+					if (track.getArtist() != null) {
+						context.lastArtistAt.put(track.getArtist().toLowerCase(Locale.ROOT), scheduledAt);
+					}
+					context.lastSongAt.put(track.getId(), scheduledAt);
+					return track;
+				});
+	}
+
+	private boolean isTrackSeparated(Track track, LocalDateTime scheduledAt, SchedulingContext context) {
+		LocalDateTime lastSong = context.lastSongAt.get(track.getId());
+		if (lastSong != null && ChronoUnit.MINUTES.between(lastSong, scheduledAt) < MIN_SONG_SEPARATION_MINUTES) {
+			return false;
+		}
+		if (track.getArtist() != null) {
+			LocalDateTime lastArtist = context.lastArtistAt.get(track.getArtist().toLowerCase(Locale.ROOT));
+			if (lastArtist != null && ChronoUnit.MINUTES.between(lastArtist, scheduledAt) < MIN_ARTIST_SEPARATION_MINUTES) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private Optional<VoiceTrack> pickInterview(
+			List<VoiceTrack> interviews, int targetHour, LocalDateTime scheduledAt, SchedulingContext context) {
+		return interviews.stream()
+				.filter(vt -> vt.getScheduledTime() == null || vt.getScheduledTime().getHour() == targetHour)
+				.filter(vt -> isInterviewSeparated(vt, scheduledAt, context))
+				.findFirst()
+				.map(vt -> {
+					context.lastInterviewAt.put(vt.getId(), scheduledAt);
+					return vt;
+				});
+	}
+
+	private boolean isInterviewSeparated(VoiceTrack voiceTrack, LocalDateTime scheduledAt, SchedulingContext context) {
+		LocalDateTime last = context.lastInterviewAt.get(voiceTrack.getId());
+		return last == null || ChronoUnit.MINUTES.between(last, scheduledAt) >= MIN_INTERVIEW_SEPARATION_MINUTES;
+	}
+
+	private Integer parseHour(String hhmmss) {
+		if (hhmmss == null || hhmmss.isBlank()) {
+			return null;
+		}
+		try {
+			return LocalTime.parse(hhmmss).getHour();
+		} catch (Exception ignored) {
+			return null;
+		}
+	}
+
+	private boolean matchesDaypartHour(String daypart, int hour) {
+		if (daypart == null || daypart.isBlank()) {
+			return true;
+		}
+		String normalized = daypart.toLowerCase(Locale.ROOT);
+		if (normalized.contains("morning")) {
+			return hour >= 6 && hour < 10;
+		}
+		if (normalized.contains("midday") || normalized.contains("noon")) {
+			return hour >= 10 && hour < 15;
+		}
+		if (normalized.contains("afternoon")) {
+			return hour >= 12 && hour < 17;
+		}
+		if (normalized.contains("drive") || normalized.contains("evening")) {
+			return hour >= 15 && hour < 20;
+		}
+		if (normalized.contains("overnight") || normalized.contains("night")) {
+			return hour >= 20 || hour < 6;
+		}
+		return true;
+	}
+
+	private UUID resolveStationId(ClockTemplateWithBreaksDTO clock) {
+		if (clock.getChannelId() == null) {
+			return null;
+		}
+		try {
+			Optional<Channel> channel = channelRepository.findById(clock.getChannelId());
+			return channel.map(c -> c.getStation().getId()).orElse(null);
+		} catch (Exception ex) {
+			logger.warn("Failed resolving station from channel {}: {}", clock.getChannelId(), ex.getMessage());
+			return null;
+		}
+	}
+
+	private static class SchedulingContext {
+		private final Map<UUID, LocalDateTime> lastSpotAt = new HashMap<>();
+		private final Map<UUID, LocalDateTime> lastSongAt = new HashMap<>();
+		private final Map<String, LocalDateTime> lastArtistAt = new HashMap<>();
+		private final Map<UUID, LocalDateTime> lastInterviewAt = new HashMap<>();
+	}
+
+	private record GenerationResult(
+			LibreTimeExportDTO export,
+			SchedulingExceptionReportDTO exceptionReport) {
 	}
 
 	@Override

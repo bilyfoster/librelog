@@ -3,6 +3,7 @@ package com.onelpro.librelog.services;
 import com.onelpro.librelog.dto.ClockExportResultDTO;
 import com.onelpro.librelog.dto.ClockExportValidationResultDTO;
 import com.onelpro.librelog.dto.LibreTimeExportDTO;
+import com.onelpro.librelog.dto.SchedulingExceptionReportDTO;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -58,6 +59,17 @@ public interface LibreTimeSyncService {
 	 * @return The log in LibreTime format with show instances for the date range
 	 */
 	LibreTimeExportDTO generateLogFromClock(UUID clockTemplateId, LocalDate startDate, LocalDate endDate);
+
+	/**
+	 * Generates an exception report for log generation over a date range.
+	 *
+	 * @param clockTemplateId The ID of the clock template
+	 * @param startDate The start date of the range
+	 * @param endDate The end date of the range (inclusive)
+	 * @return Scheduling exception report with unfilled/conflicted slots
+	 */
+	SchedulingExceptionReportDTO generateSchedulingExceptionReport(
+			UUID clockTemplateId, LocalDate startDate, LocalDate endDate);
 
 	/**
 	 * Pushes a generated log to LibreTime API.
