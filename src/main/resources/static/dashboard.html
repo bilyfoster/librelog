@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>LibreLog</title>
+<link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+
+<div id="loginScreen" class="login-screen">
+    <form id="loginForm" class="login-card">
+        <h1>LibreLog</h1>
+        <p class="muted">Sign in to continue</p>
+        <label>Email <input type="email" id="loginEmail" required autocomplete="username" /></label>
+        <label>Password <input type="password" id="loginPassword" required autocomplete="current-password" /></label>
+        <button type="submit">Sign in</button>
+        <div id="loginError" class="error"></div>
+    </form>
+</div>
+
+<div id="app" class="app hidden">
+    <aside class="sidebar">
+        <div class="brand">LibreLog</div>
+        <nav>
+            <div class="nav-section-title">Schedule</div>
+            <button class="nav-item" data-tab="dayBuilder">Day Builder</button>
+            <button class="nav-item" data-tab="library">LibreTime Library</button>
+
+            <div class="nav-section-title">Orders</div>
+            <button class="nav-item" data-tab="customers">Customers</button>
+            <button class="nav-item" data-tab="orders">Orders &amp; Spots</button>
+            <button class="nav-item" data-tab="reconciliation">Reconciliation</button>
+
+            <div class="nav-section-title">Setup</div>
+            <button class="nav-item" data-tab="stations">Station</button>
+            <button class="nav-item" data-tab="connection">LibreTime Connection</button>
+            <button class="nav-item admin-only" data-tab="users">Users</button>
+        </nav>
+        <div class="user-bar">
+            <span id="currentUserLabel"></span>
+            <button id="logoutButton" class="link">Sign out</button>
+        </div>
+    </aside>
+
+    <main class="content">
+        <header class="page-header">
+            <h2 id="pageTitle">Day Builder</h2>
+            <div id="stationPicker" class="station-picker"></div>
+        </header>
+
+        <!-- Day Builder -->
+        <section id="dayBuilderTab" class="tab">
+            <div class="day-builder-toolbar">
+                <label>Date <input type="date" id="dayBuilderDate" /></label>
+                <button id="dayBuilderLoad">Load</button>
+                <span id="dayBuilderStatus" class="badge"></span>
+                <span id="dayBuilderLockBadge" class="badge"></span>
+                <span class="grow"></span>
+                <button id="dayBuilderLockBtn">Edit this day</button>
+                <button id="dayBuilderSaveBtn" disabled>Save draft</button>
+                <button id="dayBuilderPushBtn" disabled>Push to LibreTime</button>
+                <button id="dayBuilderReopenBtn" class="admin-only" disabled>Reopen (admin)</button>
+                <button id="dayBuilderForceUnlockBtn" class="admin-only" disabled>Force unlock</button>
+            </div>
+            <div class="day-builder">
+                <div class="db-pane db-pane-left">
+                    <h3>Show instances</h3>
+                    <div id="dayBuilderShows" class="muted">Pick a date and load.</div>
+                </div>
+                <div class="db-pane db-pane-mid">
+                    <h3>Slots</h3>
+                    <div id="dayBuilderSlots" class="muted">No slots yet.</div>
+                </div>
+                <div class="db-pane db-pane-right">
+                    <h3>Library &amp; Spots</h3>
+                    <input id="dayBuilderLibSearch" placeholder="Search library" />
+                    <button id="dayBuilderLibBtn">Search</button>
+                    <div id="dayBuilderLibResults" class="muted">Search the library.</div>
+                    <h4>Open order spots</h4>
+                    <div id="dayBuilderSpotPool" class="muted">Active orders' spots will appear here.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Library -->
+        <section id="libraryTab" class="tab hidden">
+            <div class="row">
+                <input id="libSearch" placeholder="Search files" />
+                <button id="libSearchBtn">Search</button>
+            </div>
+            <h3>Files</h3>
+            <div id="libFiles"></div>
+            <h3>Show instances (today)</h3>
+            <div id="libShowInstances"></div>
+            <h3>Templates</h3>
+            <div id="libTemplates"></div>
+        </section>
+
+        <!-- Customers -->
+        <section id="customersTab" class="tab hidden">
+            <button id="customerNewBtn">New customer</button>
+            <table class="data-table">
+                <thead><tr><th>Name</th><th>Contact</th><th>Notes</th><th></th></tr></thead>
+                <tbody id="customersBody"></tbody>
+            </table>
+        </section>
+
+        <!-- Orders + Spots -->
+        <section id="ordersTab" class="tab hidden">
+            <button id="orderNewBtn">New order</button>
+            <table class="data-table">
+                <thead><tr><th>Name</th><th>Customer</th><th>Dates</th><th>Spots</th><th></th></tr></thead>
+                <tbody id="ordersBody"></tbody>
+            </table>
+            <div id="orderDetail" class="hidden">
+                <h3 id="orderDetailTitle"></h3>
+                <button id="spotNewBtn">New spot</button>
+                <button id="orderReconcileBtn">View reconciliation</button>
+                <table class="data-table">
+                    <thead><tr><th>Label</th><th>Length</th><th>LibreTime file</th><th>Rotation</th><th></th></tr></thead>
+                    <tbody id="spotsBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Reconciliation -->
+        <section id="reconciliationTab" class="tab hidden">
+            <p class="muted">Pick an order from <em>Orders</em> to see scheduled vs. as-run.</p>
+            <div id="reconciliationDetail"></div>
+        </section>
+
+        <!-- Station -->
+        <section id="stationsTab" class="tab hidden">
+            <button id="stationNewBtn">New station</button>
+            <table class="data-table">
+                <thead><tr><th>Name</th><th>Call letters</th><th>Time zone</th><th></th></tr></thead>
+                <tbody id="stationsBody"></tbody>
+            </table>
+        </section>
+
+        <!-- LibreTime Connection -->
+        <section id="connectionTab" class="tab hidden">
+            <p class="muted">Configure how LibreLog talks to your LibreTime instance for the selected station.</p>
+            <form id="connectionForm">
+                <label>Base URL <input type="url" id="connBaseUrl" required placeholder="https://libretime.example.org" /></label>
+                <label>API Key <input type="password" id="connApiKey" placeholder="Leave blank to keep existing" /></label>
+                <button type="submit">Save</button>
+                <button type="button" id="connTestBtn">Test connection</button>
+                <div id="connStatus" class="muted"></div>
+            </form>
+        </section>
+
+        <!-- Users -->
+        <section id="usersTab" class="tab hidden">
+            <button id="userNewBtn">New user</button>
+            <table class="data-table">
+                <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Active</th><th></th></tr></thead>
+                <tbody id="usersBody"></tbody>
+            </table>
+        </section>
+    </main>
+</div>
+
+<dialog id="modal">
+    <form id="modalForm" method="dialog">
+        <h3 id="modalTitle"></h3>
+        <div id="modalBody"></div>
+        <div class="modal-actions">
+            <button type="button" id="modalCancel">Cancel</button>
+            <button type="submit" id="modalSave">Save</button>
+        </div>
+    </form>
+</dialog>
+
+<script src="/app.js"></script>
+</body>
+</html>

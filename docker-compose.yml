@@ -1,0 +1,63 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: librelog-db
+    environment:
+      POSTGRES_DB: librelog
+      POSTGRES_USER: librelog
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-librelog}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U librelog"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - librelog-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: librelog-api
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/librelog
+      - SPRING_DATASOURCE_USERNAME=librelog
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-librelog}
+      - JWT_SECRET=${JWT_SECRET:-please-change-me-please-change-me-please-change-me}
+      - ADMIN_SEED_EMAIL=${ADMIN_SEED_EMAIL:-admin@librelog.local}
+      - ADMIN_SEED_PASSWORD=${ADMIN_SEED_PASSWORD:-admin123}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-please-change-me-32-bytes-please-c}
+      - SERVER_PORT=8080
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - librelog-network
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.librelog.rule=Host(`log.gayphx.com`)"
+      - "traefik.http.routers.librelog.entrypoints=websecure"
+      - "traefik.http.routers.librelog.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.librelog.priority=10"
+      - "traefik.http.routers.librelog-http.rule=Host(`log.gayphx.com`)"
+      - "traefik.http.routers.librelog-http.entrypoints=web"
+      - "traefik.http.routers.librelog-http.middlewares=librelog-redirect"
+      - "traefik.http.middlewares.librelog-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.librelog-redirect.redirectscheme.permanent=true"
+      - "traefik.http.services.librelog.loadbalancer.server.port=8080"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  librelog-network:
+    driver: bridge
+  traefik:
+    external: true

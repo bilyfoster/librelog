@@ -1,0 +1,28 @@
+# Maven
+target/
+*.jar
+*.war
+*.ear
+*.class
+
+# Spring Boot repackaged artifacts
+**/BOOT-INF/
+**/META-INF/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# Logs / OS / secrets
+*.log
+.DS_Store
+.env
+.env.local
+
+# Misc leftover working dirs (not part of v2 source)
+archive/
+frontend/

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="v2-001-initial-schema" author="librelog">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+
+CREATE TABLE station (
+    id UUID PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    call_letters VARCHAR(20),
+    time_zone VARCHAR(64) NOT NULL DEFAULT 'UTC',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE librtime_connection (
+    station_id UUID PRIMARY KEY REFERENCES station(id) ON DELETE CASCADE,
+    base_url VARCHAR(500) NOT NULL,
+    api_key_encrypted TEXT NOT NULL,
+    last_tested_at TIMESTAMP,
+    last_test_ok BOOLEAN,
+    last_test_message TEXT
+);
+
+CREATE TABLE app_user (
+    id UUID PRIMARY KEY,
+    email VARCHAR(200) NOT NULL UNIQUE,
+    password_hash VARCHAR(200) NOT NULL,
+    name VARCHAR(200),
+    role VARCHAR(20) NOT NULL DEFAULT 'EDITOR',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE customer (
+    id UUID PRIMARY KEY,
+    station_id UUID NOT NULL REFERENCES station(id) ON DELETE CASCADE,
+    name VARCHAR(200) NOT NULL,
+    contact VARCHAR(500),
+    notes TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE orders (
+    id UUID PRIMARY KEY,
+    station_id UUID NOT NULL REFERENCES station(id) ON DELETE CASCADE,
+    customer_id UUID NOT NULL REFERENCES customer(id) ON DELETE CASCADE,
+    name VARCHAR(200) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    total_spots INT NOT NULL DEFAULT 0,
+    notes TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE spot (
+    id UUID PRIMARY KEY,
+    order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    librtime_file_id BIGINT,
+    length_seconds INT NOT NULL,
+    label VARCHAR(200) NOT NULL,
+    rotation_kind VARCHAR(20) NOT NULL DEFAULT 'ANY_TIME',
+    target_show_id BIGINT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE schedule_day (
+    id UUID PRIMARY KEY,
+    station_id UUID NOT NULL REFERENCES station(id) ON DELETE CASCADE,
+    schedule_date DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+    pushed_at TIMESTAMP,
+    pushed_by UUID REFERENCES app_user(id),
+    version BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE (station_id, schedule_date)
+);
+
+CREATE TABLE schedule_item (
+    id UUID PRIMARY KEY,
+    schedule_day_id UUID NOT NULL REFERENCES schedule_day(id) ON DELETE CASCADE,
+    show_instance_id BIGINT,
+    slot_index INT NOT NULL,
+    kind VARCHAR(20) NOT NULL,
+    spot_id UUID REFERENCES spot(id) ON DELETE SET NULL,
+    librtime_file_id BIGINT,
+    scheduled_at TIMESTAMP,
+    length_seconds INT,
+    position INT NOT NULL
+);
+
+CREATE INDEX idx_schedule_item_day ON schedule_item(schedule_day_id);
+CREATE INDEX idx_schedule_item_show ON schedule_item(show_instance_id);
+
+CREATE TABLE day_lock (
+    schedule_day_id UUID PRIMARY KEY REFERENCES schedule_day(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+    acquired_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE playback_log_entry (
+    id UUID PRIMARY KEY,
+    station_id UUID NOT NULL REFERENCES station(id) ON DELETE CASCADE,
+    played_at TIMESTAMP NOT NULL,
+    librtime_file_id BIGINT,
+    length_seconds INT,
+    raw TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_playback_station_time ON playback_log_entry(station_id, played_at);
+
+CREATE TABLE reconciliation (
+    id UUID PRIMARY KEY,
+    schedule_item_id UUID NOT NULL REFERENCES schedule_item(id) ON DELETE CASCADE,
+    playback_log_entry_id UUID REFERENCES playback_log_entry(id) ON DELETE SET NULL,
+    matched_at TIMESTAMP,
+    status VARCHAR(20) NOT NULL
+);
+
+CREATE INDEX idx_reconciliation_item ON reconciliation(schedule_item_id);
+
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>
