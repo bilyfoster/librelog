@@ -489,107 +489,61 @@
             <h1>LibreLog</h1>
         </div>
         
-        <!-- Phase 1: Configuration & Orders -->
+        <!-- MVP Scheduler Workflow -->
         <div class="nav-section">
-            <div class="nav-section-title">Configuration</div>
-            <a href="#" class="nav-item" data-tab="organizations">
-                <i>🏛️</i> Organizations
-            </a>
-            <a href="#" class="nav-item" data-tab="markets">
-                <i>🌍</i> Markets
-            </a>
-            <a href="#" class="nav-item active" data-tab="dashboard">
-                <i>📊</i> Dashboard
-            </a>
-            <a href="#" class="nav-item" data-tab="clusters">
-                <i>🔗</i> Clusters
-            </a>
-            <a href="#" class="nav-item" data-tab="stations">
-                <i>📻</i> Stations
-            </a>
-            <a href="#" class="nav-item" data-tab="channels">
-                <i>📡</i> Channels
-            </a>
-            <a href="#" class="nav-item" data-tab="clocks">
-                <i>🕐</i> Clock Templates
-            </a>
-            <a href="#" class="nav-item" data-tab="dayparts">
-                <i>⏰</i> Dayparts
-            </a>
-            <a href="#" class="nav-item" data-tab="daypartCategories">
-                <i>📂</i> Daypart Categories
-            </a>
-        </div>
-
-        <div class="nav-section">
-            <div class="nav-section-title">Orders & CRM</div>
-            <a href="#" class="nav-item" data-tab="orders">
-                <i>📋</i> Orders
+            <div class="nav-section-title">MVP Scheduler</div>
+            <a href="#" class="nav-item active" data-tab="scheduler">
+                <i>🗓️</i> Build Schedule
             </a>
             <a href="#" class="nav-item" data-tab="advertisers">
-                <i>🏢</i> Advertisers
+                <i>🏢</i> Customers
             </a>
-            <a href="#" class="nav-item" data-tab="agencies">
-                <i>🤝</i> Agencies
-            </a>
-            <a href="#" class="nav-item" data-tab="sales-reps">
-                <i>👤</i> Sales Reps
-            </a>
-        </div>
-
-        <div class="nav-section">
-            <div class="nav-section-title">Campaigns & Traffic</div>
-            <a href="#" class="nav-item" data-tab="campaigns">
-                <i>📢</i> Campaigns
+            <a href="#" class="nav-item" data-tab="orders">
+                <i>📋</i> Orders
             </a>
             <a href="#" class="nav-item" data-tab="spots">
                 <i>🎧</i> Spots / Production
             </a>
             <a href="#" class="nav-item" data-tab="voice-tracks">
-                <i>🎙️</i> Voice Tracks
+                <i>🎙️</i> Interviews
             </a>
-        </div>
-
-        <div class="nav-section">
-            <div class="nav-section-title">Administration</div>
             <a href="#" class="nav-item" data-tab="users">
                 <i>👥</i> Users
             </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Setup Needed</div>
+            <a href="#" class="nav-item" data-tab="clocks">
+                <i>🕐</i> Templates
+            </a>
+            <a href="#" class="nav-item" data-tab="dayparts">
+                <i>⏰</i> Time Windows
+            </a>
             <a href="/libretime-integration-settings.html" class="nav-item">
-                <i>🔌</i> LibreTime Integration
+                <i>🔌</i> LibreTime Connection
             </a>
         </div>
 
-        <!-- Future sections (commented for now) -->
-        <!--
-        <div class="nav-section">
-            <div class="nav-section-title">Logs & Placement</div>
-            <a href="#" class="nav-item" data-tab="logs">📊 Daily Logs</a>
-            <a href="#" class="nav-item" data-tab="placement">🎯 Spot Placement</a>
-            <a href="#" class="nav-item" data-tab="separation">🔄 Separation Rules</a>
-        </div>
-
-        <div class="nav-section">
-            <div class="nav-section-title">Export & Reconciliation</div>
-            <a href="#" class="nav-item" data-tab="export">📤 Log Export</a>
-            <a href="#" class="nav-item" data-tab="reconciliation">✅ As-Run Reconciliation</a>
-            <a href="#" class="nav-item" data-tab="integrations">🔌 Integrations</a>
-        </div>
-
-        <div class="nav-section">
-            <div class="nav-section-title">Billing & Analytics</div>
-            <a href="#" class="nav-item" data-tab="invoicing">💰 Invoicing</a>
-            <a href="#" class="nav-item" data-tab="affidavits">📄 Affidavits</a>
-            <a href="#" class="nav-item" data-tab="receivables">💳 Accounts Receivable</a>
-            <a href="#" class="nav-item" data-tab="analytics">📈 Revenue Analytics</a>
-        </div>
-        -->
+        <details class="nav-section" style="margin: 1rem 0;">
+            <summary class="nav-section-title" style="cursor: pointer;">Advanced / Later</summary>
+            <a href="#" class="nav-item" data-tab="dashboard"><i>📊</i> Dashboard</a>
+            <a href="#" class="nav-item" data-tab="campaigns"><i>📢</i> Campaigns</a>
+            <a href="#" class="nav-item" data-tab="organizations"><i>🏛️</i> Organizations</a>
+            <a href="#" class="nav-item" data-tab="markets"><i>🌍</i> Markets</a>
+            <a href="#" class="nav-item" data-tab="clusters"><i>🔗</i> Clusters</a>
+            <a href="#" class="nav-item" data-tab="stations"><i>📻</i> Stations</a>
+            <a href="#" class="nav-item" data-tab="channels"><i>📡</i> Channels</a>
+            <a href="#" class="nav-item" data-tab="agencies"><i>🤝</i> Agencies</a>
+            <a href="#" class="nav-item" data-tab="sales-reps"><i>👤</i> Sales Reps</a>
+            <a href="#" class="nav-item" data-tab="daypartCategories"><i>📂</i> Daypart Categories</a>
+        </details>
     </nav>
 
     <!-- Main Content -->
     <div class="main-content">
         <div class="header">
-            <h2 id="pageTitle">Station Management</h2>
+            <h2 id="pageTitle">Build Schedule</h2>
             <div class="user-info">
                 <span class="user-badge" id="userBadge">Loading...</span>
                 <a href="/" class="logout-btn" onclick="logout()">Logout</a>
@@ -676,8 +630,77 @@
                 </div>
             </div>
 
+            <!-- Scheduler Tab -->
+            <div id="schedulerTab" class="tab-content active">
+                <div class="toolbar">
+                    <div>
+                        <h3 class="section-title">Build Schedule</h3>
+                        <p style="color: #b0b0b0; margin-top: 0.35rem;">Generate days of logs from a template and see traffic/interview blockers before publishing.</p>
+                    </div>
+                </div>
+
+                <div class="info-box" style="background: rgba(102, 126, 234, 0.1); border-left: 4px solid #667eea; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                    <strong>MVP workflow:</strong> Customer → Order → Spots/Interviews → Build Schedule. Network/station setup is hidden in Advanced for now.
+                </div>
+
+                <div class="card" style="background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+                        <div class="form-group">
+                            <label for="schedulerClockTemplateId">Template *</label>
+                            <select id="schedulerClockTemplateId">
+                                <option value="">Loading templates...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="schedulerStartDate">Start Date *</label>
+                            <input type="date" id="schedulerStartDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="schedulerEndDate">End Date *</label>
+                            <input type="date" id="schedulerEndDate">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+                        <button class="btn btn-primary" onclick="generateMvpSchedule()">Generate Schedule Preview</button>
+                        <button class="btn btn-secondary" onclick="switchTab('orders')">Enter Orders</button>
+                        <button class="btn btn-secondary" onclick="switchTab('spots')">Manage Spots</button>
+                    </div>
+                </div>
+
+                <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                    <div class="stat-card" style="background: rgba(67, 233, 123, 0.15); padding: 1rem; border-radius: 8px; border: 1px solid rgba(67, 233, 123, 0.35);">
+                        <div style="font-size: 1.75rem; font-weight: bold;" id="schedulerHoursGenerated">-</div>
+                        <div style="color: #b0b0b0;">Hours Generated</div>
+                    </div>
+                    <div class="stat-card" style="background: rgba(250, 112, 154, 0.15); padding: 1rem; border-radius: 8px; border: 1px solid rgba(250, 112, 154, 0.35);">
+                        <div style="font-size: 1.75rem; font-weight: bold;" id="schedulerCriticalExceptions">-</div>
+                        <div style="color: #b0b0b0;">Critical Blockers</div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <strong>Critical Blockers</strong>
+                        <span style="color: #888; margin-left: 0.5rem;">Spot/interview slots that need attention before the log is usable.</span>
+                    </div>
+                    <div id="schedulerEmptyState" class="empty-state">Generate a schedule preview to see blockers.</div>
+                    <table id="schedulerExceptionsTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Hour</th>
+                                <th>Break</th>
+                                <th>Type</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody id="schedulerExceptionsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Dashboard Tab -->
-            <div id="dashboardTab" class="tab-content active">
+            <div id="dashboardTab" class="tab-content">
                 <h3 class="section-title">Dashboard Overview</h3>
                 
                 <!-- Stats Cards -->
@@ -1878,7 +1901,7 @@
     <script>
         let authToken = localStorage.getItem('authToken');
         let currentUser = null;
-        let currentTab = 'stations';
+        let currentTab = 'scheduler';
 
         // Check authentication
         if (!authToken) {
@@ -1919,6 +1942,7 @@
 
             // Update page title
             const titles = {
+                'scheduler': 'Build Schedule',
                 'dashboard': 'Dashboard Overview',
                 'stations': 'Station Management',
                 'clocks': 'Clock Template Management',
@@ -1953,6 +1977,15 @@
                         'See today\'s scheduled spots',
                         'Track revenue and outstanding invoices',
                         'Monitor recent campaign activity'
+                    ]
+                },
+                'scheduler': {
+                    title: 'Build Schedule',
+                    description: 'This is the MVP scheduler screen. Pick a template and date range to generate logs ahead of time and see critical blockers.',
+                    features: [
+                        'Generate days of logs from one template',
+                        'Surface missing spot/interview placements',
+                        'Keep customers and programming informed before the day airs'
                     ]
                 },
                 'stations': {
@@ -2059,7 +2092,7 @@
                 }
             };
 
-            const help = helpTexts[tabName] || helpTexts['stations'];
+            const help = helpTexts[tabName] || helpTexts['scheduler'];
             helpContent.innerHTML = `
                 <div class="help-section">
                     <h3>${help.title}</h3>
@@ -2074,6 +2107,11 @@
 
         function loadTabData(tabName) {
             switch(tabName) {
+                case 'scheduler':
+                    document.getElementById('pageTitle').textContent = 'Build Schedule';
+                    loadSchedulerTemplates();
+                    setSchedulerDefaultDates();
+                    break;
                 case 'organizations':
                     document.getElementById('pageTitle').textContent = 'Organization Management';
                     loadOrganizationsForTable();
@@ -2136,6 +2174,109 @@
                     loadUsers();
                     break;
             }
+        }
+
+        function setSchedulerDefaultDates() {
+            const startInput = document.getElementById('schedulerStartDate');
+            const endInput = document.getElementById('schedulerEndDate');
+            if (!startInput || !endInput || startInput.value) return;
+
+            const today = new Date();
+            const end = new Date(today);
+            end.setDate(today.getDate() + 6);
+            startInput.value = today.toISOString().split('T')[0];
+            endInput.value = end.toISOString().split('T')[0];
+        }
+
+        async function loadSchedulerTemplates() {
+            const select = document.getElementById('schedulerClockTemplateId');
+            if (!select || select.dataset.loaded === 'true') return;
+
+            try {
+                const response = await fetch('/api/clocks', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed to load templates');
+
+                const templates = await response.json();
+                select.innerHTML = '<option value="">Select a template...</option>';
+                templates.forEach(template => {
+                    const option = document.createElement('option');
+                    option.value = template.id;
+                    option.textContent = template.name || template.description || template.id;
+                    select.appendChild(option);
+                });
+                select.dataset.loaded = 'true';
+
+                if (templates.length === 1) {
+                    select.value = templates[0].id;
+                }
+            } catch (error) {
+                console.error('Error loading scheduler templates:', error);
+                select.innerHTML = '<option value="">Unable to load templates</option>';
+            }
+        }
+
+        async function generateMvpSchedule() {
+            const clockTemplateId = document.getElementById('schedulerClockTemplateId').value;
+            const startDate = document.getElementById('schedulerStartDate').value;
+            const endDate = document.getElementById('schedulerEndDate').value;
+
+            if (!clockTemplateId || !startDate || !endDate) {
+                showError('Choose a template, start date, and end date first.');
+                return;
+            }
+
+            try {
+                showSuccess('Generating schedule preview...');
+                const params = new URLSearchParams({ clockTemplateId, startDate, endDate });
+                const response = await fetch(`/api/logs/generate-range-with-critical?${params.toString()}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) {
+                    throw new Error(`Schedule generation failed (${response.status})`);
+                }
+
+                const result = await response.json();
+                displaySchedulerResults(result);
+                const blockerCount = result.totalCriticalExceptions || 0;
+                showSuccess(blockerCount === 0
+                    ? 'Schedule preview generated with no critical blockers.'
+                    : `Schedule preview generated with ${blockerCount} critical blocker(s).`);
+            } catch (error) {
+                console.error('Error generating schedule preview:', error);
+                showError(error.message || 'Failed to generate schedule preview');
+            }
+        }
+
+        function displaySchedulerResults(result) {
+            document.getElementById('schedulerHoursGenerated').textContent = result.showInstanceCount || 0;
+            document.getElementById('schedulerCriticalExceptions').textContent = result.totalCriticalExceptions || 0;
+
+            const table = document.getElementById('schedulerExceptionsTable');
+            const tbody = document.getElementById('schedulerExceptionsTableBody');
+            const emptyState = document.getElementById('schedulerEmptyState');
+            const exceptions = result.criticalExceptions || [];
+
+            if (!exceptions.length) {
+                table.style.display = 'none';
+                emptyState.style.display = 'block';
+                emptyState.textContent = 'No critical spot/interview blockers found.';
+                tbody.innerHTML = '';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            table.style.display = 'table';
+            tbody.innerHTML = exceptions.map(item => `
+                <tr>
+                    <td>${item.date || '-'}</td>
+                    <td>${item.hour != null ? String(item.hour).padStart(2, '0') + ':00' : '-'}</td>
+                    <td>${item.breakName || '-'}</td>
+                    <td>${item.category || '-'}</td>
+                    <td>${item.reason || '-'}</td>
+                </tr>
+            `).join('');
         }
 
         // Help panel toggle
@@ -5288,7 +5429,8 @@
 
         // Initialize
         loadUserInfo();
-        loadStations();
+        setSchedulerDefaultDates();
+        loadSchedulerTemplates();
     </script>
     
     <!-- Clock Builder Script -->
