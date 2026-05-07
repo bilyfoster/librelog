@@ -142,23 +142,24 @@ public class ScheduleService {
         }
 
         var client = libretime.clientFor(day.getStationId());
-        var byShow = new java.util.LinkedHashMap<Long, java.util.List<java.util.Map<String, Object>>>();
+        // Group items by show instance so we can clear-and-rewrite per instance.
+        var byShow = new java.util.LinkedHashMap<Long, java.util.List<ScheduleItem>>();
         for (ScheduleItem it : items.findByScheduleDayIdOrderByPositionAsc(dayId)) {
-            if (it.getShowInstanceId() == null) continue;
-            var payload = new java.util.LinkedHashMap<String, Object>();
-            payload.put("kind", it.getKind());
-            if (it.getLibrtimeFileId() != null) payload.put("file_id", it.getLibrtimeFileId());
-            if (it.getLengthSeconds() != null) payload.put("length_seconds", it.getLengthSeconds());
-            payload.put("slot_index", it.getSlotIndex());
-            byShow.computeIfAbsent(it.getShowInstanceId(), k -> new java.util.ArrayList<>()).add(payload);
+            if (it.getShowInstanceId() == null || it.getLibrtimeFileId() == null) continue;
+            byShow.computeIfAbsent(it.getShowInstanceId(), k -> new java.util.ArrayList<>()).add(it);
         }
 
         for (var e : byShow.entrySet()) {
+            long instanceId = e.getKey();
             try {
-                client.pushShowItems(e.getKey(), e.getValue());
+                client.clearScheduleForInstance(instanceId);
+                int position = 0;
+                for (ScheduleItem it : e.getValue()) {
+                    client.scheduleFileInInstance(instanceId, it.getLibrtimeFileId(), position++);
+                }
             } catch (Exception ex) {
                 throw new IllegalStateException("Push to LibreTime failed for show instance "
-                        + e.getKey() + ": " + ex.getMessage(), ex);
+                        + instanceId + ": " + ex.getMessage(), ex);
             }
         }
 

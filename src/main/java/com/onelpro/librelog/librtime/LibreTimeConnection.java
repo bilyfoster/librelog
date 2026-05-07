@@ -24,6 +24,15 @@ public class LibreTimeConnection {
     @Column(name = "base_url", nullable = false)
     private String baseUrl;
 
+    /** LibreTime username for HTTP Basic auth. */
+    @Column(name = "username")
+    private String username;
+
+    /**
+     * Encrypted LibreTime password (used as the secret half of HTTP Basic auth).
+     * Column is named "api_key_encrypted" for backward compatibility with the initial
+     * schema; semantically it stores the password.
+     */
     @Column(name = "api_key_encrypted", nullable = false, columnDefinition = "TEXT")
     private String apiKeyEncrypted;
 

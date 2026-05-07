@@ -57,11 +57,13 @@ public class PlaybackService {
         for (JsonNode n : entries) {
             Instant playedAt = parseTime(n);
             if (playedAt == null) continue;
+            Long fileId = null;
+            if (n.has("file") && !n.get("file").isNull()) fileId = n.get("file").asLong();
+            else if (n.has("file_id") && !n.get("file_id").isNull()) fileId = n.get("file_id").asLong();
             PlaybackLogEntry e = PlaybackLogEntry.builder()
                     .stationId(stationId)
                     .playedAt(playedAt)
-                    .librtimeFileId(n.has("file_id") && !n.get("file_id").isNull() ? n.get("file_id").asLong() : null)
-                    .lengthSeconds(n.has("length_seconds") && !n.get("length_seconds").isNull() ? n.get("length_seconds").asInt() : null)
+                    .librtimeFileId(fileId)
                     .raw(n.toString())
                     .build();
             logs.save(e);
@@ -154,7 +156,7 @@ public class PlaybackService {
     }
 
     private static Instant parseTime(JsonNode n) {
-        for (String field : List.of("starts", "played_at", "start_time")) {
+        for (String field : List.of("starts", "starts_at", "played_at", "start_time")) {
             if (n.has(field) && !n.get(field).isNull()) {
                 try {
                     return parseLoose(n.get(field).asText());

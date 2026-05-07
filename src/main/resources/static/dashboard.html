@@ -24,21 +24,20 @@
         <div class="brand">LibreLog</div>
         <nav>
             <div class="nav-section-title">Schedule</div>
-            <button class="nav-item" data-tab="dayBuilder">Day Builder</button>
-            <button class="nav-item" data-tab="library">LibreTime Library</button>
+            <button class="nav-item" data-tab="dayBuilder"><span class="ic">DB</span>Day Builder</button>
+            <button class="nav-item" data-tab="library"><span class="ic">LB</span>LibreTime Library</button>
 
             <div class="nav-section-title">Orders</div>
-            <button class="nav-item" data-tab="customers">Customers</button>
-            <button class="nav-item" data-tab="orders">Orders &amp; Spots</button>
-            <button class="nav-item" data-tab="reconciliation">Reconciliation</button>
+            <button class="nav-item" data-tab="customers"><span class="ic">CU</span>Customers</button>
+            <button class="nav-item" data-tab="orders"><span class="ic">OR</span>Orders &amp; Spots</button>
 
             <div class="nav-section-title">Setup</div>
-            <button class="nav-item" data-tab="stations">Station</button>
-            <button class="nav-item" data-tab="connection">LibreTime Connection</button>
-            <button class="nav-item admin-only" data-tab="users">Users</button>
+            <button class="nav-item" data-tab="stations"><span class="ic">ST</span>Station</button>
+            <button class="nav-item" data-tab="connection"><span class="ic">LT</span>LibreTime Connection</button>
+            <button class="nav-item admin-only" data-tab="users"><span class="ic">US</span>Users</button>
         </nav>
         <div class="user-bar">
-            <span id="currentUserLabel"></span>
+            <span id="currentUserLabel" class="muted"></span>
             <button id="logoutButton" class="link">Sign out</button>
         </div>
     </aside>
@@ -49,36 +48,35 @@
             <div id="stationPicker" class="station-picker"></div>
         </header>
 
+        <div id="globalBanner" class="banner hidden"></div>
+
         <!-- Day Builder -->
         <section id="dayBuilderTab" class="tab">
             <div class="day-builder-toolbar">
-                <label>Date <input type="date" id="dayBuilderDate" /></label>
-                <button id="dayBuilderLoad">Load</button>
+                <label class="inline">Date <input type="date" id="dayBuilderDate" /></label>
                 <span id="dayBuilderStatus" class="badge"></span>
                 <span id="dayBuilderLockBadge" class="badge"></span>
                 <span class="grow"></span>
+                <button id="dayBuilderRefresh" class="secondary" title="Reload day from server">Refresh</button>
                 <button id="dayBuilderLockBtn">Edit this day</button>
                 <button id="dayBuilderSaveBtn" disabled>Save draft</button>
                 <button id="dayBuilderPushBtn" disabled>Push to LibreTime</button>
-                <button id="dayBuilderReopenBtn" class="admin-only" disabled>Reopen (admin)</button>
-                <button id="dayBuilderForceUnlockBtn" class="admin-only" disabled>Force unlock</button>
+                <button id="dayBuilderPullPlayback" class="secondary" title="Import yesterday's as-run from LibreTime">Pull playback</button>
+                <button id="dayBuilderReopenBtn" class="admin-only secondary" disabled>Reopen (admin)</button>
+                <button id="dayBuilderForceUnlockBtn" class="admin-only danger" disabled>Force unlock</button>
             </div>
             <div class="day-builder">
                 <div class="db-pane db-pane-left">
-                    <h3>Show instances</h3>
-                    <div id="dayBuilderShows" class="muted">Pick a date and load.</div>
+                    <h3>Show instances <span id="dayBuilderShowsCount" class="muted small"></span></h3>
+                    <div id="dayBuilderShows" class="muted">Pick a date to load.</div>
                 </div>
                 <div class="db-pane db-pane-mid">
-                    <h3>Slots</h3>
+                    <h3>Slots <span id="dayBuilderSlotsCount" class="muted small"></span></h3>
                     <div id="dayBuilderSlots" class="muted">No slots yet.</div>
                 </div>
                 <div class="db-pane db-pane-right">
-                    <h3>Library &amp; Spots</h3>
-                    <input id="dayBuilderLibSearch" placeholder="Search library" />
-                    <button id="dayBuilderLibBtn">Search</button>
-                    <div id="dayBuilderLibResults" class="muted">Search the library.</div>
-                    <h4>Open order spots</h4>
-                    <div id="dayBuilderSpotPool" class="muted">Active orders' spots will appear here.</div>
+                    <h3>Active spot pool <span id="dayBuilderSpotPoolCount" class="muted small"></span></h3>
+                    <div id="dayBuilderSpotPool" class="muted">No active orders for this date.</div>
                 </div>
             </div>
         </section>
@@ -86,20 +84,22 @@
         <!-- Library -->
         <section id="libraryTab" class="tab hidden">
             <div class="row">
-                <input id="libSearch" placeholder="Search files" />
+                <input id="libSearch" placeholder="Filter by name, filepath, or description" />
                 <button id="libSearchBtn">Search</button>
+                <span class="grow"></span>
+                <span id="libCount" class="muted small"></span>
             </div>
             <h3>Files</h3>
-            <div id="libFiles"></div>
+            <div id="libFiles" class="muted">Loading...</div>
             <h3>Show instances (today)</h3>
-            <div id="libShowInstances"></div>
+            <div id="libShowInstances" class="muted">Loading...</div>
             <h3>Templates</h3>
-            <div id="libTemplates"></div>
+            <div id="libTemplates" class="muted">Loading...</div>
         </section>
 
         <!-- Customers -->
         <section id="customersTab" class="tab hidden">
-            <button id="customerNewBtn">New customer</button>
+            <div class="row"><button id="customerNewBtn">New customer</button></div>
             <table class="data-table">
                 <thead><tr><th>Name</th><th>Contact</th><th>Notes</th><th></th></tr></thead>
                 <tbody id="customersBody"></tbody>
@@ -108,31 +108,30 @@
 
         <!-- Orders + Spots -->
         <section id="ordersTab" class="tab hidden">
-            <button id="orderNewBtn">New order</button>
+            <div class="row"><button id="orderNewBtn">New order</button></div>
             <table class="data-table">
                 <thead><tr><th>Name</th><th>Customer</th><th>Dates</th><th>Spots</th><th></th></tr></thead>
                 <tbody id="ordersBody"></tbody>
             </table>
-            <div id="orderDetail" class="hidden">
-                <h3 id="orderDetailTitle"></h3>
-                <button id="spotNewBtn">New spot</button>
-                <button id="orderReconcileBtn">View reconciliation</button>
+            <div id="orderDetail" class="hidden order-detail">
+                <div class="row">
+                    <h3 id="orderDetailTitle"></h3>
+                    <span class="grow"></span>
+                    <button id="spotNewBtn">New spot</button>
+                    <button id="orderReconcileBtn" class="secondary">Reconciliation</button>
+                    <button id="orderDetailClose" class="link">Close</button>
+                </div>
                 <table class="data-table">
                     <thead><tr><th>Label</th><th>Length</th><th>LibreTime file</th><th>Rotation</th><th></th></tr></thead>
                     <tbody id="spotsBody"></tbody>
                 </table>
+                <div id="orderReconciliation" class="hidden"></div>
             </div>
-        </section>
-
-        <!-- Reconciliation -->
-        <section id="reconciliationTab" class="tab hidden">
-            <p class="muted">Pick an order from <em>Orders</em> to see scheduled vs. as-run.</p>
-            <div id="reconciliationDetail"></div>
         </section>
 
         <!-- Station -->
         <section id="stationsTab" class="tab hidden">
-            <button id="stationNewBtn">New station</button>
+            <div class="row"><button id="stationNewBtn">New station</button></div>
             <table class="data-table">
                 <thead><tr><th>Name</th><th>Call letters</th><th>Time zone</th><th></th></tr></thead>
                 <tbody id="stationsBody"></tbody>
@@ -141,19 +140,22 @@
 
         <!-- LibreTime Connection -->
         <section id="connectionTab" class="tab hidden">
-            <p class="muted">Configure how LibreLog talks to your LibreTime instance for the selected station.</p>
-            <form id="connectionForm">
-                <label>Base URL <input type="url" id="connBaseUrl" required placeholder="https://libretime.example.org" /></label>
-                <label>API Key <input type="password" id="connApiKey" placeholder="Leave blank to keep existing" /></label>
-                <button type="submit">Save</button>
-                <button type="button" id="connTestBtn">Test connection</button>
+            <p class="muted">Configure how LibreLog talks to your LibreTime instance for the selected station. LibreTime uses HTTP Basic auth: enter the LibreTime user's name and password.</p>
+            <form id="connectionForm" class="form-card">
+                <label>Base URL <input type="url" id="connBaseUrl" required placeholder="https://dev-studio.gayphx.com" /></label>
+                <label>Username <input type="text" id="connUsername" required autocomplete="off" placeholder="admin" /></label>
+                <label>Password <input type="password" id="connPassword" autocomplete="new-password" placeholder="(leave blank to keep existing)" /></label>
+                <div class="row">
+                    <button type="submit">Save</button>
+                    <button type="button" id="connTestBtn" class="secondary">Test connection</button>
+                </div>
                 <div id="connStatus" class="muted"></div>
             </form>
         </section>
 
         <!-- Users -->
         <section id="usersTab" class="tab hidden">
-            <button id="userNewBtn">New user</button>
+            <div class="row"><button id="userNewBtn">New user</button></div>
             <table class="data-table">
                 <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Active</th><th></th></tr></thead>
                 <tbody id="usersBody"></tbody>
@@ -167,11 +169,24 @@
         <h3 id="modalTitle"></h3>
         <div id="modalBody"></div>
         <div class="modal-actions">
-            <button type="button" id="modalCancel">Cancel</button>
+            <button type="button" id="modalCancel" class="secondary">Cancel</button>
             <button type="submit" id="modalSave">Save</button>
         </div>
     </form>
 </dialog>
+
+<dialog id="pickerModal" class="picker">
+    <div class="picker-head">
+        <h3 id="pickerTitle"></h3>
+        <input id="pickerSearch" placeholder="Type to filter..." />
+    </div>
+    <div id="pickerList" class="picker-list"></div>
+    <div class="modal-actions">
+        <button type="button" id="pickerCancel" class="secondary">Cancel</button>
+    </div>
+</dialog>
+
+<div id="toast" class="toast hidden"></div>
 
 <script src="/app.js"></script>
 </body>

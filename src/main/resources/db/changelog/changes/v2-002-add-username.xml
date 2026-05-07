@@ -5,7 +5,10 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
             https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
-    <include file="db/changelog/changes/v2-001-initial-schema.xml"/>
-    <include file="db/changelog/changes/v2-002-add-username.xml"/>
+    <changeSet id="v2-002-add-username" author="librelog">
+        <sql splitStatements="true">
+            ALTER TABLE librtime_connection ADD COLUMN username VARCHAR(200);
+        </sql>
+    </changeSet>
 
 </databaseChangeLog>
