@@ -1,6 +1,7 @@
 package com.onelpro.librelog.librtime;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.onelpro.librelog.station.StationRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 
 @RestController
@@ -17,13 +19,15 @@ import java.util.*;
 public class LibreTimeController {
 
     private final LibreTimeService service;
+    private final StationRepository stations;
 
     public record ConnectionDto(String baseUrl, String username, boolean configured,
                                 Instant lastTestedAt, Boolean lastTestOk, String lastTestMessage) {}
 
     public record SaveConnectionRequest(@NotBlank String baseUrl, String username, String password) {}
 
-    public record FileDto(long id, String name, String length, String mime, Long size, String filepath) {}
+    public record FileDto(long id, String name, String length, String mime, Long size, String filepath,
+                          String artist, String title, String album, String genre) {}
 
     public record ShowInstanceDto(long id, String showName, Long showId,
                                   String startsAt, String endsAt,
@@ -83,7 +87,11 @@ public class LibreTimeController {
                         textOrNull(n, "length"),
                         textOrNull(n, "mime"),
                         n.has("size") && !n.get("size").isNull() ? n.get("size").asLong() : null,
-                        textOrNull(n, "filepath")));
+                        textOrNull(n, "filepath"),
+                        textOrNull(n, "artist_name"),
+                        textOrNull(n, "track_title"),
+                        textOrNull(n, "album_title"),
+                        textOrNull(n, "genre")));
             }
             return ResponseEntity.ok(out);
         } catch (Exception e) {
@@ -105,7 +113,10 @@ public class LibreTimeController {
                                            @RequestParam("date") String date) {
         try {
             var client = service.clientFor(stationId);
-            var instances = client.listShowInstances(LocalDate.parse(date));
+            ZoneId zone = stations.findById(stationId)
+                    .map(s -> safeZone(s.getTimeZone()))
+                    .orElse(ZoneId.of("UTC"));
+            var instances = client.listShowInstances(LocalDate.parse(date), zone);
             // Build show id -> name map so the UI gets human-friendly names.
             Map<Long, String> showNames = new HashMap<>();
             for (JsonNode s : client.listShows()) {
@@ -162,5 +173,10 @@ public class LibreTimeController {
         Throwable c = t;
         while (c.getCause() != null && c.getCause() != c) c = c.getCause();
         return c.getMessage() == null ? c.getClass().getSimpleName() : c.getMessage();
+    }
+
+    private static ZoneId safeZone(String tz) {
+        if (tz == null || tz.isBlank()) return ZoneId.of("UTC");
+        try { return ZoneId.of(tz); } catch (Exception e) { return ZoneId.of("UTC"); }
     }
 }

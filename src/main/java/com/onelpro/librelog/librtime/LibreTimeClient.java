@@ -6,11 +6,15 @@ import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -26,8 +30,6 @@ import java.util.Map;
  * different LibreTime instance.</p>
  */
 public class LibreTimeClient {
-
-    private static final DateTimeFormatter ISO_LOCAL = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     private final WebClient web;
 
@@ -69,19 +71,72 @@ public class LibreTimeClient {
     }
 
     public List<JsonNode> listShowInstances(LocalDate date) {
-        LocalDateTime start = date.atStartOfDay();
-        LocalDateTime end = start.plusDays(1);
-        String uri = "/api/v2/show-instances?starts_after=" + ISO_LOCAL.format(start)
-                + "&starts_before=" + ISO_LOCAL.format(end);
-        return getList(uri);
+        return listShowInstances(date, ZoneOffset.UTC);
+    }
+
+    /**
+     * LibreTime 4.5's {@code /api/v2/show-instances} viewset has no FilterSet, so the
+     * {@code starts_after}/{@code starts_before} query params are ignored and every
+     * instance is returned. We still send them (some forks honor them) but always
+     * filter client-side for the [date 00:00, date+1 00:00) window in the supplied
+     * station {@link ZoneId}.
+     */
+    public List<JsonNode> listShowInstances(LocalDate date, ZoneId zone) {
+        ZoneId z = zone == null ? ZoneOffset.UTC : zone;
+        ZonedDateTime startZdt = date.atStartOfDay(z);
+        ZonedDateTime endZdt = startZdt.plusDays(1);
+        Instant startInstant = startZdt.toInstant();
+        Instant endInstant = endZdt.toInstant();
+
+        String start = encIsoInstant(startInstant.toString());
+        String end = encIsoInstant(endInstant.toString());
+        String uri = "/api/v2/show-instances?starts_after=" + start + "&starts_before=" + end;
+        List<JsonNode> raw = getList(uri);
+
+        List<JsonNode> filtered = new ArrayList<>(raw.size());
+        for (JsonNode n : raw) {
+            Instant t = parseInstant(textOrNull(n, "starts_at"));
+            if (t == null) continue;
+            // Half-open window: [startInstant, endInstant)
+            if (!t.isBefore(startInstant) && t.isBefore(endInstant)) {
+                filtered.add(n);
+            }
+        }
+        return filtered;
+    }
+
+    private static String textOrNull(JsonNode n, String f) {
+        return n != null && n.has(f) && !n.get(f).isNull() ? n.get(f).asText() : null;
+    }
+
+    private static Instant parseInstant(String s) {
+        if (s == null || s.isBlank()) return null;
+        try {
+            return Instant.parse(s);
+        } catch (Exception e) {
+            try {
+                // fallback: naive ISO local strings, treat as UTC
+                return java.time.LocalDateTime.parse(s).toInstant(ZoneOffset.UTC);
+            } catch (Exception ignored) {
+                return null;
+            }
+        }
     }
 
     public List<JsonNode> listSchedule(LocalDate date) {
-        LocalDateTime start = date.atStartOfDay();
-        LocalDateTime end = start.plusDays(1);
-        String uri = "/api/v2/schedule?starts_after=" + ISO_LOCAL.format(start)
-                + "&starts_before=" + ISO_LOCAL.format(end);
+        String start = encIsoInstant(date.atStartOfDay(ZoneOffset.UTC).toInstant().toString());
+        String end = encIsoInstant(date.atStartOfDay(ZoneOffset.UTC).plusDays(1).toInstant().toString());
+        String uri = "/api/v2/schedule?starts_after=" + start + "&starts_before=" + end;
         return getList(uri);
+    }
+
+    public List<JsonNode> listScheduleForInstance(long instanceId) {
+        return getList("/api/v2/schedule?instance=" + instanceId);
+    }
+
+    /** Fetch a single show instance to learn its starts_at / ends_at. */
+    public JsonNode getShowInstance(long instanceId) {
+        return getJson("/api/v2/show-instances/" + instanceId);
     }
 
     public List<JsonNode> listFiles(String genre) {
@@ -101,29 +156,39 @@ public class LibreTimeClient {
     }
 
     public List<JsonNode> playoutHistory(LocalDate date) {
-        LocalDateTime start = date.atStartOfDay();
-        LocalDateTime end = start.plusDays(1);
-        String uri = "/api/v2/playout-history?starts_after=" + ISO_LOCAL.format(start)
-                + "&starts_before=" + ISO_LOCAL.format(end);
+        String start = encIsoInstant(date.atStartOfDay(ZoneOffset.UTC).toInstant().toString());
+        String end = encIsoInstant(date.atStartOfDay(ZoneOffset.UTC).plusDays(1).toInstant().toString());
+        String uri = "/api/v2/playout-history?starts_after=" + start + "&starts_before=" + end;
         return getList(uri);
     }
 
     /**
      * Schedule a single file inside a show instance.
      *
-     * <p>The LibreTime {@code /api/v2/schedule} POST requires an {@code instance}
-     * (show instance id) and a {@code file} (file id) plus position/cue fields.
-     * Returns the created Schedule object.</p>
+     * <p>The LibreTime {@code /api/v2/schedule} POST (in 4.5.x) requires
+     * {@code instance}, {@code file}, {@code position}, {@code starts_at},
+     * {@code ends_at}, {@code cue_in}, {@code cue_out}, and {@code broadcasted}.
+     * The caller is responsible for computing absolute {@code startsAt} (typically
+     * the show instance start plus accumulated lengths) and
+     * {@code endsAt = startsAt + lengthSeconds}.</p>
+     *
+     * <p>Returns the created Schedule object.</p>
      */
-    public JsonNode scheduleFileInInstance(long instanceId, long fileId, int position) {
-        Map<String, Object> body = Map.of(
-                "instance", instanceId,
-                "file", fileId,
-                "position", position,
-                "cue_in", "00:00:00",
-                "cue_out", "00:00:00",
-                "fade_in", "00:00:00.500",
-                "fade_out", "00:00:00.500");
+    public JsonNode scheduleFileInInstance(long instanceId, long fileId, int position,
+                                           Instant startsAt, Instant endsAt,
+                                           int lengthSeconds) {
+        java.util.LinkedHashMap<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("instance", instanceId);
+        body.put("file", fileId);
+        body.put("position", position);
+        body.put("starts_at", startsAt.toString());
+        body.put("ends_at", endsAt.toString());
+        body.put("cue_in", "00:00:00");
+        body.put("cue_out", formatHms(Math.max(0, lengthSeconds)));
+        body.put("fade_in", "00:00:00.500");
+        body.put("fade_out", "00:00:00.500");
+        body.put("broadcasted", 0);
+        body.put("playout_status", 1);
         return web.post().uri("/api/v2/schedule")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
@@ -132,10 +197,17 @@ public class LibreTimeClient {
                 .block(Duration.ofSeconds(30));
     }
 
+    private static String formatHms(int totalSeconds) {
+        int h = totalSeconds / 3600;
+        int m = (totalSeconds % 3600) / 60;
+        int s = totalSeconds % 60;
+        return String.format("%02d:%02d:%02d", h, m, s);
+    }
+
     /** Delete every existing schedule item for a show instance (so we can re-push). */
     public void clearScheduleForInstance(long instanceId) {
         // /api/v2/schedule supports filtering by query, but DELETE is per-id.
-        var existing = getList("/api/v2/schedule?instance=" + instanceId);
+        var existing = listScheduleForInstance(instanceId);
         for (JsonNode n : existing) {
             if (!n.has("id")) continue;
             long id = n.get("id").asLong();
@@ -177,6 +249,10 @@ public class LibreTimeClient {
 
     private static String errorMessage(Throwable t) {
         if (t instanceof WebClientResponseException w) {
+            String body = w.getResponseBodyAsString();
+            if (body != null && !body.isBlank() && body.length() < 600) {
+                return "HTTP " + w.getStatusCode().value() + ": " + body;
+            }
             return "HTTP " + w.getStatusCode().value() + " from LibreTime";
         }
         Throwable cause = t.getCause();
@@ -185,4 +261,8 @@ public class LibreTimeClient {
     }
 
     public record TestResult(boolean ok, String message) {}
+
+    private static String encIsoInstant(String iso) {
+        return URLEncoder.encode(iso, StandardCharsets.UTF_8);
+    }
 }

@@ -1,6 +1,7 @@
 package com.onelpro.librelog.playback;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onelpro.librelog.librtime.LibreTimeService;
 import com.onelpro.librelog.orders.Order;
 import com.onelpro.librelog.orders.OrderRepository;
@@ -41,6 +42,7 @@ public class PlaybackService {
     private final ScheduleItemRepository items;
     private final OrderRepository orders;
     private final SpotRepository spots;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Transactional
     public ImportResult importDay(UUID stationId, LocalDate date) {
@@ -74,6 +76,25 @@ public class PlaybackService {
         ReconcileResult rec = day == null ? new ReconcileResult(0, 0, 0)
                 : reconcileDay(day);
         return new ImportResult(saved, rec.matched(), rec.missed());
+    }
+
+    public List<PlaybackRow> listDay(UUID stationId, LocalDate date) {
+        Instant from = date.atStartOfDay(ZoneOffset.UTC).toInstant();
+        Instant to = date.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        return logs.findByStationIdAndPlayedAtBetweenOrderByPlayedAtAsc(stationId, from, to)
+                .stream()
+                .map(e -> {
+                    JsonNode raw = parseRaw(e.getRaw());
+                    return new PlaybackRow(
+                            e.getId().toString(),
+                            e.getPlayedAt(),
+                            e.getLibrtimeFileId(),
+                            firstText(raw, "name", "title", "file_name", "filename"),
+                            nestedText(raw, "file", "name", "title", "filename"),
+                            firstText(raw, "show_name", "show"),
+                            e.getLengthSeconds());
+                })
+                .toList();
     }
 
     @Transactional
@@ -173,7 +194,31 @@ public class PlaybackService {
         return ZonedDateTime.parse(s).toInstant();
     }
 
+    private JsonNode parseRaw(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        try { return objectMapper.readTree(raw); } catch (Exception ignored) { return null; }
+    }
+
+    private static String firstText(JsonNode n, String... fields) {
+        if (n == null) return null;
+        for (String field : fields) {
+            if (n.has(field) && !n.get(field).isNull()) {
+                String value = n.get(field).asText();
+                if (value != null && !value.isBlank()) return value;
+            }
+        }
+        return null;
+    }
+
+    private static String nestedText(JsonNode n, String objectField, String... fields) {
+        if (n == null || !n.has(objectField) || !n.get(objectField).isObject()) return null;
+        return firstText(n.get(objectField), fields);
+    }
+
     public record ImportResult(int entriesSaved, int matched, int missed) {}
+    public record PlaybackRow(String id, Instant playedAt, Long librtimeFileId,
+                              String name, String fileName, String showName,
+                              Integer lengthSeconds) {}
     public record ReconcileResult(int scheduled, int matched, int missed) {}
     public record OrderReconciliation(String orderId, String orderName,
                                       int scheduled, int matched, int missed,

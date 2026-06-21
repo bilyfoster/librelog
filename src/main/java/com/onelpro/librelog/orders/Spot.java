@@ -38,6 +38,20 @@ public class Spot {
     @Column(name = "target_show_id")
     private Long targetShowId;
 
+    /**
+     * Optional station-local half-open window [start, end) for when this spot may air.
+     * When unset, the spot is eligible whenever its cart slot runs (subject to rotation kind).
+     */
+    @Column(name = "local_window_start_minutes")
+    private Integer localWindowStartMinutes;
+
+    @Column(name = "local_window_end_minutes")
+    private Integer localWindowEndMinutes;
+
+    /** When set, {@link #localWindowStartMinutes}/{@link #localWindowEndMinutes} are ignored. */
+    @Column(name = "day_part_id")
+    private UUID dayPartId;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

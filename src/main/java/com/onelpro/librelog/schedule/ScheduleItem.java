@@ -47,6 +47,17 @@ public class ScheduleItem {
     @Column(nullable = false)
     private int position;
 
+    @Column(name = "cart_id")
+    private UUID cartId;
+
+    @Column(name = "cart_category")
+    private String cartCategory;
+
+    @Column(name = "resolved_member_id")
+    private UUID resolvedMemberId;
+
+    private String label;
+
     @PrePersist
     void prePersist() {
         if (id == null) id = UUID.randomUUID();

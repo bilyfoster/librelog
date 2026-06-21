@@ -7,5 +7,12 @@
 
     <include file="db/changelog/changes/v2-001-initial-schema.xml"/>
     <include file="db/changelog/changes/v2-002-add-username.xml"/>
+    <include file="db/changelog/changes/v2-003-carts-and-clocks.xml"/>
+    <include file="db/changelog/changes/v2-004-cart-category.xml"/>
+    <include file="db/changelog/changes/v2-005-order-kind-founding.xml"/>
+    <include file="db/changelog/changes/v2-006-clock-spot-time-windows.xml"/>
+    <include file="db/changelog/changes/v2-007-day-parts.xml"/>
+    <include file="db/changelog/changes/v2-008-schedule-day-clock-segments.xml"/>
+    <include file="db/changelog/changes/v2-009-clock-slot-cart-category.xml"/>
 
 </databaseChangeLog>

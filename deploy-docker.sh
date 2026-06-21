@@ -13,17 +13,11 @@ else
     exit 1
 fi
 
-echo "[1/4] mvn package..."
-mvn -DskipTests -q clean package
-
-echo "[2/4] docker compose down..."
-$COMPOSE_CMD down --remove-orphans
-
-echo "[3/4] docker compose build api..."
+echo "[1/2] docker compose build api (Maven + JDK 21 inside image)..."
 $COMPOSE_CMD build api
 
-echo "[4/4] docker compose up -d..."
-$COMPOSE_CMD up -d
+echo "[2/2] docker compose up -d (recreates api with new image; DB volume kept)..."
+$COMPOSE_CMD up -d --force-recreate api
 
 echo
 echo "Waiting for /actuator/health..."

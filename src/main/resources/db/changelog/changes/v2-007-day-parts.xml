@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="v2-007-day-parts" author="librelog">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+
+CREATE TABLE day_part (
+    id UUID PRIMARY KEY,
+    station_id UUID NOT NULL REFERENCES station(id) ON DELETE CASCADE,
+    name VARCHAR(200) NOT NULL,
+    start_minutes INT NOT NULL,
+    end_minutes INT NOT NULL,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE (station_id, name)
+);
+CREATE INDEX idx_day_part_station ON day_part(station_id, sort_order, name);
+
+ALTER TABLE clock_template_slot ADD COLUMN day_part_id UUID REFERENCES day_part(id) ON DELETE SET NULL;
+ALTER TABLE spot ADD COLUMN day_part_id UUID REFERENCES day_part(id) ON DELETE SET NULL;
+
+        ]]></sql>
+    </changeSet>
+</databaseChangeLog>

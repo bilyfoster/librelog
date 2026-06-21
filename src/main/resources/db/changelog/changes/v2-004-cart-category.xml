@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="v2-004-cart-category" author="librelog">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+
+ALTER TABLE cart ADD COLUMN category VARCHAR(40) NOT NULL DEFAULT 'MUSIC';
+
+UPDATE cart SET category = 'COMMERCIAL' WHERE kind = 'COMMERCIAL';
+UPDATE cart SET category = 'MUSIC'      WHERE kind = 'MUSIC' AND category IS NULL;
+
+CREATE INDEX idx_cart_category ON cart(station_id, category);
+
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

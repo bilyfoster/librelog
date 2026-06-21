@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="v2-006-clock-spot-time-windows" author="librelog">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+
+ALTER TABLE clock_template_slot ADD COLUMN local_window_start_minutes INT;
+ALTER TABLE clock_template_slot ADD COLUMN local_window_end_minutes INT;
+ALTER TABLE clock_template_slot ADD COLUMN outside_window_label VARCHAR(200);
+
+ALTER TABLE spot ADD COLUMN local_window_start_minutes INT;
+ALTER TABLE spot ADD COLUMN local_window_end_minutes INT;
+
+        ]]></sql>
+    </changeSet>
+</databaseChangeLog>

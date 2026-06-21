@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="v2-005-order-kind-founding" author="librelog">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+
+ALTER TABLE orders ADD COLUMN order_kind VARCHAR(30) NOT NULL DEFAULT 'STANDARD';
+ALTER TABLE orders ADD COLUMN monthly_spot_allowance INT;
+ALTER TABLE orders ADD COLUMN monthly_price_cents INT;
+
+-- Founding / open-ended subscriptions may omit an end date (active until cancelled).
+ALTER TABLE orders ALTER COLUMN end_date DROP NOT NULL;
+
+        ]]></sql>
+    </changeSet>
+</databaseChangeLog>

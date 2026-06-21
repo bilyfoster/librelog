@@ -25,6 +25,16 @@ public class PlaybackController {
         }
     }
 
+    @GetMapping("/api/stations/{stationId}/playback")
+    public ResponseEntity<?> listDay(@PathVariable UUID stationId,
+                                     @RequestParam("date") String date) {
+        try {
+            return ResponseEntity.ok(service.listDay(stationId, LocalDate.parse(date)));
+        } catch (Exception e) {
+            return ResponseEntity.status(502).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @GetMapping("/api/orders/{orderId}/reconciliation")
     public ResponseEntity<?> orderReconciliation(@PathVariable UUID orderId) {
         try {

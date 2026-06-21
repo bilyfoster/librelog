@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="v2-008-schedule-day-clock-segments" author="librelog">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+
+CREATE TABLE schedule_day_clock_segment (
+    id UUID PRIMARY KEY,
+    schedule_day_id UUID NOT NULL REFERENCES schedule_day(id) ON DELETE CASCADE,
+    position INT NOT NULL,
+    local_start_minutes INT NOT NULL,
+    local_end_minutes INT NOT NULL,
+    clock_template_id UUID NOT NULL REFERENCES clock_template(id) ON DELETE CASCADE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_schedule_day_clock_segment_day ON schedule_day_clock_segment(schedule_day_id, position);
+
+ALTER TABLE clock_template_slot DROP COLUMN IF EXISTS day_part_id;
+ALTER TABLE clock_template_slot DROP COLUMN IF EXISTS local_window_start_minutes;
+ALTER TABLE clock_template_slot DROP COLUMN IF EXISTS local_window_end_minutes;
+ALTER TABLE clock_template_slot DROP COLUMN IF EXISTS outside_window_label;
+
+        ]]></sql>
+    </changeSet>
+</databaseChangeLog>

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="v2-003-carts-and-clocks" author="librelog">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+
+CREATE TABLE cart (
+    id UUID PRIMARY KEY,
+    station_id UUID NOT NULL REFERENCES station(id) ON DELETE CASCADE,
+    name VARCHAR(200) NOT NULL,
+    kind VARCHAR(20) NOT NULL,
+    source VARCHAR(20) NOT NULL DEFAULT 'MANUAL',
+    order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
+    description TEXT,
+    rotation_pointer INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE (station_id, name)
+);
+CREATE INDEX idx_cart_station_kind ON cart(station_id, kind);
+
+CREATE TABLE cart_member (
+    id UUID PRIMARY KEY,
+    cart_id UUID NOT NULL REFERENCES cart(id) ON DELETE CASCADE,
+    position INT NOT NULL DEFAULT 0,
+    weight INT NOT NULL DEFAULT 1,
+    librtime_file_id BIGINT,
+    spot_id UUID REFERENCES spot(id) ON DELETE CASCADE,
+    artist VARCHAR(200),
+    title VARCHAR(300),
+    sponsor VARCHAR(200),
+    product VARCHAR(200),
+    length_seconds INT,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_cart_member_cart ON cart_member(cart_id, position);
+
+CREATE TABLE separation_policy (
+    cart_id UUID PRIMARY KEY REFERENCES cart(id) ON DELETE CASCADE,
+    min_minutes_same_cart INT NOT NULL DEFAULT 0,
+    min_minutes_same_artist INT NOT NULL DEFAULT 0,
+    min_minutes_same_title INT NOT NULL DEFAULT 0,
+    min_minutes_same_sponsor INT NOT NULL DEFAULT 0,
+    min_minutes_same_product INT NOT NULL DEFAULT 0
+);
+
+CREATE TABLE cart_play_history (
+    id UUID PRIMARY KEY,
+    station_id UUID NOT NULL REFERENCES station(id) ON DELETE CASCADE,
+    cart_id UUID REFERENCES cart(id) ON DELETE SET NULL,
+    cart_member_id UUID REFERENCES cart_member(id) ON DELETE SET NULL,
+    artist VARCHAR(200),
+    title VARCHAR(300),
+    sponsor VARCHAR(200),
+    product VARCHAR(200),
+    librtime_file_id BIGINT,
+    spot_id UUID,
+    played_at TIMESTAMP NOT NULL,
+    schedule_item_id UUID,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_cart_history_station_time ON cart_play_history(station_id, played_at);
+CREATE INDEX idx_cart_history_cart_time ON cart_play_history(cart_id, played_at);
+
+CREATE TABLE clock_template (
+    id UUID PRIMARY KEY,
+    station_id UUID NOT NULL REFERENCES station(id) ON DELETE CASCADE,
+    name VARCHAR(200) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE (station_id, name)
+);
+
+CREATE TABLE clock_template_slot (
+    id UUID PRIMARY KEY,
+    clock_template_id UUID NOT NULL REFERENCES clock_template(id) ON DELETE CASCADE,
+    position INT NOT NULL,
+    kind VARCHAR(20) NOT NULL,
+    cart_id UUID REFERENCES cart(id) ON DELETE SET NULL,
+    librtime_file_id BIGINT,
+    spot_id UUID REFERENCES spot(id) ON DELETE SET NULL,
+    label VARCHAR(200),
+    default_length_seconds INT
+);
+CREATE INDEX idx_clock_template_slot_template ON clock_template_slot(clock_template_id, position);
+
+ALTER TABLE schedule_item ADD COLUMN cart_id UUID REFERENCES cart(id) ON DELETE SET NULL;
+ALTER TABLE schedule_item ADD COLUMN resolved_member_id UUID;
+ALTER TABLE schedule_item ADD COLUMN label VARCHAR(200);
+
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

@@ -34,6 +34,7 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(a -> a
                         .requestMatchers("/", "/index.html", "/dashboard.html",
+                                "/api/version",
                                 "/app.js", "/app.css", "/favicon.ico",
                                 "/static/**", "/css/**", "/js/**", "/images/**",
                                 "/actuator/health", "/actuator/info",

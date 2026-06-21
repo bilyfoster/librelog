@@ -2,9 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
+<meta name="theme-color" content="#0f172a" />
 <title>LibreLog</title>
-<link rel="stylesheet" href="/app.css" />
+<link rel="stylesheet" href="/app.css?v=20260212b" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.css" crossorigin="anonymous" />
+<script>
+    // Apply the persisted theme as early as possible to avoid a flash.
+    (function () {
+        try {
+            var saved = localStorage.getItem('librelog.theme'); // 'light' | 'dark' | 'auto' | null
+            var theme = saved && saved !== 'auto'
+                ? saved
+                : (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+            document.documentElement.setAttribute('data-theme', theme);
+        } catch (e) {}
+    })();
+</script>
 </head>
 <body>
 
@@ -16,15 +30,24 @@
         <label>Password <input type="password" id="loginPassword" required autocomplete="current-password" /></label>
         <button type="submit">Sign in</button>
         <div id="loginError" class="error"></div>
+        <p id="loginVersionLine" class="muted small" style="margin-top:12px;text-align:center"></p>
     </form>
 </div>
 
+<div id="sidebarBackdrop" class="sidebar-backdrop" aria-hidden="true"></div>
+
 <div id="app" class="app hidden">
-    <aside class="sidebar">
-        <div class="brand">LibreLog</div>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <span>LibreLog</span>
+            <button id="sidebarCloseBtn" class="icon-btn sidebar-close" aria-label="Close menu">&times;</button>
+        </div>
         <nav>
             <div class="nav-section-title">Schedule</div>
             <button class="nav-item" data-tab="dayBuilder"><span class="ic">DB</span>Day Builder</button>
+            <button class="nav-item" data-tab="carts"><span class="ic">CT</span>Carts</button>
+            <button class="nav-item" data-tab="clocks"><span class="ic">CL</span>Clocks</button>
             <button class="nav-item" data-tab="library"><span class="ic">LB</span>LibreTime Library</button>
 
             <div class="nav-section-title">Orders</div>
@@ -32,20 +55,56 @@
             <button class="nav-item" data-tab="orders"><span class="ic">OR</span>Orders &amp; Spots</button>
 
             <div class="nav-section-title">Setup</div>
-            <button class="nav-item" data-tab="stations"><span class="ic">ST</span>Station</button>
+            <button class="nav-item" data-tab="stations"><span class="ic">ST</span>Station &amp; day parts</button>
             <button class="nav-item" data-tab="connection"><span class="ic">LT</span>LibreTime Connection</button>
             <button class="nav-item admin-only" data-tab="users"><span class="ic">US</span>Users</button>
         </nav>
         <div class="user-bar">
-            <span id="currentUserLabel" class="muted"></span>
-            <button id="logoutButton" class="link">Sign out</button>
+            <div class="user-row">
+                <span id="currentUserLabel" class="muted small"></span>
+                <button id="logoutButton" class="link">Sign out</button>
+            </div>
+            <div class="theme-toggle" role="group" aria-label="Theme">
+                <span class="muted small">Theme</span>
+                <button data-theme-set="light" title="Light theme">Light</button>
+                <button data-theme-set="dark" title="Dark theme">Dark</button>
+                <button data-theme-set="auto" title="Match system">Auto</button>
+            </div>
         </div>
     </aside>
 
     <main class="content">
         <header class="page-header">
-            <h2 id="pageTitle">Day Builder</h2>
-            <div id="stationPicker" class="station-picker"></div>
+            <div class="header-left">
+                <button id="menuToggle" class="icon-btn menu-toggle" aria-label="Open menu" aria-controls="sidebar">&#9776;</button>
+                <h2 id="pageTitle">Day Builder</h2>
+            </div>
+            <div class="page-header-tools">
+                <div id="headerClock" class="header-clock" title="Live clock. Station time uses your station's configured timezone; UTC is what LibreTime stores in the database.">
+                    <div class="clock-row">
+                        <span class="clock-label">Station</span>
+                        <span id="clockStationTz" class="clock-tz muted small">—</span>
+                        <span id="clockStationTime" class="clock-time">—</span>
+                    </div>
+                    <div class="clock-row">
+                        <span class="clock-label">UTC</span>
+                        <span id="clockUtcTime" class="clock-time">—</span>
+                    </div>
+                </div>
+                <div id="stationPicker" class="station-picker"></div>
+                <details class="help-tour-details" id="tourHelpDetails">
+                    <summary class="help-tour-summary" title="Step-by-step overlays for new users">Guided tour</summary>
+                    <div class="help-tour-menu" role="menu">
+                        <div class="help-tour-hint muted small">Spotlights parts of the app. Use Next / Back or Esc to exit.</div>
+                        <button type="button" role="menuitem" data-tour="full">Full tour (recommended)</button>
+                        <button type="button" role="menuitem" data-tour="setup">Setup: station &amp; LibreTime</button>
+                        <button type="button" role="menuitem" data-tour="orders">Customers &amp; orders</button>
+                        <button type="button" role="menuitem" data-tour="carts">Carts</button>
+                        <button type="button" role="menuitem" data-tour="clocks">Clocks</button>
+                        <button type="button" role="menuitem" data-tour="daybuilder">Day Builder &amp; push</button>
+                    </div>
+                </details>
+            </div>
         </header>
 
         <div id="globalBanner" class="banner hidden"></div>
@@ -59,11 +118,38 @@
                 <span class="grow"></span>
                 <button id="dayBuilderRefresh" class="secondary" title="Reload day from server">Refresh</button>
                 <button id="dayBuilderLockBtn">Edit this day</button>
+                <button id="dayBuilderPreloadBtn" class="secondary" disabled>Preload from LibreTime</button>
+                <button id="dayBuilderApplyClockScheduleBtn" class="secondary" disabled title="Apply saved clock windows to each show by its start time">Apply clock schedule</button>
                 <button id="dayBuilderSaveBtn" disabled>Save draft</button>
+                <button id="dayBuilderPreviewBtn" class="secondary" disabled title="Dry-run: see what cart slots would resolve to">Preview push</button>
                 <button id="dayBuilderPushBtn" disabled>Push to LibreTime</button>
                 <button id="dayBuilderPullPlayback" class="secondary" title="Import yesterday's as-run from LibreTime">Pull playback</button>
                 <button id="dayBuilderReopenBtn" class="admin-only secondary" disabled>Reopen (admin)</button>
                 <button id="dayBuilderForceUnlockBtn" class="admin-only danger" disabled>Force unlock</button>
+            </div>
+            <p class="muted small day-builder-help">
+                <strong>How this works:</strong> LibreLog does not duplicate show templates or smart blocks from LibreTime.
+                It lists <em>show instances</em> that exist on the calendar day you picked (what actually airs).
+                You place <em>slots</em> for spots or library tracks for trafficking and reconciliation.
+                Use <strong>Clock schedule</strong> below to map station-local hours to clock templates, then <strong>Apply clock schedule</strong> so each show instance picks the right clock by its start time.
+                Use <strong>Apply clock</strong> on a single show when you want to override with one template.
+                Use <strong>Preload from LibreTime</strong> to copy today’s already-scheduled files into slots as tracks.
+                Smart blocks fill inside LibreTime at play time — Preload only picks concrete library files already on the schedule.
+                <br>
+                <strong>Times:</strong> the date picker uses <em>station local</em> time (see clock above). LibreTime's UI may show
+                times in <em>its own configured timezone</em> (often UTC) — if your shows look offset (e.g. an "8&nbsp;AM" show
+                landing at 1&nbsp;AM station time), update <code>general.timezone</code> in LibreTime's <code>config.yml</code>
+                and restart it.
+            </p>
+            <div class="form-card" id="dayBuilderClockScheduleCard" style="max-width:none;margin-bottom:12px">
+                <div class="row" style="flex-wrap:wrap;gap:8px;align-items:center">
+                    <h3 style="margin:0">Clock schedule <span id="dayBuilderClockScheduleCount" class="muted small"></span></h3>
+                    <span class="grow"></span>
+                    <button type="button" class="secondary" id="dayBuilderClockScheduleAddBtn" disabled>Add row</button>
+                    <button type="button" id="dayBuilderSaveClockScheduleBtn" disabled>Save clock schedule</button>
+                </div>
+                <p class="muted small" style="margin:10px 0 0 0">Which clock template applies during which <em>station-local</em> hours on this calendar day. Rows are checked in order; the <strong>first</strong> window that contains the show’s start time wins. End time is <strong>exclusive</strong> (e.g. 06:00–12:00 is morning through noon, not including noon).</p>
+                <div id="dayBuilderClockScheduleRows" class="muted" style="margin-top:12px">Load a day to edit.</div>
             </div>
             <div class="day-builder">
                 <div class="db-pane db-pane-left">
@@ -77,6 +163,69 @@
                 <div class="db-pane db-pane-right">
                     <h3>Active spot pool <span id="dayBuilderSpotPoolCount" class="muted small"></span></h3>
                     <div id="dayBuilderSpotPool" class="muted">No active orders for this date.</div>
+                    <h3>Played / as-run <span id="dayBuilderPlaybackCount" class="muted small"></span></h3>
+                    <div id="dayBuilderPlayback" class="muted">Pick a past date or click Pull playback.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Carts -->
+        <section id="cartsTab" class="tab hidden">
+            <p class="muted small">
+                <strong>Carts</strong> are rotating bins. A music cart picks one library file each time it's used in a slot;
+                a commercial cart picks one spot. Push time uses the cart's <em>separation policy</em> (artist/title/sponsor/product cooldowns)
+                to avoid back-to-back repeats. Use <strong>Apply clock</strong> in the Day Builder to drop carts into a show in one click.
+            </p>
+            <div class="row">
+                <button id="cartNewBtn">New cart</button>
+                <span class="grow"></span>
+                <select id="cartFilterCategory" class="inline">
+                    <option value="">All categories</option>
+                </select>
+            </div>
+            <div class="cart-layout">
+                <div class="cart-list-pane">
+                    <h3>All carts <span id="cartListCount" class="muted small"></span></h3>
+                    <div id="cartList" class="muted">Loading...</div>
+                </div>
+                <div class="cart-detail-pane">
+                    <div id="cartDetail" class="muted">Pick a cart on the left, or create a new one.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Clocks -->
+        <section id="clocksTab" class="tab hidden">
+            <div class="muted small clocks-intro">
+                <p><strong>What a clock is:</strong> a reusable <em>pattern for one hour</em> — an ordered list of slots (music cart, commercial cart, fixed track, spot, etc.). In <strong>Day Builder</strong> you map hours to clocks in the <em>clock schedule</em>, then apply that schedule to shows (or apply one clock to a single show).</p>
+                <p><strong>After you click “New clock”:</strong> the clock only has a name until you add <strong>slots</strong> and click <strong>Save slots</strong>.</p>
+                <ol class="clocks-steps">
+                    <li><strong>Select the clock</strong> in the list on the left (click its name).</li>
+                    <li><strong>Add slot</strong> for each piece of content in order (first row = first thing in the hour).</li>
+                    <li>In each row, set <strong>kind</strong>:
+                        <ul>
+                            <li><strong>music cart</strong> — pick a <em>library (music)</em> cart from the Carts tab; at push time one song/image is chosen from that cart.</li>
+                            <li><strong>commercial cart</strong> — pick a <em>commercial</em> cart (often tied to an order); at push time one spot is chosen.</li>
+                            <li><strong>track</strong> — always the same LibreTime file: enter its numeric <strong>file id</strong> (find it under LibreTime Library).</li>
+                            <li><strong>spot</strong> — one specific spot by UUID (from Orders; power-user).</li>
+                            <li><strong>note</strong> — placeholder / timing filler (optional label + length).</li>
+                        </ul>
+                    </li>
+                    <li>Optional: <strong>label</strong> and <strong>len s</strong> (default length in seconds) help timing before push.</li>
+                    <li>Click <strong>Save slots</strong> — the template is not stored until you do.</li>
+                </ol>
+                <p class="muted"><strong>Prerequisite:</strong> build your carts in the <strong>Carts</strong> tab first so they appear in the cart dropdown. Named <strong>day parts</strong> for spot windows live under <strong>Station</strong> in Setup.</p>
+            </div>
+            <div class="row">
+                <button id="clockNewBtn">New clock</button>
+            </div>
+            <div class="cart-layout">
+                <div class="cart-list-pane">
+                    <h3>Clocks <span id="clockListCount" class="muted small"></span></h3>
+                    <div id="clockList" class="muted">Loading...</div>
+                </div>
+                <div class="cart-detail-pane">
+                    <div id="clockDetail" class="muted">Pick a clock on the left, or create a new one.</div>
                 </div>
             </div>
         </section>
@@ -110,7 +259,7 @@
         <section id="ordersTab" class="tab hidden">
             <div class="row"><button id="orderNewBtn">New order</button></div>
             <table class="data-table">
-                <thead><tr><th>Name</th><th>Customer</th><th>Dates</th><th>Spots</th><th></th></tr></thead>
+                <thead><tr><th>Name</th><th>Type</th><th>Customer</th><th>Dates</th><th>Spots</th><th></th></tr></thead>
                 <tbody id="ordersBody"></tbody>
             </table>
             <div id="orderDetail" class="hidden order-detail">
@@ -122,7 +271,7 @@
                     <button id="orderDetailClose" class="link">Close</button>
                 </div>
                 <table class="data-table">
-                    <thead><tr><th>Label</th><th>Length</th><th>LibreTime file</th><th>Rotation</th><th></th></tr></thead>
+                    <thead><tr><th>Label</th><th>Length</th><th>LibreTime file</th><th>Rotation</th><th>Local window</th><th></th></tr></thead>
                     <tbody id="spotsBody"></tbody>
                 </table>
                 <div id="orderReconciliation" class="hidden"></div>
@@ -131,11 +280,21 @@
 
         <!-- Station -->
         <section id="stationsTab" class="tab hidden">
+            <p class="muted small">Manage facilities and <strong>day parts</strong> for the station selected in the header. Day parts are reusable station-local time windows (half-open); assign them on <strong>spots</strong> in Orders so commercial traffic only runs when allowed.</p>
             <div class="row"><button id="stationNewBtn">New station</button></div>
             <table class="data-table">
                 <thead><tr><th>Name</th><th>Call letters</th><th>Time zone</th><th></th></tr></thead>
                 <tbody id="stationsBody"></tbody>
             </table>
+            <div class="day-parts-panel" style="margin-top:24px">
+                <h3>Day parts <span id="dayPartsListCount" class="muted small"></span></h3>
+                <p class="muted small">Named windows for spot scheduling. End time is <strong>exclusive</strong> (same rule as the clock schedule).</p>
+                <table class="data-table" style="margin-top:8px">
+                    <thead><tr><th>Name</th><th>Start</th><th>End</th><th>Sort</th><th></th></tr></thead>
+                    <tbody id="dayPartsBody"></tbody>
+                </table>
+                <button type="button" class="secondary" id="dayPartNewBtn" style="margin-top:8px">New day part</button>
+            </div>
         </section>
 
         <!-- LibreTime Connection -->
@@ -161,6 +320,7 @@
                 <tbody id="usersBody"></tbody>
             </table>
         </section>
+        <footer id="appFooter" class="app-footer muted small" aria-label="Application version"></footer>
     </main>
 </div>
 
@@ -186,8 +346,28 @@
     </div>
 </dialog>
 
+<dialog id="libraryBulkModal" class="picker library-bulk-modal">
+    <div class="picker-head">
+        <h3 id="libraryBulkTitle">Add library files</h3>
+        <input id="libraryBulkSearch" type="search" placeholder="Filter by title, artist, album, genre, path, id…" autocomplete="off" />
+    </div>
+    <p id="libraryBulkHint" class="muted small">Search narrows the table. <strong>Select visible</strong> checks every row that matches the filter (use after filtering to IDs). Row click toggles; header checkbox toggles all visible.</p>
+    <div class="library-bulk-toolbar row">
+        <button type="button" id="libraryBulkSelectVisible" class="secondary">Select visible</button>
+        <button type="button" id="libraryBulkClear" class="secondary">Clear selection</button>
+        <span id="libraryBulkCount" class="muted small"></span>
+        <span class="grow"></span>
+    </div>
+    <div id="libraryBulkTableWrap" class="library-bulk-wrap"></div>
+    <div class="modal-actions">
+        <button type="button" id="libraryBulkCancel" class="secondary">Cancel</button>
+        <button type="button" id="libraryBulkAdd" disabled>Add to cart</button>
+    </div>
+</dialog>
+
 <div id="toast" class="toast hidden"></div>
 
-<script src="/app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.js.iife.min.js" crossorigin="anonymous"></script>
+<script src="/app.js?v=20260212b"></script>
 </body>
 </html>
