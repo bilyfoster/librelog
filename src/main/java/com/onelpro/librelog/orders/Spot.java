@@ -17,11 +17,25 @@ import java.util.UUID;
 @Builder
 public class Spot {
 
+    /** Production lifecycle. Only {@link #STATUS_APPROVED}/{@link #STATUS_TRAFFICKED} spots may air. */
+    public static final String STATUS_DRAFT = "DRAFT";
+    public static final String STATUS_PRODUCED = "PRODUCED";
+    public static final String STATUS_APPROVED = "APPROVED";
+    public static final String STATUS_TRAFFICKED = "TRAFFICKED";
+
+    /** Statuses a user may set directly; TRAFFICKED is applied by the system at push time. */
+    public static final java.util.Set<String> MANUAL_STATUSES =
+            java.util.Set.of(STATUS_DRAFT, STATUS_PRODUCED, STATUS_APPROVED);
+
     @Id
     private UUID id;
 
     @Column(name = "order_id", nullable = false)
     private UUID orderId;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private String status = STATUS_DRAFT;
 
     @Column(name = "librtime_file_id")
     private Long librtimeFileId;
@@ -65,10 +79,16 @@ public class Spot {
         if (createdAt == null) createdAt = now;
         updatedAt = now;
         if (rotationKind == null) rotationKind = "ANY_TIME";
+        if (status == null) status = STATUS_DRAFT;
     }
 
     @PreUpdate
     void preUpdate() {
         updatedAt = Instant.now();
+    }
+
+    /** Approved or already trafficked — i.e. cleared to air. */
+    public static boolean isAirable(Spot s) {
+        return s != null && (STATUS_APPROVED.equals(s.getStatus()) || STATUS_TRAFFICKED.equals(s.getStatus()));
     }
 }

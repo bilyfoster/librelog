@@ -711,7 +711,7 @@ async function loadSpotsForOrder(orderId) {
     }
     const tbody = document.getElementById('spotsBody');
     if (!list.length) {
-        tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><strong>No spots yet</strong>Click "New spot" to add one.</div></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><strong>No spots yet</strong>Click "New spot" to add one.</div></td></tr>';
         return;
     }
     tbody.innerHTML = list.map(s => `
@@ -719,6 +719,7 @@ async function loadSpotsForOrder(orderId) {
             <td data-label="Label">${escapeHtml(s.label)}</td>
             <td data-label="Length">${s.lengthSeconds}s</td>
             <td data-label="LibreTime file">${s.librtimeFileId ?? '<span class="muted">to-produce</span>'}</td>
+            <td data-label="Status">${spotStatusCell(s)}</td>
             <td data-label="Rotation">${s.rotationKind === 'SPECIFIC_SHOW' ? 'Specific show: ' + escapeHtml(showNameById(s.targetShowId) || ('#' + (s.targetShowId || '?'))) : 'Any time'}</td>
             <td data-label="Local window">${spotWindowCell(s)}</td>
             <td>
@@ -734,6 +735,26 @@ async function loadSpotsForOrder(orderId) {
             try { await API.del('/api/spots/' + b.dataset.spotDelete); toast('Spot deleted', 'ok'); await loadSpotsForOrder(orderId); }
             catch (e) { toast(e.message, 'error'); }
         }));
+    tbody.querySelectorAll('[data-spot-advance]').forEach(b =>
+        b.addEventListener('click', async () => {
+            try {
+                await API.post('/api/spots/' + b.dataset.spotAdvance + '/status', { status: b.dataset.toStatus });
+                toast('Spot ' + b.dataset.toStatus.toLowerCase(), 'ok');
+                await loadSpotsForOrder(orderId);
+            } catch (e) { toast(e.message, 'error'); }
+        }));
+}
+
+const SPOT_STATUS_LABEL = { DRAFT: 'Draft', PRODUCED: 'Produced', APPROVED: 'Approved', TRAFFICKED: 'Trafficked' };
+// The next status a user can advance to, and the button label for it.
+const SPOT_NEXT_STATUS = { DRAFT: ['PRODUCED', 'Mark produced'], PRODUCED: ['APPROVED', 'Approve'] };
+
+function spotStatusCell(s) {
+    const status = s.status || 'DRAFT';
+    const badge = `<span class="badge status-${status.toLowerCase()}">${SPOT_STATUS_LABEL[status] || status}</span>`;
+    const next = SPOT_NEXT_STATUS[status];
+    if (!next) return badge;
+    return `${badge} <button class="link" data-spot-advance="${s.id}" data-to-status="${next[0]}">${next[1]}</button>`;
 }
 
 async function spotModal(orderId, existing) {
@@ -2158,6 +2179,19 @@ async function renderCartDetail(cartId) {
             <button type="submit">Save policy</button>
         </form>
 
+        <h4>Freshness <span class="muted small">(how this cart picks its next play)</span></h4>
+        <form id="cartFreshnessForm" class="form-inline">
+            <label>Strategy
+                <select name="selectionStrategy">
+                    <option value="ROTATION" ${cart.selectionStrategy !== 'NEWEST_FIRST' ? 'selected' : ''}>Rotation (round-robin)</option>
+                    <option value="NEWEST_FIRST" ${cart.selectionStrategy === 'NEWEST_FIRST' ? 'selected' : ''}>Newest first</option>
+                </select>
+            </label>
+            <label>Max age (hours) <input type="number" min="1" name="maxAgeHours" placeholder="no limit" value="${cart.maxAgeHours ?? ''}" /></label>
+            <button type="submit">Save freshness</button>
+        </form>
+        <p class="muted small">For news and voicetracks pick <strong>Newest first</strong> with a max age (e.g. 6h) so stale audio never airs. Leave <strong>Rotation</strong> for music and commercials.</p>
+
         <h4>Members <span class="muted small">${members.length}</span></h4>
         <div class="row">
             ${isOrder
@@ -2189,6 +2223,23 @@ async function renderCartDetail(cartId) {
         try {
             await API.put(`/api/carts/${cart.id}/policy`, body);
             toast('Separation policy saved', 'ok');
+            await loadCartsForCurrentStation();
+            renderCartList();
+            await renderCartDetail(cart.id);
+        } catch (err) { toast(err.message, 'error'); }
+    });
+    document.getElementById('cartFreshnessForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const maxRaw = (fd.get('maxAgeHours') || '').trim();
+        const body = {
+            selectionStrategy: fd.get('selectionStrategy'),
+            // -1 tells the API to clear the limit; otherwise the parsed hours.
+            maxAgeHours: maxRaw === '' ? -1 : parseInt(maxRaw),
+        };
+        try {
+            await API.put(`/api/carts/${cart.id}`, body);
+            toast('Freshness saved', 'ok');
             await loadCartsForCurrentStation();
             renderCartList();
             await renderCartDetail(cart.id);
@@ -2635,6 +2686,64 @@ function clockCreateModal() {
     });
 }
 
+// ---------- Starter guide (read-me-first walkthrough) ----------
+const STARTER_GUIDE_HTML = `
+<p class="muted">LibreLog turns sales into an on-air, reconciled log. Two lanes — <strong>sales</strong>
+and <strong>programming</strong> — meet in the <strong>Day Builder</strong>, which pushes the finished
+day into LibreTime. Here is the whole flow.</p>
+
+<h4>Once, to set up</h4>
+<ol class="guide-steps">
+    <li><strong>Station &amp; time zone</strong> — create your station; the time zone defines what "today" means everywhere else.</li>
+    <li><strong>Connect LibreTime</strong> — save the base URL and a LibreTime user, then <em>Test</em>. LibreLog reads shows/library from it and pushes the schedule back.</li>
+</ol>
+
+<h4>Sales lane — turning an order into an approved spot</h4>
+<ol class="guide-steps">
+    <li><strong>Customer → Order</strong> — add the advertiser, then an order (standard date-range, or founding-member allowance).</li>
+    <li><strong>Add a spot</strong> — each spot starts as <span class="badge status-draft">Draft</span>. Attach the produced audio (a LibreTime file).</li>
+    <li><strong>Produce → Approve</strong> — mark it <span class="badge status-produced">Produced</span>, then <span class="badge status-approved">Approved</span>.
+        <em>Only approved spots can air</em> — draft/produced spots are skipped at push. (Removing the audio drops a spot back to Draft.)</li>
+</ol>
+
+<h4>Programming lane — building the sound</h4>
+<ol class="guide-steps">
+    <li><strong>Carts</strong> are rotating bins. A <em>commercial cart sourced "from an order"</em> auto-fills with that order's spots (and re-syncs whenever you change them). Music/news/imaging carts pull library files.</li>
+    <li><strong>Freshness</strong> — each cart picks either by <em>Rotation</em> (round-robin: music, commercials) or <em>Newest first</em> with a <em>max age</em> (news, voicetracks — so stale audio never airs).</li>
+    <li><strong>Clocks</strong> are reusable hour patterns: an ordered list of slots (music cart, commercial cart, fixed track, spot).</li>
+</ol>
+
+<h4>Day Builder — where the lanes meet</h4>
+<ol class="guide-steps">
+    <li><strong>Pick the date</strong> (station-local) and <strong>lock the day</strong> so only you edit it.</li>
+    <li><strong>Clock schedule</strong> — map local hours to clocks, then <strong>Apply clock schedule</strong> so each show gets the right template. <strong>Save draft</strong>.</li>
+    <li><strong>Preview push</strong> (dry run), then <strong>Push to LibreTime</strong>. At push, carts resolve to real files using rotation/freshness, separation cooldowns, time windows, show targeting, and the approval gate. Approved spots flip to <span class="badge status-trafficked">Trafficked</span>.</li>
+    <li><strong>After air → Pull playback</strong> — imports what LibreTime actually played and reconciles it against your schedule. Each order's <em>Reconciliation</em> shows matched vs. missed.</li>
+</ol>
+
+<p class="muted small">Tip: pre-scheduled <em>tracks</em> (music, interviews, content) get exact air times you can announce; <em>carts</em> stay dynamic and resolve at push so news and ads are fresh.</p>
+`;
+
+function showStarterGuide() {
+    const dlg = document.getElementById('modal');
+    document.getElementById('modalTitle').textContent = 'How LibreLog works, end to end';
+    document.getElementById('modalBody').innerHTML = STARTER_GUIDE_HTML;
+    const save = document.getElementById('modalSave');
+    const cancel = document.getElementById('modalCancel');
+    const prevSave = save.textContent;
+    save.textContent = 'Got it';
+    cancel.style.display = 'none';
+    const form = document.getElementById('modalForm');
+    form.onsubmit = null; // method="dialog" closes it; no save action
+    const restore = () => {
+        save.textContent = prevSave;
+        cancel.style.display = '';
+        dlg.removeEventListener('close', restore);
+    };
+    dlg.addEventListener('close', restore);
+    dlg.showModal();
+}
+
 // ---------- Guided tours (Driver.js) ----------
 let librelogActiveTour = null;
 
@@ -2699,10 +2808,10 @@ function buildLibrelogTourSteps(route) {
             'An order is a contract: standard (date range + total spots) or founding member (monthly spot allowance, optional open end date, optional monthly amount).',
             'right', () => showTab('orders')),
         S('#orderNewBtn', 'New order',
-            'Choose order type, dates, and limits. Then open the order and add spots—each spot is a creative (label, length, optional LibreTime file id).',
+            'Choose order type, dates, and limits. Then open the order and add spots—each spot is a creative (label, length, the produced LibreTime file).',
             'bottom'),
-        S('#ordersBody', 'Order list',
-            'Open an order by name to manage its spots. The table shows type, dates, and how many spots you have versus the cap.',
+        S('#ordersBody', 'Order list & spot lifecycle',
+            'Open an order to manage its spots. Each spot moves Draft → Produced → Approved using the buttons in the Status column. <strong>Only approved spots air</strong>; once pushed, a spot becomes Trafficked automatically. The order’s Reconciliation (after air) shows matched vs. missed.',
             'bottom'),
     ];
 
@@ -2716,8 +2825,8 @@ function buildLibrelogTourSteps(route) {
         S('#cartList', 'Cart list',
             'Select a cart to edit members, separation rules (cooldowns), and sync from order for order-backed carts.',
             'bottom'),
-        S('#cartDetail', 'Cart detail',
-            'After you pick a cart: add library files, set policy, or use Sync from order for commercial carts tied to an order.',
+        S('#cartDetail', 'Cart detail & freshness',
+            'After you pick a cart: add library files, set the separation policy, and choose a <strong>Freshness</strong> strategy. Use <em>Newest first</em> + a max age for news and voicetracks so stale audio never airs; leave <em>Rotation</em> for music and commercials. Order-backed carts re-sync automatically when the order’s spots change.',
             'bottom'),
     ];
 
@@ -2768,7 +2877,7 @@ function buildLibrelogTourSteps(route) {
             'Writes your slot list to LibreLog. You must be holding the lock.',
             'bottom', () => showTab('dayBuilder')),
         S('#dayBuilderPushBtn', 'Push to LibreTime',
-            'Clears and rewrites LibreTime’s schedule rows for those instances. Cart slots become concrete files using rotation and separation.',
+            'Clears and rewrites LibreTime’s schedule rows for those instances. Cart slots become concrete files using rotation/freshness, separation, time windows, show targeting, and the approval gate (unapproved spots are skipped). Approved spots that air flip to Trafficked.',
             'bottom', () => showTab('dayBuilder')),
         S('#dayBuilderPullPlayback', 'Pull playback',
             'After air, import what LibreTime logged as played—as-run and reconciliation context.',
@@ -2908,6 +3017,10 @@ window.addEventListener('DOMContentLoaded', () => {
     // Picker
     document.getElementById('pickerCancel').addEventListener('click', () => closePicker(null));
 
+    document.getElementById('starterGuideBtn')?.addEventListener('click', () => {
+        document.getElementById('tourHelpDetails')?.removeAttribute('open');
+        showStarterGuide();
+    });
     document.getElementById('tourHelpDetails')?.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-tour]');
         if (!btn) return;

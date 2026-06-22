@@ -43,6 +43,13 @@ public class CartMember {
     @Column(name = "length_seconds")
     private Integer lengthSeconds;
 
+    /**
+     * When this member's audio became "fresh" — LibreTime upload time when known, otherwise
+     * when it was added to the cart. Drives {@link Cart#STRATEGY_NEWEST_FIRST} and max-age.
+     */
+    @Column(name = "freshness_at")
+    private Instant freshnessAt;
+
     @Column(nullable = false)
     private boolean enabled;
 

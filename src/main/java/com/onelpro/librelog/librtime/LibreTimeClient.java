@@ -226,20 +226,55 @@ public class LibreTimeClient {
         return web.get().uri(uri).retrieve().bodyToMono(JsonNode.class).block(Duration.ofSeconds(15));
     }
 
+    /** Safety cap so a misbehaving {@code next} chain can't loop forever. */
+    private static final int MAX_PAGES = 1000;
+
+    /**
+     * Fetch a list, following Django REST Framework pagination. LibreTime returns
+     * {@code {count, next, previous, results}}; {@code next} is an absolute URL to the
+     * following page (or null on the last page). Earlier this read only the first page,
+     * which truncated the library, show instances, and playout history. We now walk
+     * every page via {@code next}. Plain-array and single-object responses are still
+     * handled for forks that don't paginate.
+     */
     private List<JsonNode> getList(String uri) {
-        JsonNode body = getJson(uri);
-        if (body == null) return List.of();
-        if (body.isArray()) {
-            java.util.ArrayList<JsonNode> out = new java.util.ArrayList<>(body.size());
-            body.forEach(out::add);
+        java.util.ArrayList<JsonNode> out = new java.util.ArrayList<>();
+        String next = uri;
+        int pages = 0;
+        while (next != null && pages++ < MAX_PAGES) {
+            JsonNode body = getJson(next);
+            if (body == null) break;
+            if (body.isArray()) {
+                body.forEach(out::add);
+                return out;
+            }
+            if (body.has("results") && body.get("results").isArray()) {
+                body.get("results").forEach(out::add);
+                next = (body.has("next") && !body.get("next").isNull())
+                        ? toPathAndQuery(body.get("next").asText())
+                        : null;
+                continue;
+            }
+            out.add(body);
             return out;
         }
-        if (body.has("results") && body.get("results").isArray()) {
-            java.util.ArrayList<JsonNode> out = new java.util.ArrayList<>();
-            body.get("results").forEach(out::add);
-            return out;
+        return out;
+    }
+
+    /**
+     * Reduce an absolute {@code next} URL to path?query so it re-resolves against our
+     * configured baseUrl. LibreTime behind a reverse proxy often returns an internal
+     * scheme/host in {@code next} that wouldn't be reachable as-is.
+     */
+    private static String toPathAndQuery(String url) {
+        if (url == null || url.isBlank()) return null;
+        try {
+            java.net.URI u = java.net.URI.create(url);
+            if (u.getRawPath() == null) return url;
+            return u.getRawQuery() == null ? u.getRawPath() : u.getRawPath() + "?" + u.getRawQuery();
+        } catch (Exception e) {
+            return url;
         }
-        return List.of(body);
     }
 
     private static String stripTrailingSlash(String s) {

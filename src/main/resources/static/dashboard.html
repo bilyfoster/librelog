@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
 <meta name="theme-color" content="#0f172a" />
 <title>LibreLog</title>
-<link rel="stylesheet" href="/app.css?v=20260212b" />
+<link rel="stylesheet" href="/app.css?v=20260622a" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.css" crossorigin="anonymous" />
 <script>
     // Apply the persisted theme as early as possible to avoid a flash.
@@ -93,9 +93,11 @@
                 </div>
                 <div id="stationPicker" class="station-picker"></div>
                 <details class="help-tour-details" id="tourHelpDetails">
-                    <summary class="help-tour-summary" title="Step-by-step overlays for new users">Guided tour</summary>
+                    <summary class="help-tour-summary" title="Starter guide and step-by-step overlays for new users">Help &amp; tour</summary>
                     <div class="help-tour-menu" role="menu">
-                        <div class="help-tour-hint muted small">Spotlights parts of the app. Use Next / Back or Esc to exit.</div>
+                        <div class="help-tour-hint muted small">New here? Start with the walkthrough, then run a guided tour of any area.</div>
+                        <button type="button" role="menuitem" id="starterGuideBtn">📖 How it works (read me first)</button>
+                        <div class="help-tour-hint muted small">Guided tours spotlight parts of the app. Use Next / Back or Esc to exit.</div>
                         <button type="button" role="menuitem" data-tour="full">Full tour (recommended)</button>
                         <button type="button" role="menuitem" data-tour="setup">Setup: station &amp; LibreTime</button>
                         <button type="button" role="menuitem" data-tour="orders">Customers &amp; orders</button>
@@ -173,8 +175,11 @@
         <section id="cartsTab" class="tab hidden">
             <p class="muted small">
                 <strong>Carts</strong> are rotating bins. A music cart picks one library file each time it's used in a slot;
-                a commercial cart picks one spot. Push time uses the cart's <em>separation policy</em> (artist/title/sponsor/product cooldowns)
-                to avoid back-to-back repeats. Use <strong>Apply clock</strong> in the Day Builder to drop carts into a show in one click.
+                a commercial cart picks one spot (and only <em>approved</em> spots are eligible). Push time uses the cart's
+                <em>separation policy</em> (artist/title/sponsor/product cooldowns) to avoid back-to-back repeats, plus a
+                <em>freshness</em> strategy: <strong>Rotation</strong> for music and commercials, or <strong>Newest first</strong>
+                with a max age for news and voicetracks so stale audio never airs. Order-backed commercial carts re-sync
+                automatically when the order's spots change. Use <strong>Apply clock</strong> in the Day Builder to drop carts into a show in one click.
             </p>
             <div class="row">
                 <button id="cartNewBtn">New cart</button>
@@ -271,7 +276,7 @@
                     <button id="orderDetailClose" class="link">Close</button>
                 </div>
                 <table class="data-table">
-                    <thead><tr><th>Label</th><th>Length</th><th>LibreTime file</th><th>Rotation</th><th>Local window</th><th></th></tr></thead>
+                    <thead><tr><th>Label</th><th>Length</th><th>LibreTime file</th><th>Status</th><th>Rotation</th><th>Local window</th><th></th></tr></thead>
                     <tbody id="spotsBody"></tbody>
                 </table>
                 <div id="orderReconciliation" class="hidden"></div>
@@ -368,6 +373,6 @@
 <div id="toast" class="toast hidden"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.js.iife.min.js" crossorigin="anonymous"></script>
-<script src="/app.js?v=20260212b"></script>
+<script src="/app.js?v=20260622a"></script>
 </body>
 </html>

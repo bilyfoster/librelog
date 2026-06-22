@@ -9,7 +9,14 @@ and is read-only.
 
 - Connect a station to LibreTime (URL + API key, with a Test button).
 - Browse the LibreTime library, show instances, smart blocks, and playlists (read-only).
-- Manage customers, orders, and spots.
+- Manage customers, orders, and spots, with a production lifecycle per spot
+  (DRAFT → PRODUCED → APPROVED → TRAFFICKED). Only approved spots air; a spot becomes
+  TRAFFICKED automatically when it is pushed into a schedule. Editing an order's spots
+  re-syncs any order-backed commercial cart automatically.
+- Carts resolve at push time with a selectable strategy: ROTATION (round-robin, for music
+  and commercials) or NEWEST_FIRST with an optional max-age window (for news and
+  voicetracks, so stale audio never airs). Spots flagged for a specific show only air
+  inside that show.
 - Build a day's schedule against existing LibreTime show templates, save as a draft, and
   push it to LibreTime.
 - Per-day editor lock with a 15-minute TTL so two users can't clobber each other.

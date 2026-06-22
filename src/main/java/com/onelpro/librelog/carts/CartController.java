@@ -18,6 +18,7 @@ public class CartController {
 
     public record CartDto(String id, String stationId, String name, String kind, String category,
                           String source, String orderId, String description, int rotationPointer,
+                          String selectionStrategy, Integer maxAgeHours,
                           int memberCount, PolicyDto policy) {}
 
     public record PolicyDto(int sameCart, int sameArtist, int sameTitle, int sameSponsor, int sameProduct) {
@@ -41,9 +42,11 @@ public class CartController {
     }
 
     public record CreateRequest(@NotBlank String name, @NotBlank String kind,
-                                String category, String source, String orderId, String description) {}
+                                String category, String source, String orderId, String description,
+                                String selectionStrategy, Integer maxAgeHours) {}
 
-    public record UpdateRequest(String name, String description) {}
+    public record UpdateRequest(String name, String description,
+                                String selectionStrategy, Integer maxAgeHours) {}
 
     public record MemberRequest(Integer position, Integer weight,
                                 Long librtimeFileId, String spotId,
@@ -71,7 +74,8 @@ public class CartController {
         try {
             UUID orderId = req.orderId() == null ? null : UUID.fromString(req.orderId());
             Cart c = carts.create(stationId, req.name(), req.kind(), req.category(),
-                    req.source(), orderId, req.description());
+                    req.source(), orderId, req.description(),
+                    req.selectionStrategy(), req.maxAgeHours());
             return ResponseEntity.ok(toDto(c, carts.membersOf(c.getId()).size(), carts.policyFor(c.getId())));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -89,7 +93,8 @@ public class CartController {
     @PutMapping("/api/carts/{cartId}")
     public ResponseEntity<?> update(@PathVariable UUID cartId, @RequestBody UpdateRequest req) {
         try {
-            Cart c = carts.update(cartId, req.name(), req.description());
+            Cart c = carts.update(cartId, req.name(), req.description(),
+                    req.selectionStrategy(), req.maxAgeHours());
             return ResponseEntity.ok(toDto(c, carts.membersOf(c.getId()).size(), carts.policyFor(c.getId())));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -183,6 +188,7 @@ public class CartController {
         return new CartDto(c.getId().toString(), c.getStationId().toString(),
                 c.getName(), c.getKind(), c.getCategory(), c.getSource(),
                 c.getOrderId() == null ? null : c.getOrderId().toString(),
-                c.getDescription(), c.getRotationPointer(), memberCount, PolicyDto.from(p));
+                c.getDescription(), c.getRotationPointer(),
+                c.getSelectionStrategy(), c.getMaxAgeHours(), memberCount, PolicyDto.from(p));
     }
 }

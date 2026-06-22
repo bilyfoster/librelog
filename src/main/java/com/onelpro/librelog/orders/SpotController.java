@@ -1,5 +1,6 @@
 package com.onelpro.librelog.orders;
 
+import com.onelpro.librelog.carts.CartService;
 import com.onelpro.librelog.station.DayPart;
 import com.onelpro.librelog.station.DayPartRepository;
 import com.onelpro.librelog.time.TimeWindowUtil;
@@ -21,19 +22,22 @@ public class SpotController {
     private final SpotRepository spots;
     private final OrderRepository orders;
     private final DayPartRepository dayParts;
+    private final CartService carts;
 
     public record SpotDto(String id, String orderId, Long librtimeFileId, int lengthSeconds,
-                          String label, String rotationKind, Long targetShowId,
+                          String label, String status, String rotationKind, Long targetShowId,
                           String dayPartId,
                           Integer localWindowStartMinutes, Integer localWindowEndMinutes) {
         static SpotDto from(Spot s) {
             return new SpotDto(s.getId().toString(), s.getOrderId().toString(),
                     s.getLibrtimeFileId(), s.getLengthSeconds(), s.getLabel(),
-                    s.getRotationKind(), s.getTargetShowId(),
+                    s.getStatus(), s.getRotationKind(), s.getTargetShowId(),
                     s.getDayPartId() == null ? null : s.getDayPartId().toString(),
                     s.getLocalWindowStartMinutes(), s.getLocalWindowEndMinutes());
         }
     }
+
+    public record StatusRequest(@NotBlank String status) {}
 
     public record SpotRequest(@NotBlank String label, @Positive int lengthSeconds,
                               Long librtimeFileId, String rotationKind, Long targetShowId,
@@ -73,7 +77,9 @@ public class SpotController {
                     .targetShowId(req.targetShowId())
                     .build();
             applySpotWindow(order, s, req);
-            return ResponseEntity.ok(SpotDto.from(spots.save(s)));
+            Spot saved = spots.save(s);
+            carts.syncCartsForOrder(orderId);
+            return ResponseEntity.ok(SpotDto.from(saved));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -87,6 +93,12 @@ public class SpotController {
         if (order == null) return ResponseEntity.notFound().build();
         s.setLabel(req.label());
         s.setLengthSeconds(req.lengthSeconds());
+        // Removing the audio un-produces the spot: it can no longer be approved or air until
+        // new audio is attached, so drop it back to DRAFT.
+        if (req.librtimeFileId() == null && s.getLibrtimeFileId() != null
+                && !Spot.STATUS_DRAFT.equals(s.getStatus())) {
+            s.setStatus(Spot.STATUS_DRAFT);
+        }
         s.setLibrtimeFileId(req.librtimeFileId());
         if (req.rotationKind() != null) {
             if (!"ANY_TIME".equals(req.rotationKind()) && !"SPECIFIC_SHOW".equals(req.rotationKind())) {
@@ -97,16 +109,47 @@ public class SpotController {
         s.setTargetShowId(req.targetShowId());
         try {
             applySpotWindow(order, s, req);
-            return ResponseEntity.ok(SpotDto.from(spots.save(s)));
+            Spot saved = spots.save(s);
+            carts.syncCartsForOrder(saved.getOrderId());
+            return ResponseEntity.ok(SpotDto.from(saved));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
+    /**
+     * Move a spot through its production lifecycle: DRAFT → PRODUCED → APPROVED. TRAFFICKED is
+     * applied by the scheduler when the spot is pushed, so it cannot be set here.
+     */
+    @PostMapping("/api/spots/{id}/status")
+    public ResponseEntity<?> setStatus(@PathVariable UUID id, @Valid @RequestBody StatusRequest req) {
+        Spot s = spots.findById(id).orElse(null);
+        if (s == null) return ResponseEntity.notFound().build();
+        String status = req.status().trim().toUpperCase();
+        if (Spot.STATUS_TRAFFICKED.equals(status)) {
+            return ResponseEntity.badRequest().body(Map.of("error",
+                    "TRAFFICKED is set automatically when the spot airs"));
+        }
+        if (!Spot.MANUAL_STATUSES.contains(status)) {
+            return ResponseEntity.badRequest().body(Map.of("error",
+                    "status must be one of DRAFT, PRODUCED, APPROVED"));
+        }
+        if ((Spot.STATUS_PRODUCED.equals(status) || Spot.STATUS_APPROVED.equals(status))
+                && s.getLibrtimeFileId() == null) {
+            return ResponseEntity.badRequest().body(Map.of("error",
+                    "Attach the produced audio (a LibreTime file) before marking " + status));
+        }
+        s.setStatus(status);
+        return ResponseEntity.ok(SpotDto.from(spots.save(s)));
+    }
+
     @DeleteMapping("/api/spots/{id}")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        if (!spots.existsById(id)) return ResponseEntity.notFound().build();
+        Spot s = spots.findById(id).orElse(null);
+        if (s == null) return ResponseEntity.notFound().build();
+        UUID orderId = s.getOrderId();
         spots.deleteById(id);
+        carts.syncCartsForOrder(orderId);
         return ResponseEntity.noContent().build();
     }
 

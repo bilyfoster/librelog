@@ -70,10 +70,12 @@ public class CartService {
 
     @Transactional
     public Cart create(UUID stationId, String name, String kind, String category, String source,
-                       UUID orderId, String description) {
+                       UUID orderId, String description, String selectionStrategy, Integer maxAgeHours) {
         if (!"MUSIC".equals(kind) && !"COMMERCIAL".equals(kind)) {
             throw new IllegalArgumentException("kind must be MUSIC or COMMERCIAL");
         }
+        String strategy = normalizeStrategy(selectionStrategy);
+        Integer maxAge = normalizeMaxAge(maxAgeHours);
         if (category == null || category.isBlank()) {
             category = "COMMERCIAL".equals(kind) ? "COMMERCIAL" : "MUSIC";
         }
@@ -98,6 +100,7 @@ public class CartService {
         Cart c = Cart.builder()
                 .stationId(stationId).name(name).kind(kind).category(category).source(source)
                 .orderId(orderId).description(description).rotationPointer(0)
+                .selectionStrategy(strategy).maxAgeHours(maxAge)
                 .build();
         c = carts.save(c);
         policies.save(defaultPolicyFor(c.getId(), category));
@@ -124,7 +127,8 @@ public class CartService {
     }
 
     @Transactional
-    public Cart update(UUID cartId, String name, String description) {
+    public Cart update(UUID cartId, String name, String description,
+                       String selectionStrategy, Integer maxAgeHours) {
         Cart c = carts.findById(cartId).orElseThrow(() -> new IllegalArgumentException("Cart not found"));
         if (name != null && !name.equals(c.getName())) {
             carts.findByStationIdAndName(c.getStationId(), name).ifPresent(other -> {
@@ -134,7 +138,35 @@ public class CartService {
             c.setName(name);
         }
         if (description != null) c.setDescription(description);
+        if (selectionStrategy != null) c.setSelectionStrategy(normalizeStrategy(selectionStrategy));
+        // maxAgeHours: a negative value clears the freshness window; >=1 sets it; null leaves it.
+        if (maxAgeHours != null) c.setMaxAgeHours(maxAgeHours < 0 ? null : normalizeMaxAge(maxAgeHours));
         return carts.save(c);
+    }
+
+    private static String normalizeStrategy(String s) {
+        if (s == null || s.isBlank()) return Cart.STRATEGY_ROTATION;
+        String v = s.trim().toUpperCase();
+        if (!Cart.STRATEGY_ROTATION.equals(v) && !Cart.STRATEGY_NEWEST_FIRST.equals(v)) {
+            throw new IllegalArgumentException("selectionStrategy must be ROTATION or NEWEST_FIRST");
+        }
+        return v;
+    }
+
+    private static Integer normalizeMaxAge(Integer h) {
+        if (h == null) return null;
+        if (h == 0) return null;
+        if (h < 1) throw new IllegalArgumentException("maxAgeHours must be >= 1 (or omit for no limit)");
+        return h;
+    }
+
+    /** Re-sync every {@code source=ORDER} cart tied to this order. Call after spots change. */
+    @Transactional
+    public int syncCartsForOrder(UUID orderId) {
+        if (orderId == null) return 0;
+        List<Cart> orderCarts = carts.findByOrderId(orderId);
+        for (Cart c : orderCarts) syncOrderCart(c);
+        return orderCarts.size();
     }
 
     @Transactional
@@ -185,6 +217,7 @@ public class CartService {
                 .artist(input.artist()).title(input.title())
                 .sponsor(input.sponsor()).product(input.product())
                 .lengthSeconds(input.lengthSeconds())
+                .freshnessAt(Instant.now())
                 .enabled(input.enabled() == null || input.enabled())
                 .build();
         return members.save(m);
@@ -253,6 +286,7 @@ public class CartService {
                             textOrNull(file, "track_title"),
                             textOrNull(file, "name"))))
                     .lengthSeconds(parseLengthSeconds(textOrNull(file, "length")))
+                    .freshnessAt(fileFreshness(file))
                     .enabled(true)
                     .build();
             members.save(m);
@@ -306,6 +340,7 @@ public class CartService {
                     .spotId(s.getId())
                     .sponsor(s.getLabel())
                     .lengthSeconds(s.getLengthSeconds())
+                    .freshnessAt(s.getUpdatedAt() != null ? s.getUpdatedAt() : Instant.now())
                     .enabled(true)
                     .build();
             members.save(m);
@@ -335,24 +370,44 @@ public class CartService {
 
         public List<CartPlayHistory> getPending() { return pending; }
 
+        /** Backwards-compatible: no show context (used by preview). */
         public Resolution resolve(Cart cart, Instant slotTime) {
+            return resolve(cart, slotTime, null);
+        }
+
+        /**
+         * @param currentShowId the LibreTime show id of the instance this slot belongs to,
+         *        or null when unknown (preview). Used to enforce SPECIFIC_SHOW spots.
+         */
+        public Resolution resolve(Cart cart, Instant slotTime, Long currentShowId) {
             List<CartMember> all = memberCache.computeIfAbsent(cart.getId(),
                     cid -> members.findByCartIdOrderByPositionAsc(cid));
-            List<CartMember> usable = all.stream().filter(CartMember::isEnabled).toList();
-            if (usable.isEmpty()) {
+            List<CartMember> enabled = all.stream().filter(CartMember::isEnabled).toList();
+            if (enabled.isEmpty()) {
                 return Resolution.empty("Cart \"" + cart.getName() + "\" has no enabled members");
             }
+
+            // Freshness window: drop anything older than maxAgeHours (e.g. stale news).
+            List<CartMember> usable = enabled;
+            if (cart.getMaxAgeHours() != null && cart.getMaxAgeHours() > 0) {
+                Instant cutoff = slotTime.minus(Duration.ofHours(cart.getMaxAgeHours()));
+                usable = enabled.stream().filter(m -> freshnessOf(m).isAfter(cutoff)).toList();
+                if (usable.isEmpty()) {
+                    return Resolution.empty("Cart \"" + cart.getName() + "\" has no member fresher than "
+                            + cart.getMaxAgeHours() + "h");
+                }
+            }
+
             SeparationPolicy pol = policyCache.computeIfAbsent(cart.getId(),
                     cid -> policies.findById(cid).orElseGet(() ->
                             SeparationPolicy.builder().cartId(cid).build()));
 
-            int n = usable.size();
-            int start = ((cart.getRotationPointer() % n) + n) % n;
+            boolean newest = Cart.STRATEGY_NEWEST_FIRST.equals(cart.getSelectionStrategy());
+            List<CartMember> ordered = orderedCandidates(cart, usable, newest);
 
             CartMember picked = null;
-            for (int i = 0; i < n; i++) {
-                CartMember candidate = usable.get((start + i) % n);
-                if (!eligibleAtStationTime(candidate, slotTime)) continue;
+            for (CartMember candidate : ordered) {
+                if (!eligibleAtStationTime(candidate, slotTime, currentShowId)) continue;
                 if (passesSeparation(candidate, cart, pol, slotTime)) {
                     picked = candidate;
                     break;
@@ -360,9 +415,8 @@ public class CartService {
             }
             String note = null;
             if (picked == null) {
-                for (int i = 0; i < n; i++) {
-                    CartMember candidate = usable.get((start + i) % n);
-                    if (eligibleAtStationTime(candidate, slotTime)) {
+                for (CartMember candidate : ordered) {
+                    if (eligibleAtStationTime(candidate, slotTime, currentShowId)) {
                         picked = candidate;
                         note = "Separation violated for cart \"" + cart.getName()
                                 + "\" — no member satisfied policy";
@@ -371,13 +425,16 @@ public class CartService {
                 }
             }
             if (picked == null) {
-                return Resolution.empty("No member eligible at this station time for cart \""
-                        + cart.getName() + "\" (spot time windows)");
+                return Resolution.empty("No eligible member for cart \"" + cart.getName()
+                        + "\" at this time (time window, show targeting, or unapproved spot)");
             }
 
-            int chosenIdx = usable.indexOf(picked);
-            cart.setRotationPointer((chosenIdx + 1) % n);
-            carts.save(cart);
+            // Rotation advances the pointer; NEWEST_FIRST always re-sorts so it doesn't.
+            if (!newest) {
+                int chosenIdx = usable.indexOf(picked);
+                cart.setRotationPointer((chosenIdx + 1) % usable.size());
+                carts.save(cart);
+            }
 
             CartPlayHistory h = CartPlayHistory.builder()
                     .stationId(stationId)
@@ -399,10 +456,40 @@ public class CartService {
             return spotCache.computeIfAbsent(m.getSpotId(), id -> spots.findById(id).orElse(null));
         }
 
-        private boolean eligibleAtStationTime(CartMember m, Instant slotTime) {
+        /** Round-robin from the rotation pointer, or freshest-first for NEWEST_FIRST carts. */
+        private List<CartMember> orderedCandidates(Cart cart, List<CartMember> usable, boolean newest) {
+            if (newest) {
+                List<CartMember> copy = new ArrayList<>(usable);
+                copy.sort(Comparator.comparing(Resolver::freshnessOf).reversed());
+                return copy;
+            }
+            int n = usable.size();
+            int start = ((cart.getRotationPointer() % n) + n) % n;
+            List<CartMember> out = new ArrayList<>(n);
+            for (int i = 0; i < n; i++) out.add(usable.get((start + i) % n));
+            return out;
+        }
+
+        private static Instant freshnessOf(CartMember m) {
+            if (m.getFreshnessAt() != null) return m.getFreshnessAt();
+            if (m.getCreatedAt() != null) return m.getCreatedAt();
+            return Instant.EPOCH;
+        }
+
+        private boolean eligibleAtStationTime(CartMember m, Instant slotTime, Long currentShowId) {
             Spot sp = spotForMember(m);
             if (sp == null) {
                 return true;
+            }
+            // Production gate: only approved (or already trafficked) spots may air.
+            if (!Spot.isAirable(sp)) {
+                return false;
+            }
+            // Show targeting: a SPECIFIC_SHOW spot only airs inside its target show. When the
+            // show is unknown (preview, currentShowId == null) we don't enforce it.
+            if ("SPECIFIC_SHOW".equals(sp.getRotationKind()) && sp.getTargetShowId() != null
+                    && currentShowId != null && !currentShowId.equals(sp.getTargetShowId())) {
+                return false;
             }
             Integer st = sp.getLocalWindowStartMinutes();
             Integer en = sp.getLocalWindowEndMinutes();
@@ -526,6 +613,18 @@ public class CartService {
 
     private static boolean equalsIgnoreCase(String a, String b) {
         return a != null && b != null && a.equalsIgnoreCase(b);
+    }
+
+    /** Best-effort upload/modified time from a LibreTime file node; falls back to now. */
+    private static Instant fileFreshness(JsonNode file) {
+        for (String field : new String[]{"utime", "mtime", "track_number"}) {
+            String v = textOrNull(file, field);
+            if (v == null || v.isBlank()) continue;
+            try { return Instant.parse(v); } catch (Exception ignored) {}
+            try { return java.time.LocalDateTime.parse(v).toInstant(ZoneOffset.UTC); } catch (Exception ignored) {}
+            try { return java.time.LocalDateTime.parse(v.replace(' ', 'T')).toInstant(ZoneOffset.UTC); } catch (Exception ignored) {}
+        }
+        return Instant.now();
     }
 
     private static Integer parseLengthSeconds(String s) {

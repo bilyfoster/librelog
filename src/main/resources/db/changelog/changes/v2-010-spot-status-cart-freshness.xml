@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="v2-010-spot-status-cart-freshness" author="librelog">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+
+-- Spot production lifecycle: DRAFT -> PRODUCED -> APPROVED -> TRAFFICKED.
+-- Only APPROVED / TRAFFICKED spots are eligible to air.
+ALTER TABLE spot ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'DRAFT';
+-- Existing spots predate the lifecycle and were already airing; treat them as approved
+-- so this migration does not silently pull running advertiser spots off the air.
+UPDATE spot SET status = 'APPROVED' WHERE status = 'DRAFT';
+
+-- Cart freshness controls: how a cart picks a member, and an optional max age.
+ALTER TABLE cart ADD COLUMN IF NOT EXISTS selection_strategy VARCHAR(20) NOT NULL DEFAULT 'ROTATION';
+ALTER TABLE cart ADD COLUMN IF NOT EXISTS max_age_hours INTEGER;
+
+-- When a cart member's underlying audio became "fresh" (LibreTime upload time when known,
+-- otherwise when it was added to the cart). Drives NEWEST_FIRST and the max-age window.
+ALTER TABLE cart_member ADD COLUMN IF NOT EXISTS freshness_at TIMESTAMP;
+UPDATE cart_member SET freshness_at = created_at WHERE freshness_at IS NULL;
+
+        ]]></sql>
+    </changeSet>
+</databaseChangeLog>

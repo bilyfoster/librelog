@@ -278,6 +278,7 @@ public class ScheduleService {
             }
             Instant instanceStart = parseInstantSafe(textField(instance, "starts_at"));
             Instant instanceEnd = parseInstantSafe(textField(instance, "ends_at"));
+            Long currentShowId = numberField(instance, "show");
             if (instanceStart == null) {
                 skipReasons.add("Instance " + instanceId + " has no starts_at; skipped " + e.getValue().size() + " row(s)");
                 rowsSkipped += e.getValue().size();
@@ -300,7 +301,7 @@ public class ScheduleService {
                 // Cart slots: resolve to a concrete file/spot now, using the *intended*
                 // start time for separation lookups (specific cart or category pool).
                 if (fileId == null && ("MUSIC_CART".equals(it.getKind()) || "COMMERCIAL_CART".equals(it.getKind()))) {
-                    CartPickResult pick = pickCartMemberForItem(it, day, resolver, cursor);
+                    CartPickResult pick = pickCartMemberForItem(it, day, resolver, cursor, currentShowId);
                     if (pick.member() == null) {
                         rowsSkipped++;
                         if (pick.note() != null) {
@@ -326,6 +327,8 @@ public class ScheduleService {
                     it.setResolvedMemberId(picked.getId());
                     if (it.getLabel() == null) it.setLabel(displayLabelOf(cart, picked));
                     items.save(it);
+                    // An approved spot that lands in a push is now trafficked (on air).
+                    markSpotTrafficked(picked.getSpotId());
                 }
                 if (fileId == null) continue;
                 if (len <= 0) len = 30; // fall-back so 0-length placeholders still get a row
@@ -340,6 +343,14 @@ public class ScheduleService {
                 try {
                     client.scheduleFileInInstance(instanceId, fileId, position++, rowStart, rowEnd, len);
                     rowsWritten++;
+                    // Persist the actual air time (and the resolved file/length) so that
+                    // playback reconciliation can later match this row by file id + time.
+                    // Without this, clock-built and cart/spot-resolved rows have a null
+                    // scheduledAt and reconcileDay() silently skips them.
+                    it.setScheduledAt(rowStart);
+                    it.setLibrtimeFileId(fileId);
+                    it.setLengthSeconds(len);
+                    items.save(it);
                 } catch (Exception ex) {
                     throw new IllegalStateException("Push to LibreTime failed for show instance "
                             + instanceId + " (file " + fileId + ", position " + (position - 1)
@@ -549,7 +560,8 @@ public class ScheduleService {
      * at {@code slotTime} (spot day parts / local windows apply inside {@link CartService.Resolver}).
      */
     private CartPickResult pickCartMemberForItem(ScheduleItem it, ScheduleDay day,
-                                                 CartService.Resolver resolver, Instant slotTime) {
+                                                 CartService.Resolver resolver, Instant slotTime,
+                                                 Long currentShowId) {
         if (!"MUSIC_CART".equals(it.getKind()) && !"COMMERCIAL_CART".equals(it.getKind())) {
             return new CartPickResult(null, null, null);
         }
@@ -558,7 +570,7 @@ public class ScheduleService {
             if (cart == null) {
                 return new CartPickResult(null, null, "Referenced cart was not found");
             }
-            var res = resolver.resolve(cart, slotTime);
+            var res = resolver.resolve(cart, slotTime, currentShowId);
             return new CartPickResult(cart, res.member(), res.note());
         }
         if (it.getCartCategory() != null && !it.getCartCategory().isBlank()) {
@@ -566,7 +578,7 @@ public class ScheduleService {
             List<Cart> candidates = cartRepo.findByStationIdAndKindAndCategoryOrderByNameAsc(
                     day.getStationId(), ck, it.getCartCategory());
             for (Cart c : candidates) {
-                var res = resolver.resolve(c, slotTime);
+                var res = resolver.resolve(c, slotTime, currentShowId);
                 if (res.member() != null) {
                     return new CartPickResult(c, res.member(), res.note());
                 }
@@ -575,6 +587,17 @@ public class ScheduleService {
                     "No cart in category \"" + it.getCartCategory() + "\" had an eligible member at this time");
         }
         return new CartPickResult(null, null, null);
+    }
+
+    /** Advance an APPROVED spot to TRAFFICKED once it has been pushed into a schedule. */
+    private void markSpotTrafficked(UUID spotId) {
+        if (spotId == null) return;
+        spots.findById(spotId).ifPresent(sp -> {
+            if (Spot.STATUS_APPROVED.equals(sp.getStatus())) {
+                sp.setStatus(Spot.STATUS_TRAFFICKED);
+                spots.save(sp);
+            }
+        });
     }
 
     private ScheduleItem clockSlotToScheduleItem(ClockTemplateSlot s, UUID dayId, long instanceId,
@@ -657,7 +680,7 @@ public class ScheduleService {
         CartService.Resolver resolver = cartService.newResolver(day.getStationId(), Duration.ofHours(48));
         for (ScheduleItem it : items.findByScheduleDayIdOrderByPositionAsc(dayId)) {
             if ("MUSIC_CART".equals(it.getKind()) || "COMMERCIAL_CART".equals(it.getKind())) {
-                CartPickResult pick = pickCartMemberForItem(it, day, resolver, Instant.now());
+                CartPickResult pick = pickCartMemberForItem(it, day, resolver, Instant.now(), null);
                 if (pick.member() != null) {
                     Cart cart = pick.cart();
                     CartMember picked = pick.member();

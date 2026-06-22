@@ -484,6 +484,12 @@ label.inline input { margin-top: 0; width: auto; }
 .badge.matched { background: var(--ok-soft); color: var(--ok); }
 .badge.missed { background: var(--danger-soft); color: var(--danger); }
 .badge.pending { background: var(--panel-3); color: var(--muted); }
+.guide-steps { margin: 6px 0 14px 0; padding-left: 20px; }
+.guide-steps li { margin: 7px 0; line-height: 1.45; }
+.badge.status-draft { background: var(--panel-3); color: var(--muted); }
+.badge.status-produced { background: var(--panel-2); color: var(--text); }
+.badge.status-approved { background: var(--ok-soft); color: var(--ok); }
+.badge.status-trafficked { background: var(--ok); color: white; }
 
 /* =====================================================================
    Modal + picker
