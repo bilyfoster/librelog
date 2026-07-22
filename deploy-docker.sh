@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail
+cd "$(dirname "$0")"
 
 echo "LibreLog v2 deploy"
 echo "=================="
@@ -13,6 +14,10 @@ else
     exit 1
 fi
 
+# The version this checkout will build (the <version> that follows the librelog artifactId).
+EXPECTED_VERSION="$(awk '/<artifactId>librelog<\/artifactId>/{found=1} found && /<version>/{gsub(/.*<version>|<\/version>.*/,""); print; exit}' pom.xml)"
+echo "Building version: ${EXPECTED_VERSION:-unknown}"
+
 echo "[1/2] docker compose build api (Maven + JDK 21 inside image)..."
 $COMPOSE_CMD build api
 
@@ -20,15 +25,39 @@ echo "[2/2] docker compose up -d (recreates api with new image; DB volume kept).
 $COMPOSE_CMD up -d --force-recreate api
 
 echo
-echo "Waiting for /actuator/health..."
+echo "Verifying the LOCAL container came up on the new version..."
+LOCAL_OK=""
 for i in $(seq 1 60); do
-    if curl -fs -o /dev/null https://log.gayphx.com/actuator/health 2>/dev/null; then
-        echo "OK - https://log.gayphx.com is up"
-        exit 0
-    fi
+    LOCAL_VERSION="$(docker exec librelog-api wget -qO- http://127.0.0.1:8080/api/version 2>/dev/null \
+        | sed -n 's/.*"version":"\([^"]*\)".*/\1/p' || true)"
+    if [ -n "$LOCAL_VERSION" ]; then LOCAL_OK=1; break; fi
     sleep 2
 done
+if [ -z "$LOCAL_OK" ]; then
+    echo "Local container did not become healthy in 120s. Check logs:"
+    echo "  $COMPOSE_CMD logs -f api"
+    exit 1
+fi
+echo "Local container is up, running version $LOCAL_VERSION."
+if [ -n "$EXPECTED_VERSION" ] && [ "$LOCAL_VERSION" != "$EXPECTED_VERSION" ]; then
+    echo "WARNING: local container reports $LOCAL_VERSION but this checkout is $EXPECTED_VERSION." >&2
+    exit 1
+fi
 
-echo "Did not become healthy in 120s. Check logs:"
-echo "  $COMPOSE_CMD logs -f api"
+echo
+echo "Checking what https://log.gayphx.com is serving..."
+PUBLIC_VERSION="$(curl -fs --max-time 10 https://log.gayphx.com/api/version 2>/dev/null \
+    | sed -n 's/.*"version":"\([^"]*\)".*/\1/p' || true)"
+if [ -z "$PUBLIC_VERSION" ]; then
+    echo "Could not reach https://log.gayphx.com — if this host IS the production server," >&2
+    echo "check Traefik; otherwise the public site is unaffected by this deploy." >&2
+    exit 1
+fi
+if [ "$PUBLIC_VERSION" = "$LOCAL_VERSION" ]; then
+    echo "OK - https://log.gayphx.com is serving $PUBLIC_VERSION (this deploy is live)."
+    exit 0
+fi
+echo "NOTE: https://log.gayphx.com is serving $PUBLIC_VERSION, but this machine's container runs $LOCAL_VERSION." >&2
+echo "The public site is hosted elsewhere (DNS does not point at this host)." >&2
+echo "This deploy only updated the LOCAL stack. To update production, run this script on the production server." >&2
 exit 1

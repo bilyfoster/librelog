@@ -1,5 +1,18 @@
 # Release notes
 
+## v2.5.1 — deploy script honesty
+
+`deploy-docker.sh` previously "succeeded" by curling the public URL's health endpoint —
+which passes even when you deploy from a machine that does **not** serve log.gayphx.com
+(the site kept running an old version while the script said OK). It now:
+
+- verifies the **local** container came up on the version this checkout built
+  (`/api/version` inside the container must match pom.xml), and
+- compares the **public** site's version: if it differs, it says plainly that the public
+  site is hosted elsewhere and this deploy only updated the local stack (exit 1).
+
+No app changes; version bumped so the fix is traceable.
+
 ## v2.5.0 — clock editor: timing feedback + reorder
 
 Frontend-only quality pass on the clock slot editor. No DB or API changes.
