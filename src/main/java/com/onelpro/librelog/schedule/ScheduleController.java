@@ -26,7 +26,8 @@ public class ScheduleController {
                          String spotId, Long librtimeFileId, Instant scheduledAt,
                          Integer lengthSeconds, int position,
                          String cartId, String cartCategory, String resolvedMemberId, String label,
-                         Integer segueOffsetSeconds, java.math.BigDecimal duckDb) {
+                         Integer segueOffsetSeconds, java.math.BigDecimal duckDb,
+                         String fillMode, Integer fillTargetSeconds, Integer fillTargetCount) {
         static ItemDto from(ScheduleItem i) {
             return new ItemDto(i.getId().toString(), i.getShowInstanceId(), i.getSlotIndex(),
                     i.getKind(), i.getSpotId() == null ? null : i.getSpotId().toString(),
@@ -34,7 +35,8 @@ public class ScheduleController {
                     i.getCartId() == null ? null : i.getCartId().toString(),
                     i.getCartCategory(),
                     i.getResolvedMemberId() == null ? null : i.getResolvedMemberId().toString(),
-                    i.getLabel(), i.getSegueOffsetSeconds(), i.getDuckDb());
+                    i.getLabel(), i.getSegueOffsetSeconds(), i.getDuckDb(),
+                    i.getFillMode(), i.getFillTargetSeconds(), i.getFillTargetCount());
         }
     }
 
@@ -65,7 +67,8 @@ public class ScheduleController {
     public record ItemRequest(Long showInstanceId, int slotIndex, String kind,
                               String spotId, Long librtimeFileId, Instant scheduledAt,
                               Integer lengthSeconds, String cartId, String cartCategory, String label,
-                              Integer segueOffsetSeconds, java.math.BigDecimal duckDb) {}
+                              Integer segueOffsetSeconds, java.math.BigDecimal duckDb,
+                              String fillMode, Integer fillTargetSeconds, Integer fillTargetCount) {}
 
     public record SaveRequest(Long expectedVersion, List<ItemRequest> items) {}
 
@@ -143,6 +146,9 @@ public class ScheduleController {
                     .label(r.label())
                     .segueOffsetSeconds(r.segueOffsetSeconds())
                     .duckDb(r.duckDb())
+                    .fillMode(r.fillMode() == null || r.fillMode().isBlank() ? null : r.fillMode().trim().toUpperCase())
+                    .fillTargetSeconds(r.fillTargetSeconds())
+                    .fillTargetCount(r.fillTargetCount())
                     .build()).toList();
             var view = schedule.save(dayId, user.getId(), req.expectedVersion(), newItems);
             return ResponseEntity.ok(toDto(view, user.getId()));

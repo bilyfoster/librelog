@@ -1,5 +1,52 @@
 # Release notes
 
+## v2.3.0 — fill blocks + fair advertiser rotation
+
+Clock hours can now contain *blocks*, not just single units, and category pools rotate
+advertisers fairly. One DB migration (auto-applied), additive APIs, one behavior change.
+
+### ⚠️ Heads-up
+
+1. **Category-pool cart order changed (fairness).** Slots bound to a *category* (e.g.
+   "any COMMERCIAL cart") now try the cart that has aired **least recently** first,
+   instead of alphabetical name order. Expect advertiser rotation to even out — carts
+   that used to win every break because they sorted first will now share.
+2. Fill semantics: **COUNT/TIME blocks expand into concrete unit slots when the clock is
+   applied** (each unit resolves independently at push, with real schedule items for
+   order reconciliation). **TO_END is music-only**, must be the clock's last slot, and
+   resolves unit-by-unit at push straight into LibreTime (play history recorded; no
+   per-unit schedule items — filler music has no order to reconcile).
+
+### What's new
+
+- **Fill blocks on cart slots** (`fillMode` on clock slots):
+  - `COUNT` — a fixed number of units (1–50), e.g. a 4-unit ad break from the
+    COMMERCIAL category pool.
+  - `TIME` — fill ~N seconds (30–3600), unit-estimated from the slot's default length
+    (30s commercial / 180s music), e.g. a 3:00 stopset = 6 × 30s units.
+  - `TO_END` — music only: keep resolving songs until the show instance ends ("take us
+    to the top of the hour"). Safety-capped at 60 units; the marker item records the
+    fill's start time and total seconds after push, and push notes report what filled.
+- **Fair pool rotation**: `Resolver.orderPoolFairly` orders category-pool carts
+  least-recently-aired first (never-aired first, ties by name), using persisted history
+  *plus* picks already made in the current push — so consecutive pool slots rotate
+  across clients within one break.
+- Clock editor: fill controls per cart slot row (single / fill # units / fill seconds /
+  to end).
+
+### API / schema
+
+- Migration `v2-014`: `fill_mode`, `fill_target_seconds`, `fill_target_count` on
+  `clock_template_slot` and `schedule_item`.
+- Clock slot DTOs and schedule item DTOs carry the three fill fields (additive).
+- Validation: fill modes only on cart slots; TO_END only on music slots and only as the
+  last slot of a clock.
+
+### Tests
+
+- `ScheduleServiceFillTest` (COUNT/TIME/TO_END expansion math) and two new resolver
+  tests for fair pool ordering (65 tests total).
+
 ## v2.2.1 — editable cart categories + INTERVIEW category
 
 - **Cart category is now editable** after creation (cart → Edit). The category is

@@ -64,6 +64,20 @@ public class ScheduleItem {
     @Column(name = "duck_db")
     private java.math.BigDecimal duckDb;
 
+    /**
+     * Push-time fill marker. Only {@code TO_END} appears on schedule items (music fill to
+     * the end of the show instance, resolved unit-by-unit at push). COUNT/TIME fills are
+     * expanded into plain items when the clock is applied.
+     */
+    @Column(name = "fill_mode")
+    private String fillMode;
+
+    @Column(name = "fill_target_seconds")
+    private Integer fillTargetSeconds;
+
+    @Column(name = "fill_target_count")
+    private Integer fillTargetCount;
+
     private String label;
 
     @PrePersist

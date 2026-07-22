@@ -19,7 +19,8 @@ public class ClockController {
 
     public record SlotDto(String id, int position, String kind,
                           String cartId, String cartCategory, Long librtimeFileId, String spotId,
-                          String label, Integer defaultLengthSeconds) {
+                          String label, Integer defaultLengthSeconds,
+                          String fillMode, Integer fillTargetSeconds, Integer fillTargetCount) {
         static SlotDto from(ClockTemplateSlot s) {
             return new SlotDto(s.getId() == null ? null : s.getId().toString(),
                     s.getPosition(), s.getKind(),
@@ -27,14 +28,16 @@ public class ClockController {
                     s.getCartCategory(),
                     s.getLibrtimeFileId(),
                     s.getSpotId() == null ? null : s.getSpotId().toString(),
-                    s.getLabel(), s.getDefaultLengthSeconds());
+                    s.getLabel(), s.getDefaultLengthSeconds(),
+                    s.getFillMode(), s.getFillTargetSeconds(), s.getFillTargetCount());
         }
     }
 
     public record ClockRequest(String name, String description) {}
 
     public record SlotRequest(String kind, String cartId, String cartCategory, Long librtimeFileId, String spotId,
-                              String label, Integer defaultLengthSeconds) {
+                              String label, Integer defaultLengthSeconds,
+                              String fillMode, Integer fillTargetSeconds, Integer fillTargetCount) {
         ClockTemplateSlot toEntity() {
             return ClockTemplateSlot.builder()
                     .kind(kind)
@@ -44,6 +47,9 @@ public class ClockController {
                     .spotId(uuidOrNull(spotId))
                     .label(label)
                     .defaultLengthSeconds(defaultLengthSeconds)
+                    .fillMode(trimOrNull(fillMode))
+                    .fillTargetSeconds(fillTargetSeconds)
+                    .fillTargetCount(fillTargetCount)
                     .build();
         }
 

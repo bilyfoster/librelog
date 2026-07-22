@@ -18,5 +18,6 @@
     <include file="db/changelog/changes/v2-011-rumble-production-schema.xml"/>
     <include file="db/changelog/changes/v2-012-media-uploads.xml"/>
     <include file="db/changelog/changes/v2-013-voicetrack-markers.xml"/>
+    <include file="db/changelog/changes/v2-014-fill-blocks.xml"/>
 
 </databaseChangeLog>

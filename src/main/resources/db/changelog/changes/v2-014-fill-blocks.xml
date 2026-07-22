@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="v2-014-fill-blocks" author="librelog">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+
+-- Fill blocks: a cart slot can fill by unit COUNT, by TIME (seconds), or TO_END of the
+-- show instance (music only). COUNT/TIME expand into concrete slots when a clock is
+-- applied; TO_END is resolved at push time and needs to survive on the schedule item.
+ALTER TABLE clock_template_slot ADD COLUMN IF NOT EXISTS fill_mode VARCHAR(10);
+ALTER TABLE clock_template_slot ADD COLUMN IF NOT EXISTS fill_target_seconds INTEGER;
+ALTER TABLE clock_template_slot ADD COLUMN IF NOT EXISTS fill_target_count INTEGER;
+
+ALTER TABLE schedule_item ADD COLUMN IF NOT EXISTS fill_mode VARCHAR(10);
+ALTER TABLE schedule_item ADD COLUMN IF NOT EXISTS fill_target_seconds INTEGER;
+ALTER TABLE schedule_item ADD COLUMN IF NOT EXISTS fill_target_count INTEGER;
+
+        ]]></sql>
+    </changeSet>
+</databaseChangeLog>

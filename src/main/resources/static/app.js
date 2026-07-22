@@ -1626,6 +1626,9 @@ async function saveDay() {
                 label: it.label,
                 segueOffsetSeconds: it.segueOffsetSeconds ?? null,
                 duckDb: it.duckDb ?? null,
+                fillMode: it.fillMode ?? null,
+                fillTargetSeconds: it.fillTargetSeconds ?? null,
+                fillTargetCount: it.fillTargetCount ?? null,
             })),
         });
         state.day = r;
@@ -2802,14 +2805,21 @@ function renderClockDetail(clock) {
                     }
                 }
             }
+            const isCartKind = kind === 'MUSIC_CART' || kind === 'COMMERCIAL_CART';
+            const fillMode = isCartKind ? (r.querySelector('[name="fillMode"]')?.value || null) : null;
+            const fillCount = r.querySelector('[name="fillTargetCount"]')?.value;
+            const fillSecs = r.querySelector('[name="fillTargetSeconds"]')?.value;
             payload.push({
                 kind,
-                cartId: (kind === 'MUSIC_CART' || kind === 'COMMERCIAL_CART') ? cartId : null,
-                cartCategory: (kind === 'MUSIC_CART' || kind === 'COMMERCIAL_CART') ? cartCategory : null,
+                cartId: isCartKind ? cartId : null,
+                cartCategory: isCartKind ? cartCategory : null,
                 librtimeFileId: kind === 'TRACK' && lf ? parseInt(lf) : null,
                 spotId: kind === 'SPOT' ? spotId : null,
                 label,
                 defaultLengthSeconds: len ? parseInt(len) : null,
+                fillMode: fillMode || null,
+                fillTargetCount: fillMode === 'COUNT' && fillCount ? parseInt(fillCount) : null,
+                fillTargetSeconds: fillMode === 'TIME' && fillSecs ? parseInt(fillSecs) : null,
             });
         }
         try {
@@ -2849,17 +2859,46 @@ function clockSlotRowHtml(s, i) {
         <input name="spotId" placeholder="spot uuid" value="${s.spotId ?? ''}" ${k === 'SPOT' ? '' : 'disabled'} />
         <input name="label" placeholder="label" value="${escapeAttr(s.label || '')}" />
         <input name="defaultLengthSeconds" type="number" placeholder="len s" value="${s.defaultLengthSeconds ?? ''}" />
+        <select name="fillMode" title="Single unit, or fill a block" ${showCartBind ? '' : 'disabled'}>
+            <option value="" ${!s.fillMode ? 'selected' : ''}>single</option>
+            <option value="COUNT" ${s.fillMode === 'COUNT' ? 'selected' : ''}>fill # units</option>
+            <option value="TIME" ${s.fillMode === 'TIME' ? 'selected' : ''}>fill seconds</option>
+            <option value="TO_END" ${s.fillMode === 'TO_END' ? 'selected' : ''}>to end (music)</option>
+        </select>
+        <input name="fillTargetCount" type="number" min="1" max="50" placeholder="#" style="width:52px"
+               value="${s.fillTargetCount ?? ''}" ${s.fillMode === 'COUNT' ? '' : 'disabled'} />
+        <input name="fillTargetSeconds" type="number" min="30" max="3600" placeholder="fill s" style="width:64px"
+               value="${s.fillTargetSeconds ?? ''}" ${s.fillMode === 'TIME' ? '' : 'disabled'} />
         <button class="link" data-remove-clock-slot>x</button>
         </div>
     </div>`;
 }
 
 document.addEventListener('change', (e) => {
+    if (e.target.matches('.clock-slot-row [name="fillMode"]')) {
+        const row = e.target.closest('.clock-slot-row');
+        const fm = e.target.value;
+        const cnt = row.querySelector('[name="fillTargetCount"]');
+        const sec = row.querySelector('[name="fillTargetSeconds"]');
+        if (cnt) cnt.disabled = fm !== 'COUNT';
+        if (sec) sec.disabled = fm !== 'TIME';
+        return;
+    }
     if (e.target.matches('.clock-slot-row [name="kind"]')) {
         const row = e.target.closest('.clock-slot-row');
         const k = e.target.value;
         row.querySelector('[name="librtimeFileId"]').disabled = k !== 'TRACK';
         row.querySelector('[name="spotId"]').disabled = k !== 'SPOT';
+        const isCartKind = k === 'MUSIC_CART' || k === 'COMMERCIAL_CART';
+        const fm = row.querySelector('[name="fillMode"]');
+        if (fm) {
+            fm.disabled = !isCartKind;
+            if (!isCartKind) fm.value = '';
+            const cnt = row.querySelector('[name="fillTargetCount"]');
+            const sec = row.querySelector('[name="fillTargetSeconds"]');
+            if (cnt) cnt.disabled = !isCartKind || fm.value !== 'COUNT';
+            if (sec) sec.disabled = !isCartKind || fm.value !== 'TIME';
+        }
         const wrap = row.querySelector('.clock-cart-bind-wrap');
         if (wrap) {
             wrap.style.display = (k === 'MUSIC_CART' || k === 'COMMERCIAL_CART') ? 'inline-flex' : 'none';

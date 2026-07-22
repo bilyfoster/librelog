@@ -51,6 +51,20 @@ public class ClockTemplateSlot {
     @Column(name = "default_length_seconds")
     private Integer defaultLengthSeconds;
 
+    /**
+     * Fill block mode for cart slots: {@code COUNT} (fixed number of units), {@code TIME}
+     * (fill roughly this many seconds, unit-estimated at apply time), or {@code TO_END}
+     * (music only — keep resolving at push until the show instance ends). Null = one unit.
+     */
+    @Column(name = "fill_mode")
+    private String fillMode;
+
+    @Column(name = "fill_target_seconds")
+    private Integer fillTargetSeconds;
+
+    @Column(name = "fill_target_count")
+    private Integer fillTargetCount;
+
     @PrePersist
     void prePersist() {
         if (id == null) id = UUID.randomUUID();

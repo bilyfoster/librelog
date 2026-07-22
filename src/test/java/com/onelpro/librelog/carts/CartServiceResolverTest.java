@@ -246,6 +246,45 @@ class CartServiceResolverTest {
         assertThat(second.member().getSponsor()).isNotEqualTo(first.member().getSponsor());
     }
 
+    @Test
+    void orderPoolFairly_leastRecentlyAiredFirst() {
+        Cart aardvark = Cart.builder().id(UUID.randomUUID()).stationId(stationId).name("Aardvark Autos")
+                .kind("COMMERCIAL").category("COMMERCIAL").build();
+        Cart beta = Cart.builder().id(UUID.randomUUID()).stationId(stationId).name("Beta Bakery")
+                .kind("COMMERCIAL").category("COMMERCIAL").build();
+        Cart zeke = Cart.builder().id(UUID.randomUUID()).stationId(stationId).name("Zeke's Tacos")
+                .kind("COMMERCIAL").category("COMMERCIAL").build();
+        // Aardvark aired 5 minutes ago, Beta 3 hours ago, Zeke never.
+        when(history.recentForStation(any(), any())).thenReturn(List.of(
+                CartPlayHistory.builder().id(UUID.randomUUID()).stationId(stationId)
+                        .cartId(aardvark.getId()).playedAt(now.minus(Duration.ofMinutes(5))).build(),
+                CartPlayHistory.builder().id(UUID.randomUUID()).stationId(stationId)
+                        .cartId(beta.getId()).playedAt(now.minus(Duration.ofHours(3))).build()));
+
+        List<Cart> ordered = resolver().orderPoolFairly(List.of(aardvark, beta, zeke));
+        // Never-aired first, then oldest airing — name order no longer wins.
+        assertThat(ordered).containsExactly(zeke, beta, aardvark);
+    }
+
+    @Test
+    void orderPoolFairly_pendingPicksRotateWithinOnePush() {
+        Cart a = Cart.builder().id(UUID.randomUUID()).stationId(stationId).name("A")
+                .kind("COMMERCIAL").category("COMMERCIAL").build();
+        Cart b = Cart.builder().id(UUID.randomUUID()).stationId(stationId).name("B")
+                .kind("COMMERCIAL").category("COMMERCIAL").build();
+        UUID aSpot = UUID.randomUUID();
+        CartMember aMember = spotMember(0, aSpot);
+        when(members.findByCartIdOrderByPositionAsc(a.getId())).thenReturn(List.of(aMember));
+        when(spots.findById(aSpot)).thenReturn(Optional.of(spot(aSpot, Spot.STATUS_APPROVED, "ANY_TIME", null)));
+
+        CartService.Resolver r = resolver();
+        assertThat(r.orderPoolFairly(List.of(a, b)).get(0)).isEqualTo(a); // tie -> name order
+        // Resolving from A records a pending play, so B must come first for the next slot.
+        aMember.setCartId(a.getId());
+        assertThat(r.resolve(a, now, null).member()).isNotNull();
+        assertThat(r.orderPoolFairly(List.of(a, b)).get(0)).isEqualTo(b);
+    }
+
     private Spot spot(UUID id, String status, String rotationKind, Long targetShowId) {
         return Spot.builder().id(id).orderId(UUID.randomUUID()).label("Spot").lengthSeconds(30)
                 .status(status).rotationKind(rotationKind).targetShowId(targetShowId).build();

@@ -483,6 +483,33 @@ public class CartService {
             return spotCache.computeIfAbsent(m.getSpotId(), id -> spots.findById(id).orElse(null));
         }
 
+        /**
+         * Order category-pool candidate carts by when they last aired — least recently
+         * (or never) first, ties broken by name. Uses both persisted history and picks
+         * already made in this push, so consecutive pool slots rotate across carts.
+         */
+        public List<Cart> orderPoolFairly(List<Cart> candidates) {
+            if (candidates == null || candidates.size() < 2) {
+                return candidates == null ? List.of() : candidates;
+            }
+            Map<UUID, Instant> lastAired = new HashMap<>();
+            for (CartPlayHistory h : recent) {
+                if (h.getCartId() != null && h.getPlayedAt() != null) {
+                    lastAired.merge(h.getCartId(), h.getPlayedAt(), (a, b) -> a.isAfter(b) ? a : b);
+                }
+            }
+            for (CartPlayHistory h : pending) {
+                if (h.getCartId() != null && h.getPlayedAt() != null) {
+                    lastAired.merge(h.getCartId(), h.getPlayedAt(), (a, b) -> a.isAfter(b) ? a : b);
+                }
+            }
+            List<Cart> out = new ArrayList<>(candidates);
+            out.sort(Comparator
+                    .comparing((Cart c) -> lastAired.getOrDefault(c.getId(), Instant.EPOCH))
+                    .thenComparing(Cart::getName, Comparator.nullsLast(String::compareTo)));
+            return out;
+        }
+
         /** Round-robin from the rotation pointer, or freshest-first for NEWEST_FIRST carts. */
         private List<CartMember> orderedCandidates(Cart cart, List<CartMember> usable, boolean newest) {
             if (newest) {

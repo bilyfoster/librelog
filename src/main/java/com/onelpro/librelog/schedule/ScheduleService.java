@@ -42,6 +42,9 @@ public class ScheduleService {
 
     public static final Duration LOCK_TTL = Duration.ofMinutes(15);
 
+    /** Safety cap on units a single TO_END fill may write (guards against runaway loops). */
+    static final int FILL_MAX_UNITS = 60;
+
     private static final String DEFAULT_ADVERTISER_CART_PLACEHOLDER = "Advertiser cart slot";
 
     private final ScheduleDayRepository days;
@@ -303,6 +306,64 @@ public class ScheduleService {
                 Long fileId = it.getLibrtimeFileId();
                 int len = it.getLengthSeconds() != null ? it.getLengthSeconds() : 0;
 
+                // TO_END fill: keep resolving music units until the show instance ends.
+                // Music-only by validation; units go straight to LibreTime (play history is
+                // recorded for separation, but no per-unit schedule items are created —
+                // filler music has no order to reconcile).
+                if (fileId == null && "TO_END".equals(it.getFillMode()) && "MUSIC_CART".equals(it.getKind())) {
+                    if (instanceEnd == null) {
+                        rowsSkipped++;
+                        skipReasons.add("Position " + it.getPosition() + ": instance " + instanceId
+                                + " has no end time; cannot fill to end");
+                        continue;
+                    }
+                    Instant blockStart = cursor;
+                    int units = 0;
+                    long filledSeconds = 0;
+                    while (cursor.isBefore(instanceEnd) && units < FILL_MAX_UNITS) {
+                        CartPickResult pick = pickCartMemberForItem(it, day, resolver, cursor, currentShowId);
+                        if (pick.member() == null) {
+                            skipReasons.add("Fill at position " + it.getPosition() + " stopped after "
+                                    + units + " unit(s): "
+                                    + (pick.note() != null ? pick.note() : "no eligible member"));
+                            break;
+                        }
+                        Long unitFile = resolveFileId(pick.member());
+                        if (unitFile == null) {
+                            skipReasons.add("Fill at position " + it.getPosition() + ": cart \""
+                                    + pick.cart().getName() + "\" picked member without a file; stopped");
+                            break;
+                        }
+                        int unitLen = pick.member().getLengthSeconds() != null && pick.member().getLengthSeconds() > 0
+                                ? pick.member().getLengthSeconds() : 180;
+                        Instant rowStart = cursor;
+                        Instant rowEnd = rowStart.plusSeconds(unitLen);
+                        try {
+                            client.scheduleFileInInstance(instanceId, unitFile, position++, rowStart, rowEnd,
+                                    unitLen, null, null);
+                        } catch (Exception ex) {
+                            throw new IllegalStateException("Push to LibreTime failed during fill for show instance "
+                                    + instanceId + " (file " + unitFile + "): " + ex.getMessage(), ex);
+                        }
+                        rowsWritten++;
+                        rowsResolved++;
+                        units++;
+                        filledSeconds += unitLen;
+                        if (pick.note() != null) skipReasons.add(pick.note());
+                        cursor = rowEnd;
+                    }
+                    // Bookkeeping on the marker so the day view shows when/how much was filled.
+                    it.setScheduledAt(blockStart);
+                    it.setLengthSeconds((int) Math.min(Integer.MAX_VALUE, filledSeconds));
+                    items.save(it);
+                    if (units > 0) {
+                        skipReasons.add("Filled " + units + " music unit(s) ("
+                                + (filledSeconds / 60) + "m" + (filledSeconds % 60) + "s) to end of instance "
+                                + instanceId);
+                    }
+                    continue;
+                }
+
                 // Cart slots: resolve to a concrete file/spot now, using the *intended*
                 // start time for separation lookups (specific cart or category pool).
                 if (fileId == null && ("MUSIC_CART".equals(it.getKind()) || "COMMERCIAL_CART".equals(it.getKind()))) {
@@ -553,9 +614,41 @@ public class ScheduleService {
         }
         int slotIndex = 0;
         for (ClockTemplateSlot s : clockSlots) {
-            ScheduleItem it = clockSlotToScheduleItem(s, day.getId(), showInstanceId, slotIndex++, position++);
-            if (it != null) items.save(it);
+            // COUNT/TIME fill blocks expand into concrete unit items here, so each unit
+            // resolves independently at push (separation, approval, fair pool) and gets a
+            // real schedule item for reconciliation. TO_END stays a single marker item
+            // resolved at push time.
+            int units = fillUnitCount(s);
+            for (int u = 0; u < units; u++) {
+                ScheduleItem it = clockSlotToScheduleItem(s, day.getId(), showInstanceId, slotIndex++, position++);
+                if (it == null) break;
+                if (units > 1 && it.getLabel() != null) {
+                    it.setLabel(it.getLabel() + " " + (u + 1) + "/" + units);
+                }
+                items.save(it);
+            }
         }
+    }
+
+    /**
+     * How many unit items a clock slot expands into when a clock is applied. COUNT is the
+     * configured count; TIME divides the target by the slot's unit length (default 30s for
+     * commercial, 180s for music), rounding up. TO_END and plain slots stay one item.
+     */
+    static int fillUnitCount(ClockTemplateSlot s) {
+        if (s.getFillMode() == null || "TO_END".equals(s.getFillMode())) return 1;
+        if ("COUNT".equals(s.getFillMode())) {
+            int n = s.getFillTargetCount() == null ? 1 : s.getFillTargetCount();
+            return Math.min(50, Math.max(1, n));
+        }
+        if ("TIME".equals(s.getFillMode())) {
+            int unit = s.getDefaultLengthSeconds() != null && s.getDefaultLengthSeconds() > 0
+                    ? s.getDefaultLengthSeconds()
+                    : ("COMMERCIAL_CART".equals(s.getKind()) ? 30 : 180);
+            int target = s.getFillTargetSeconds() == null ? unit : s.getFillTargetSeconds();
+            return Math.min(50, Math.max(1, (int) Math.ceil(target / (double) unit)));
+        }
+        return 1;
     }
 
     private record CartPickResult(Cart cart, CartMember member, String note) {}
@@ -583,7 +676,9 @@ public class ScheduleService {
             String ck = "MUSIC_CART".equals(it.getKind()) ? "MUSIC" : "COMMERCIAL";
             List<Cart> candidates = cartRepo.findByStationIdAndKindAndCategoryOrderByNameAsc(
                     day.getStationId(), ck, it.getCartCategory());
-            for (Cart c : candidates) {
+            // Fair rotation: try the cart that has aired least recently first, instead of
+            // name order (which starved alphabetically-late clients in category pools).
+            for (Cart c : resolver.orderPoolFairly(candidates)) {
                 var res = resolver.resolve(c, slotTime, currentShowId);
                 if (res.member() != null) {
                     return new CartPickResult(c, res.member(), res.note());
@@ -610,6 +705,7 @@ public class ScheduleService {
                                                  int slotIndex, int position) {
         switch (s.getKind()) {
             case "MUSIC_CART", "COMMERCIAL_CART" -> {
+                boolean toEnd = "TO_END".equals(s.getFillMode());
                 if (s.getCartCategory() != null && !s.getCartCategory().isBlank()) {
                     int len = s.getDefaultLengthSeconds() != null ? s.getDefaultLengthSeconds()
                             : ("COMMERCIAL_CART".equals(s.getKind()) ? 30 : 180);
@@ -618,7 +714,10 @@ public class ScheduleService {
                             .kind(s.getKind())
                             .cartCategory(s.getCartCategory())
                             .lengthSeconds(len)
-                            .label(s.getLabel() != null ? s.getLabel() : ("Any " + s.getCartCategory() + " cart"))
+                            .fillMode(toEnd ? "TO_END" : null)
+                            .label(s.getLabel() != null ? s.getLabel()
+                                    : (toEnd ? ("Fill " + s.getCartCategory() + " to end of show")
+                                             : ("Any " + s.getCartCategory() + " cart")))
                             .position(position).build();
                 }
                 if (s.getCartId() == null) {
@@ -643,7 +742,9 @@ public class ScheduleService {
                 return ScheduleItem.builder()
                         .scheduleDayId(dayId).showInstanceId(instanceId).slotIndex(slotIndex)
                         .kind(s.getKind()).cartId(cart.getId()).lengthSeconds(len)
-                        .label(s.getLabel() != null ? s.getLabel() : cart.getName())
+                        .fillMode(toEnd ? "TO_END" : null)
+                        .label(s.getLabel() != null ? s.getLabel()
+                                : (toEnd ? ("Fill " + cart.getName() + " to end of show") : cart.getName()))
                         .position(position).build();
             }
             case "VOICETRACK" -> {

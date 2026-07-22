@@ -60,17 +60,55 @@ public class ClockService {
             validateSlot(s, stationId);
             saved.add(slots.save(s));
         }
+        // A TO_END fill absorbs the rest of the show, so nothing may follow it.
+        for (int i = 0; i < saved.size() - 1; i++) {
+            if ("TO_END".equals(saved.get(i).getFillMode())) {
+                throw new IllegalArgumentException(
+                        "A \"fill to end of show\" slot must be the last slot in the clock (slot "
+                                + (i + 1) + " is not last)");
+            }
+        }
         return saved;
     }
 
     private void validateSlot(ClockTemplateSlot s, UUID stationId) {
         String cat = s.getCartCategory() == null ? null : s.getCartCategory().trim();
         s.setCartCategory(cat == null || cat.isEmpty() ? null : cat);
+        String fm = s.getFillMode() == null ? null : s.getFillMode().trim().toUpperCase();
+        s.setFillMode(fm == null || fm.isEmpty() ? null : fm);
         if (!"MUSIC_CART".equals(s.getKind()) && !"COMMERCIAL_CART".equals(s.getKind())) {
             if (s.getCartId() != null || s.getCartCategory() != null) {
                 throw new IllegalArgumentException("Only music/commercial cart slots may reference a cart or category");
             }
+            if (s.getFillMode() != null) {
+                throw new IllegalArgumentException("Fill modes apply only to music/commercial cart slots (slot "
+                        + (s.getPosition() + 1) + ")");
+            }
             return;
+        }
+        if (s.getFillMode() != null) {
+            switch (s.getFillMode()) {
+                case "COUNT" -> {
+                    if (s.getFillTargetCount() == null || s.getFillTargetCount() < 1 || s.getFillTargetCount() > 50) {
+                        throw new IllegalArgumentException("Fill count must be 1–50 units (slot "
+                                + (s.getPosition() + 1) + ")");
+                    }
+                }
+                case "TIME" -> {
+                    if (s.getFillTargetSeconds() == null || s.getFillTargetSeconds() < 30 || s.getFillTargetSeconds() > 3600) {
+                        throw new IllegalArgumentException("Fill time must be 30–3600 seconds (slot "
+                                + (s.getPosition() + 1) + ")");
+                    }
+                }
+                case "TO_END" -> {
+                    if (!"MUSIC_CART".equals(s.getKind())) {
+                        throw new IllegalArgumentException("\"Fill to end of show\" is only for music cart slots (slot "
+                                + (s.getPosition() + 1) + ")");
+                    }
+                }
+                default -> throw new IllegalArgumentException("fillMode must be COUNT, TIME or TO_END (slot "
+                        + (s.getPosition() + 1) + ")");
+            }
         }
         if (s.getCartId() != null && s.getCartCategory() != null) {
             throw new IllegalArgumentException("Use either a specific cart or a category for slot " + (s.getPosition() + 1) + ", not both");
