@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="v2-015-clock-grid" author="librelog">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+
+-- Weekly clock assignment grid: station-level defaults mapping ISO day-of-week
+-- (1=Monday..7=Sunday) + a station-local minute window to a clock template.
+-- New schedule days seed their per-day clock schedule from this grid; the per-day
+-- rows remain the override mechanism.
+CREATE TABLE IF NOT EXISTS station_clock_grid (
+    id UUID PRIMARY KEY,
+    station_id UUID NOT NULL,
+    day_of_week INTEGER NOT NULL,
+    position INTEGER NOT NULL,
+    local_start_minutes INTEGER NOT NULL,
+    local_end_minutes INTEGER NOT NULL,
+    clock_template_id UUID NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_station_clock_grid_station
+    ON station_clock_grid(station_id, day_of_week);
+
+        ]]></sql>
+    </changeSet>
+</databaseChangeLog>

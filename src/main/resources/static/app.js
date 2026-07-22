@@ -1472,6 +1472,8 @@ function renderClockScheduleEditor() {
     const editable = !d.readOnly && d.status !== 'PUSHED';
     addBtn.disabled = !haveLock || !editable;
     saveBtn.disabled = !haveLock || !editable;
+    const gridBtn = document.getElementById('dayBuilderGridDefaultsBtn');
+    if (gridBtn) gridBtn.disabled = !haveLock || !editable;
     const applyBtn = document.getElementById('dayBuilderApplyClockScheduleBtn');
     if (applyBtn) {
         applyBtn.disabled = !haveLock || !editable || !state.showInstances?.length || segs.length === 0;
@@ -2711,11 +2713,88 @@ async function loadClocksTab() {
         if (found) renderClockDetail(found);
         else { state.selectedClockId = null; renderClockBlank(); }
     } else renderClockBlank();
+    await loadClockGrid();
+    renderClockGrid();
 }
 
 function renderClockBlank() {
     document.getElementById('clockDetail').innerHTML =
         '<div class="empty-state"><strong>No clock selected</strong>Pick a clock on the left or create a new one.</div>';
+}
+
+// ---------- Weekly clock grid (station-level defaults) ----------
+const GRID_DAY_NAMES = { 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday', 7: 'Sunday' };
+
+async function loadClockGrid() {
+    if (!state.currentStationId) { state.clockGrid = []; return; }
+    try { state.clockGrid = await API.get(`/api/stations/${state.currentStationId}/clock-grid`); }
+    catch (e) { state.clockGrid = []; toast('Weekly grid load failed: ' + e.message, 'error'); }
+}
+
+function renderClockGrid() {
+    const rowsEl = document.getElementById('clockGridRows');
+    const countEl = document.getElementById('clockGridCount');
+    if (!rowsEl || !countEl) return;
+    const rows = state.clockGrid || [];
+    countEl.textContent = rows.length ? '(' + rows.length + ')' : '';
+    if (!rows.length) {
+        rowsEl.innerHTML = '<div class="muted">No grid yet — click <strong>Add row</strong>: pick a weekday, a local time window, and the clock that runs then. New days in Day Builder start from these rows automatically.</div>';
+        return;
+    }
+    rowsEl.innerHTML = rows.map((s, i) => `
+        <div class="grid-row" data-grid-idx="${i}" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px">
+            <select class="grid-dow">${[1, 2, 3, 4, 5, 6, 7].map(d =>
+                `<option value="${d}" ${s.dayOfWeek === d ? 'selected' : ''}>${GRID_DAY_NAMES[d]}</option>`).join('')}</select>
+            <label class="inline small">Start <input type="time" class="grid-start" value="${escapeAttr(minutesToTimeInput(s.localStartMinutes))}" /></label>
+            <label class="inline small">End <input type="time" class="grid-end" value="${escapeAttr(s.localEndMinutes === 1440 ? '' : minutesToTimeInput(s.localEndMinutes))}" /></label>
+            ${clockSelectOptionsHtml(s.clockTemplateId).replace('cs-clock', 'grid-clock')}
+            <button type="button" class="link" data-grid-remove="${i}">Remove</button>
+        </div>`).join('');
+    rowsEl.querySelectorAll('[data-grid-remove]').forEach(b =>
+        b.addEventListener('click', () => {
+            captureClockGridDom();
+            state.clockGrid.splice(parseInt(b.dataset.gridRemove, 10), 1);
+            renderClockGrid();
+        }));
+}
+
+/** Tolerantly pull current DOM edits back into state so add/remove doesn't lose typing. */
+function captureClockGridDom() {
+    const rows = document.querySelectorAll('.grid-row');
+    if (!rows.length) return;
+    const out = [];
+    rows.forEach(r => {
+        out.push({
+            dayOfWeek: parseInt(r.querySelector('.grid-dow').value, 10) || 1,
+            localStartMinutes: timeInputToMinutes(r.querySelector('.grid-start').value) ?? 0,
+            localEndMinutes: timeInputToMinutes(r.querySelector('.grid-end').value) ?? 1440,
+            clockTemplateId: r.querySelector('.grid-clock').value || null,
+        });
+    });
+    state.clockGrid = out;
+}
+
+async function saveClockGrid() {
+    const rows = [];
+    for (const r of document.querySelectorAll('.grid-row')) {
+        const start = timeInputToMinutes(r.querySelector('.grid-start').value);
+        if (start === null) { toast('Every grid row needs a start time', 'error'); return; }
+        let endM = timeInputToMinutes(r.querySelector('.grid-end').value);
+        if (endM === null) endM = 1440;
+        const clockId = r.querySelector('.grid-clock').value;
+        if (!clockId) { toast('Pick a clock in every grid row', 'error'); return; }
+        rows.push({
+            dayOfWeek: parseInt(r.querySelector('.grid-dow').value, 10),
+            localStartMinutes: start,
+            localEndMinutes: endM,
+            clockTemplateId: clockId,
+        });
+    }
+    try {
+        state.clockGrid = await API.put(`/api/stations/${state.currentStationId}/clock-grid`, { rows });
+        toast('Weekly grid saved', 'ok');
+        renderClockGrid();
+    } catch (e) { toast(e.message, 'error'); }
 }
 
 function renderClockList() {
@@ -3270,6 +3349,29 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dayBuilderPullPlayback').addEventListener('click', pullPlayback);
     const previewBtn = document.getElementById('dayBuilderPreviewBtn');
     if (previewBtn) previewBtn.addEventListener('click', previewPush);
+    // Weekly clock grid
+    document.getElementById('clockGridAddBtn')?.addEventListener('click', () => {
+        if (!state.clocks.length) { toast('Create a clock first — the grid maps hours to clocks.', 'info'); return; }
+        captureClockGridDom();
+        (state.clockGrid = state.clockGrid || []).push({
+            dayOfWeek: 1, localStartMinutes: 6 * 60, localEndMinutes: 12 * 60,
+            clockTemplateId: state.clocks[0].id,
+        });
+        renderClockGrid();
+    });
+    document.getElementById('clockGridSaveBtn')?.addEventListener('click', saveClockGrid);
+    document.getElementById('dayBuilderGridDefaultsBtn')?.addEventListener('click', async () => {
+        if (!state.day || !state.day.lock || !state.day.lock.self) {
+            toast('Acquire the day lock first ("Edit this day").', 'error');
+            return;
+        }
+        if (!confirm("Replace this day's clock schedule with the weekly grid defaults for its weekday?")) return;
+        try {
+            state.day = await API.post(`/api/days/${state.day.id}/clock-schedule/from-grid`, {});
+            toast('Grid defaults loaded', 'ok');
+            renderDay();
+        } catch (e) { toast(e.message, 'error'); }
+    });
     // Carts / Clocks
     document.getElementById('cartNewBtn')?.addEventListener('click', cartCreateModal);
     document.getElementById('cartFilterCategory')?.addEventListener('change', renderCartList);

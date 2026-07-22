@@ -1,5 +1,24 @@
 # Release notes
 
+## v2.4.0 — weekly clock assignment grid
+
+The standing format lives at the station now: a **weekly grid** (weekday × station-local
+window → clock) that every new schedule day seeds from automatically. Per-day clock
+schedule rows are unchanged and remain the override mechanism. One DB migration,
+additive APIs, no behavior changes for existing days.
+
+- **Clocks tab → "Weekly clock grid"**: rows of (weekday, start–end local time, clock).
+  Saved per station (`GET/PUT /api/stations/{id}/clock-grid`).
+- **Auto-seed**: the first time a day is opened in Day Builder (i.e. its `schedule_day`
+  row is created), its clock schedule is copied from the grid rows for that weekday.
+  Existing days are never re-seeded.
+- **Day Builder → "Grid defaults" button**: replaces the current day's clock-schedule
+  rows with the grid's weekday rows (needs the day lock; blocked on pushed days). Use it
+  for days created before the grid existed, or to reset after experimenting.
+- Migration `v2-015`: new `station_clock_grid` table. Validation mirrors the per-day
+  editor (window pairs, clock-belongs-to-station, ISO weekday 1–7).
+- Tests: grid seeding on day creation + no-reseed guarantee (67 total).
+
 ## v2.3.0 — fill blocks + fair advertiser rotation
 
 Clock hours can now contain *blocks*, not just single units, and category pools rotate

@@ -233,6 +233,56 @@ public class ScheduleController {
         }
     }
 
+    public record GridRowDto(String id, int dayOfWeek, int position,
+                             int localStartMinutes, int localEndMinutes, String clockTemplateId) {
+        static GridRowDto from(ClockGridRow r) {
+            return new GridRowDto(r.getId().toString(), r.getDayOfWeek(), r.getPosition(),
+                    r.getLocalStartMinutes(), r.getLocalEndMinutes(),
+                    r.getClockTemplateId().toString());
+        }
+    }
+
+    public record GridRowRequest(@NotNull Integer dayOfWeek,
+                                 @NotNull Integer localStartMinutes,
+                                 @NotNull Integer localEndMinutes,
+                                 @NotBlank String clockTemplateId) {}
+
+    public record GridSaveRequest(@Valid List<GridRowRequest> rows) {}
+
+    @GetMapping("/api/stations/{stationId}/clock-grid")
+    public List<GridRowDto> gridList(@PathVariable UUID stationId) {
+        return schedule.listGrid(stationId).stream().map(GridRowDto::from).toList();
+    }
+
+    @PutMapping("/api/stations/{stationId}/clock-grid")
+    public ResponseEntity<?> gridSave(@PathVariable UUID stationId,
+                                      @Valid @RequestBody GridSaveRequest req) {
+        try {
+            var rows = (req.rows() == null ? List.<GridRowRequest>of() : req.rows()).stream()
+                    .map(r -> new ScheduleService.GridRowInput(
+                            r.dayOfWeek(), r.localStartMinutes(), r.localEndMinutes(),
+                            UUID.fromString(r.clockTemplateId().trim())))
+                    .toList();
+            return ResponseEntity.ok(schedule.saveGrid(stationId, rows).stream()
+                    .map(GridRowDto::from).toList());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /** Replace this day's clock schedule with the weekly grid rows for its weekday. */
+    @PostMapping("/api/days/{dayId}/clock-schedule/from-grid")
+    public ResponseEntity<?> applyGrid(@PathVariable UUID dayId, @AuthenticationPrincipal AppUser user) {
+        try {
+            var view = schedule.applyGridToDay(dayId, user.getId());
+            return ResponseEntity.ok(toDto(view, user.getId()));
+        } catch (ScheduleService.ConcurrencyException e) {
+            return ResponseEntity.status(409).body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @GetMapping("/api/days/{dayId}/preview")
     public ResponseEntity<?> preview(@PathVariable UUID dayId) {
         return ResponseEntity.ok(schedule.previewResolution(dayId));

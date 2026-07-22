@@ -58,6 +58,7 @@ public class ScheduleService {
     private final ClockService clockService;
     private final ClockTemplateRepository clockTemplates;
     private final ScheduleDayClockSegmentRepository clockSegments;
+    private final ClockGridRowRepository gridRows;
     private final SpotRepository spots;
     private final JazzHandoffService jazzHandoff;
 
@@ -78,7 +79,12 @@ public class ScheduleService {
                 .orElseGet(() -> {
                     ScheduleDay d = ScheduleDay.builder()
                             .stationId(stationId).date(date).status("DRAFT").build();
-                    return days.save(d);
+                    d = days.save(d);
+                    // Brand-new day: seed its clock schedule from the station's weekly
+                    // grid so the operator starts from the standing format, not a blank
+                    // slate. The per-day rows remain freely editable (they're the override).
+                    seedClockScheduleFromGrid(d);
+                    return d;
                 });
         var itemList = items.findByScheduleDayIdOrderByPositionAsc(day.getId());
         DayLock lock = activeLock(day.getId()).orElse(null);
@@ -577,6 +583,97 @@ public class ScheduleService {
         lock.setExpiresAt(Instant.now().plus(LOCK_TTL));
         locks.save(lock);
         return load(stationId, day.getDate(), userId);
+    }
+
+    /** One weekly-grid row as submitted by the editor. */
+    public record GridRowInput(int dayOfWeek, int localStartMinutes, int localEndMinutes, UUID clockTemplateId) {}
+
+    public List<ClockGridRow> listGrid(UUID stationId) {
+        return gridRows.findByStationIdOrderByDayOfWeekAscPositionAsc(stationId);
+    }
+
+    /** Replace the station's weekly clock grid. Validates windows and clock ownership. */
+    @Transactional
+    public List<ClockGridRow> saveGrid(UUID stationId, List<GridRowInput> rows) {
+        Map<Integer, Integer> posByDay = new HashMap<>();
+        List<ClockGridRow> toSave = new ArrayList<>();
+        for (GridRowInput row : rows) {
+            if (row.dayOfWeek() < 1 || row.dayOfWeek() > 7) {
+                throw new IllegalArgumentException("dayOfWeek must be 1 (Monday) through 7 (Sunday)");
+            }
+            if (row.clockTemplateId() == null) {
+                throw new IllegalArgumentException("Each grid row needs a clock");
+            }
+            var tpl = clockTemplates.findById(row.clockTemplateId())
+                    .orElseThrow(() -> new IllegalArgumentException("Clock not found: " + row.clockTemplateId()));
+            if (!tpl.getStationId().equals(stationId)) {
+                throw new IllegalArgumentException("Clock \"" + tpl.getName() + "\" does not belong to this station");
+            }
+            TimeWindowUtil.validateWindowPair(row.localStartMinutes(), row.localEndMinutes(),
+                    "Grid row (" + dayName(row.dayOfWeek()) + ")");
+            int endNorm = TimeWindowUtil.normalizeExclusiveEnd(row.localEndMinutes());
+            int pos = posByDay.merge(row.dayOfWeek(), 1, Integer::sum) - 1;
+            toSave.add(ClockGridRow.builder()
+                    .stationId(stationId)
+                    .dayOfWeek(row.dayOfWeek())
+                    .position(pos)
+                    .localStartMinutes(row.localStartMinutes())
+                    .localEndMinutes(endNorm)
+                    .clockTemplateId(row.clockTemplateId())
+                    .build());
+        }
+        gridRows.deleteByStationId(stationId);
+        gridRows.flush();
+        return gridRows.saveAll(toSave);
+    }
+
+    /** Copy the grid's rows for the day's weekday into the per-day clock schedule. */
+    private void seedClockScheduleFromGrid(ScheduleDay day) {
+        int dow = day.getDate().getDayOfWeek().getValue();
+        var rows = gridRows.findByStationIdAndDayOfWeekOrderByPositionAsc(day.getStationId(), dow);
+        int pos = 0;
+        for (ClockGridRow r : rows) {
+            clockSegments.save(ScheduleDayClockSegment.builder()
+                    .scheduleDayId(day.getId())
+                    .position(pos++)
+                    .localStartMinutes(r.getLocalStartMinutes())
+                    .localEndMinutes(r.getLocalEndMinutes())
+                    .clockTemplateId(r.getClockTemplateId())
+                    .build());
+        }
+    }
+
+    /**
+     * Replace an existing day's clock schedule with the weekly grid's rows for its
+     * weekday (for days created before the grid, or to reset after experimenting).
+     */
+    @Transactional
+    public DayView applyGridToDay(UUID dayId, UUID userId) {
+        ScheduleDay day = days.findById(dayId)
+                .orElseThrow(() -> new IllegalArgumentException("Schedule day not found"));
+        if ("PUSHED".equals(day.getStatus())) {
+            throw new ConcurrencyException("Day already pushed and read-only. Reopen as admin to edit.");
+        }
+        var lock = activeLock(dayId).orElse(null);
+        if (lock == null || !lock.getUserId().equals(userId)) {
+            throw new ConcurrencyException("Acquire the day lock before loading grid defaults");
+        }
+        int dow = day.getDate().getDayOfWeek().getValue();
+        var rows = gridRows.findByStationIdAndDayOfWeekOrderByPositionAsc(day.getStationId(), dow);
+        if (rows.isEmpty()) {
+            throw new IllegalArgumentException("The weekly grid has no rows for "
+                    + day.getDate().getDayOfWeek() + ". Add them in Clocks → Weekly grid first.");
+        }
+        clockSegments.deleteByScheduleDayId(dayId);
+        clockSegments.flush();
+        seedClockScheduleFromGrid(day);
+        lock.setExpiresAt(Instant.now().plus(LOCK_TTL));
+        locks.save(lock);
+        return load(day.getStationId(), day.getDate(), userId);
+    }
+
+    private static String dayName(int isoDow) {
+        return java.time.DayOfWeek.of(isoDow).name();
     }
 
     private static ScheduleDayClockSegment firstSegmentContaining(List<ScheduleDayClockSegment> segs, int minuteOfDay) {

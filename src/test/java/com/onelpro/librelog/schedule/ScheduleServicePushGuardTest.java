@@ -45,6 +45,7 @@ class ScheduleServicePushGuardTest {
                 mock(ClockService.class),
                 mock(ClockTemplateRepository.class),
                 mock(ScheduleDayClockSegmentRepository.class),
+                mock(ClockGridRowRepository.class),
                 mock(SpotRepository.class),
                 new JazzHandoffService());
     }

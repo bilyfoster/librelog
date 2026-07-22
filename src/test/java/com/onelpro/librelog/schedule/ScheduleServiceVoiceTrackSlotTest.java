@@ -56,6 +56,7 @@ class ScheduleServiceVoiceTrackSlotTest {
                 clockService,
                 mock(ClockTemplateRepository.class),
                 clockSegments,
+                mock(ClockGridRowRepository.class),
                 mock(SpotRepository.class),
                 new JazzHandoffService());
     }
