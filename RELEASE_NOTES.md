@@ -1,5 +1,68 @@
 # Release notes
 
+## v2.2.0 — Rumble: safety rails, audio handoff, burnout rules, voice tracking, make-ups
+
+First Rumble (PRD) release: the playout safety rails, the audio processing + SFTP
+handoff to Jazz, PRD burnout rules in the resolver, browser voice tracking, and the
+nightly as-run/make-up loop. Two DB migrations (auto-applied), additive APIs, and a few
+**behavior changes** to know about.
+
+### ⚠️ Heads-up (read first)
+
+1. **Push is now blocked for today and past days.** The day builder refuses to push a log
+   whose date is before tomorrow (PRD §7 lock window — active playout buffers are never
+   rewritten). Build and push logs at least a day ahead. Admin `reopen` is unchanged.
+2. **Music separation floors are now 90 min artist / 240 min song** (PRD SCH-03) for
+   MUSIC-category carts. Per-cart policies can only be stricter, never looser. New music
+   carts default to 90/240 (previously 15/180). Other categories (NEWS, etc.) are
+   unaffected. With small carts this can leave slots unresolvable — the resolver falls
+   back to *some* eligible member and flags the violation in preview/push notes rather
+   than leaving dead air.
+3. **Clutter control:** the fallback path no longer places the same sponsor in two
+   adjacent slots when any other eligible member exists; if unavoidable it is flagged.
+4. **Docker image now ships ffmpeg** (audio pipeline); the compose stack adds a
+   `transcode_data` volume and `JAZZ_*` env vars. Uploads/voice tracks stay local
+   (status `UPLOADED`) until `JAZZ_SFTP_*` is configured — see
+   `docs/rumble-production-ops.md`.
+
+### DB migrations — `v2-012`, `v2-013` (Liquibase, auto-run on boot)
+
+- `v2-012`: `media_upload` table (audio upload tracking: names, tags, duration,
+  status UPLOADED/IMPORTED/FAILED, error).
+- `v2-013`: `schedule_item.segue_offset_seconds` INT, `schedule_item.duck_db` DECIMAL(4,1)
+  — voice-track overlap markers.
+
+### What's new
+
+- **Audio Uploads panel** (`POST/GET /api/media/uploads`): upload a spot/promo/VT audio
+  file → ffmpeg loudnorm (I=-14, TP=-2.0) → MP3 44.1kHz 192k CBR stereo with ID3 tags →
+  SFTP to the Jazz drop zone → remote `rumble_import_trigger.sh` import. Per-row status
+  and error in the dashboard.
+- **Voice tracking:** clock slots of kind `VOICETRACK` render as "Empty VT Slot" in the
+  day builder with a Record button. The browser recorder (MediaRecorder) captures a take,
+  transcodes it (title `VT-[Host]-[Date]-[Hour]`, PRD AUD-04), hands it to Jazz, and
+  attaches the imported file id to the slot. Segue offset / duck markers save with the
+  take; the segue maps to LibreTime `fade_out` at push (duck is stored in LibreLog only —
+  LibreTime has no schedule field for it).
+- **Preview violations:** `GET /api/days/{id}/preview` rows now carry a `violation` flag
+  (separation/clutter), rendered in red in the preview modal.
+- **Nightly reconciliation job** (`librelog.reconciliation.cron`, default 03:30): imports
+  yesterday's playout history per connected station and logs ordered-vs-played with
+  make-up counts. New `GET /api/playback/fulfillment?stationId&date` powers a
+  "Fulfillment / make-ups" panel listing played X of Y and the owed spot labels per order.
+
+### Fixes
+
+- `PlaybackService.orderSummary` no longer scans `findAll()` — scoped to
+  `findBySpotIdIn` (was on the nightly path).
+
+### Notes for the next dev
+
+- The PRD's `rumble_client` / `rumble_campaign` / `rumble_media_asset` / `rumble_format_clock*`
+  / `rumble_schedule_grid` tables (v2-011) remain **unused scaffolding** — the live model
+  is the v2 customers/orders/spots/carts/clocks schema. Build on v2; revisit the rumble
+  tables only if the PRD model is revived.
+
 ## v2.1.0 — sales→air→reconcile hardening
 
 Two correctness fixes, a spot production lifecycle, a cart "freshness" engine,

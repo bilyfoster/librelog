@@ -18,6 +18,7 @@ const state = {
     /** Map LibreTime file id -> human-readable label (built from name or filepath). */
     libreTimeFileById: {},
     playbackRows: [],
+    fulfillmentRows: [],
     carts: [],
     cartsById: {},
     selectedCartId: null,
@@ -27,6 +28,7 @@ const state = {
     dayParts: [],
     dayPartsStationId: null,
     cartCategories: { library: [], commercial: [] },
+    mediaUploads: [],
 };
 
 const CATEGORY_LABELS = {
@@ -105,6 +107,25 @@ const API = {
     post(p, b) { return this.req('POST', p, b); },
     put(p, b) { return this.req('PUT', p, b); },
     del(p) { return this.req('DELETE', p); },
+    async upload(path, formData) {
+        const opts = { method: 'POST', headers: { 'Accept': 'application/json' }, body: formData };
+        // No Content-Type: the browser sets the multipart boundary itself.
+        if (state.token) opts.headers['Authorization'] = 'Bearer ' + state.token;
+        const res = await fetch(path, opts);
+        if (res.status === 401) {
+            logout();
+            throw new Error('Session expired - please sign in again');
+        }
+        const text = await res.text();
+        const data = text ? JSON.parse(text) : null;
+        if (!res.ok) {
+            const msg = data?.error || data?.message || `${res.status} ${res.statusText}`;
+            const err = new Error(msg);
+            err.status = res.status;
+            throw err;
+        }
+        return data;
+    },
 };
 
 // ---------- Auth ----------
@@ -198,6 +219,7 @@ function renderStationPicker() {
         state.carts = [];
         state.cartsById = {};
         state.clocks = [];
+        state.mediaUploads = [];
         state.selectedCartId = null;
         state.selectedClockId = null;
         state.dayParts = [];
@@ -920,6 +942,7 @@ async function loadDay() {
     document.getElementById('dayBuilderSlots').textContent = '';
     document.getElementById('dayBuilderSpotPool').textContent = '';
     document.getElementById('dayBuilderPlayback').textContent = '';
+    document.getElementById('dayBuilderFulfillment').textContent = '';
 
     try {
         state.day = await API.get(`/api/stations/${state.currentStationId}/days/${date}`);
@@ -961,6 +984,10 @@ async function loadPlaybackRows(date, opts = {}) {
         if (!opts.quiet) toast(e.message, 'error');
         state.playbackRows = [];
     }
+    state.fulfillmentRows = [];
+    try {
+        state.fulfillmentRows = await API.get(`/api/playback/fulfillment?stationId=${state.currentStationId}&date=${date}`) || [];
+    } catch { /* non-fatal: fulfillment section stays empty */ }
 }
 
 async function loadActiveSpotPool(date) {
@@ -1068,6 +1095,8 @@ function renderDay() {
             b.addEventListener('click', () => fillSlotFromCart(parseInt(b.dataset.fillCommercialCart), 'commercial_cart')));
         document.querySelectorAll('[data-remove-slot]').forEach(b =>
             b.addEventListener('click', () => removeSlot(parseInt(b.dataset.removeSlot))));
+        document.querySelectorAll('[data-record-vt]').forEach(b =>
+            b.addEventListener('click', () => vtRecorderModal(parseInt(b.dataset.recordVt))));
     }
 
     // Spot pool
@@ -1087,6 +1116,7 @@ function renderDay() {
 }
 
 function renderPlaybackRows(date) {
+    renderFulfillmentRows(date);
     const rows = state.playbackRows || [];
     document.getElementById('dayBuilderPlaybackCount').textContent = rows.length ? '(' + rows.length + ')' : '';
     const target = document.getElementById('dayBuilderPlayback');
@@ -1107,6 +1137,28 @@ function renderPlaybackRows(date) {
         return `<div class="slot track">
             <div>${escapeHtml(name)}</div>
             <div class="slot-meta">${escapeHtml(meta)}</div>
+        </div>`;
+    }).join('');
+}
+
+function renderFulfillmentRows(date) {
+    const rows = state.fulfillmentRows || [];
+    document.getElementById('dayBuilderFulfillmentCount').textContent = rows.length ? '(' + rows.length + ')' : '';
+    const target = document.getElementById('dayBuilderFulfillment');
+    if (!rows.length) {
+        target.innerHTML = isPastDate(date)
+            ? '<div class="empty-state"><strong>No fulfillment data</strong>Pull playback for this date to compute make-ups owed.</div>'
+            : '<div class="empty-state"><strong>No fulfillment yet</strong>Per-order fulfillment appears here after airtime.</div>';
+        return;
+    }
+    target.innerHTML = rows.map(r => {
+        const title = `${escapeHtml(r.customerName || '(unknown customer)')} &middot; ${escapeHtml(r.orderName || '(unnamed order)')}`;
+        const meta = r.missed > 0
+            ? `Played ${r.played} of ${r.ordered} &middot; ${r.missed} missed &rarr; make-ups owed: ${r.missedSpotLabels.map(escapeHtml).join(', ')}`
+            : `Played ${r.played} of ${r.ordered} &middot; all spots aired`;
+        return `<div class="slot track">
+            <div>${title}</div>
+            <div class="slot-meta">${meta}</div>
         </div>`;
     }).join('');
 }
@@ -1164,6 +1216,13 @@ function slotPrimaryLabel(it, kindLower) {
         const lab = spotLabelById(it.spotId) || it.label;
         return lab ? ('Spot: ' + lab) : 'Commercial / traffic spot (pick label below)';
     }
+    if (kindLower === 'voicetrack') {
+        if (it.librtimeFileId != null) {
+            const lab = it.label || (state.libreTimeFileById && state.libreTimeFileById[it.librtimeFileId]);
+            return 'Voice track: ' + (lab || ('file #' + it.librtimeFileId));
+        }
+        return 'Empty VT Slot — record a voice track for this slot';
+    }
     if (kindLower === 'track') {
         const lab = (it.librtimeFileId != null ? state.libreTimeFileById[it.librtimeFileId] : null) || it.label;
         if (lab) return 'Music / library: ' + lab;
@@ -1185,6 +1244,11 @@ function slotHtml(it, idx) {
     if (it.librtimeFileId != null) meta.push('LibreTime file id ' + it.librtimeFileId);
     if (it.lengthSeconds) meta.push(it.lengthSeconds + 's');
     const primary = slotPrimaryLabel(it, k);
+    const vtEditable = state.day && !state.day.readOnly && state.day.status !== 'PUSHED'
+        && state.day.lock && state.day.lock.self;
+    const vtButton = k === 'voicetrack'
+        ? `<button class="link" data-record-vt="${idx}" ${vtEditable ? '' : 'disabled'}>${it.librtimeFileId != null ? 'Re-record' : 'Record'}</button>`
+        : '';
     return `<div class="slot ${k}">
         <div><strong>Slot ${idx + 1}</strong> <span class="muted small">(${kindNice})</span></div>
         <div class="slot-primary">${escapeHtml(primary)}</div>
@@ -1194,6 +1258,7 @@ function slotHtml(it, idx) {
             <button class="link" data-fill-commercial-cart="${idx}">Use commercial cart</button>
             <button class="link" data-fill-spot="${idx}">Use spot</button>
             <button class="link" data-fill-track="${idx}">Use track</button>
+            ${vtButton}
             <button class="link" data-remove-slot="${idx}">Remove</button>
         </div>
     </div>`;
@@ -1440,10 +1505,13 @@ async function previewPush() {
             const what = r.cartName
                 ? `cart "${r.cartName}" → ${r.label || ('file #' + (r.librtimeFileId || '?'))}`
                 : (r.label || ('file #' + (r.librtimeFileId || '?')));
-            return head + ' — ' + what + (r.note ? ` ⚠ ${r.note}` : '');
+            const text = head + ' — ' + what + (r.note ? ` ⚠ ${r.note}` : '');
+            return r.violation
+                ? `<span class="preview-violation">${escapeHtml(text)}</span>`
+                : escapeHtml(text);
         });
         const html = '<pre style="max-height:55vh;overflow:auto;white-space:pre-wrap">'
-            + escapeHtml(lines.join('\n')) + '</pre>';
+            + lines.join('\n') + '</pre>';
         openModal('Preview push (dry run)', html, () => true);
     } catch (e) { toast(e.message, 'error'); }
 }
@@ -1452,6 +1520,86 @@ function removeSlot(idx) {
     state.day.items.splice(idx, 1);
     state.day.items.forEach((it, i) => it.position = i);
     renderDay();
+}
+
+/**
+ * Voice-track recorder modal (Phase 4): capture a take with MediaRecorder, preview it,
+ * set segue/duck markers, then upload to /api/voicetracks which transcodes, ships to
+ * Jazz, and links the imported file to the schedule item.
+ */
+function vtRecorderModal(idx) {
+    const it = state.day && state.day.items ? state.day.items[idx] : null;
+    if (!it || String(it.kind || '').toUpperCase() !== 'VOICETRACK') return;
+    if (!it.id) {
+        toast('Save the day first so this slot exists on the server.', 'error');
+        return;
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
+        toast('Audio recording is not supported in this browser (needs getUserMedia + MediaRecorder).', 'error');
+        return;
+    }
+    const html = `
+        <p class="muted small">Slot ${idx + 1} &middot; ${escapeHtml(it.label || 'Voice track')}</p>
+        <div class="row" style="display:flex;gap:8px;margin-bottom:8px">
+            <button type="button" class="secondary" name="vtRecord">Record</button>
+            <button type="button" class="secondary" name="vtStop" disabled>Stop</button>
+        </div>
+        <audio name="vtPreview" controls style="width:100%;display:none;margin-bottom:8px"></audio>
+        <label>Host <input name="host" value="${escapeAttr((state.user && (state.user.name || state.user.email)) || '')}" required /></label>
+        <label>Segue offset (seconds) <input name="segueOffsetSeconds" type="number" min="0" step="1" value="${it.segueOffsetSeconds ?? 0}" /></label>
+        <label>Duck (dB) <input name="duckDb" type="number" step="0.5" value="${it.duckDb ?? 0}" /></label>
+    `;
+    let stream = null, recorder = null, chunks = [], takeBlob = null;
+    const stopStream = () => {
+        if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    };
+    openModal('Record voice track', html, async (form) => {
+        if (!takeBlob) throw new Error('Record a take first.');
+        const fd = new FormData();
+        fd.append('file', takeBlob, 'take.webm');
+        fd.append('scheduleItemId', it.id);
+        fd.append('host', form.querySelector('[name="host"]').value.trim());
+        fd.append('segueOffsetSeconds', form.querySelector('[name="segueOffsetSeconds"]').value || '0');
+        fd.append('duckDb', form.querySelector('[name="duckDb"]').value || '0');
+        const saved = await API.upload('/api/voicetracks', fd);
+        Object.assign(it, saved);
+        renderDay();
+        toast('Voice track saved', 'ok');
+        stopStream();
+    });
+    const body = document.getElementById('modalBody');
+    const recBtn = body.querySelector('[name="vtRecord"]');
+    const stopBtn = body.querySelector('[name="vtStop"]');
+    const preview = body.querySelector('[name="vtPreview"]');
+    const cancelBtn = document.getElementById('modalCancel');
+    const prevCancel = cancelBtn.onclick;
+    cancelBtn.onclick = () => { stopStream(); if (prevCancel) prevCancel(); };
+    recBtn.addEventListener('click', async () => {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (e) {
+            toast('Microphone unavailable: ' + e.message, 'error');
+            return;
+        }
+        chunks = [];
+        const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : '';
+        recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+        recorder.ondataavailable = ev => { if (ev.data && ev.data.size) chunks.push(ev.data); };
+        recorder.onstop = () => {
+            takeBlob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+            preview.src = URL.createObjectURL(takeBlob);
+            preview.style.display = 'block';
+            stopStream();
+        };
+        recorder.start();
+        recBtn.disabled = true;
+        stopBtn.disabled = false;
+    });
+    stopBtn.addEventListener('click', () => {
+        if (recorder && recorder.state !== 'inactive') recorder.stop();
+        recBtn.disabled = false;
+        stopBtn.disabled = true;
+    });
 }
 
 async function acquireDayLock() {
@@ -1475,6 +1623,8 @@ async function saveDay() {
                 cartId: it.cartId,
                 cartCategory: it.cartCategory || null,
                 label: it.label,
+                segueOffsetSeconds: it.segueOffsetSeconds ?? null,
+                duckDb: it.duckDb ?? null,
             })),
         });
         state.day = r;
@@ -1765,12 +1915,71 @@ async function cartAddMusicMember(cart) {
     if (r != null) await renderCartDetail(cart.id);
 }
 
+// ---------- Audio Uploads (Rumble → Jazz) ----------
+function formatDurationSeconds(s) {
+    if (s == null) return '';
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return m + ':' + String(sec).padStart(2, '0');
+}
+
+async function loadMediaUploads() {
+    const form = document.getElementById('mediaUploadForm');
+    if (form && !form.dataset.wired) {
+        form.dataset.wired = '1';
+        form.addEventListener('submit', submitMediaUpload);
+    }
+    if (!state.currentStationId) return;
+    state.mediaUploads = await API.get('/api/media/uploads?stationId=' + state.currentStationId);
+    renderMediaUploads();
+}
+
+function renderMediaUploads() {
+    const tbody = document.getElementById('mediaUploadsBody');
+    if (!state.mediaUploads.length) {
+        tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><strong>No uploads yet</strong>Upload a voice track to transcode it and hand it off to Jazz.</div></td></tr>';
+        return;
+    }
+    tbody.innerHTML = state.mediaUploads.map(u => `
+        <tr>
+            <td data-label="Name">${escapeHtml(u.originalFileName)}</td>
+            <td data-label="Artist / Title">${escapeHtml(u.artistTag || '')}${u.artistTag && u.titleTag ? ' — ' : ''}${escapeHtml(u.titleTag || '')}</td>
+            <td data-label="Length">${escapeHtml(formatDurationSeconds(u.durationSeconds))}</td>
+            <td data-label="Status"><span class="badge">${escapeHtml(u.status)}</span></td>
+            <td data-label="Error" class="muted small">${escapeHtml(u.error || '')}</td>
+            <td data-label="Created">${escapeHtml(formatTime(u.createdAt))}</td>
+        </tr>`).join('');
+}
+
+async function submitMediaUpload(e) {
+    e.preventDefault();
+    const form = e.target;
+    const fileInput = form.querySelector('input[name="file"]');
+    if (!fileInput.files.length) { toast('Pick an audio file first', 'error'); return; }
+    const fd = new FormData();
+    fd.append('file', fileInput.files[0]);
+    fd.append('artist', form.querySelector('input[name="artist"]').value.trim());
+    fd.append('title', form.querySelector('input[name="title"]').value.trim());
+    fd.append('stationId', state.currentStationId);
+    try {
+        const row = await API.upload('/api/media/uploads', fd);
+        if (row.status === 'FAILED') toast('Upload failed: ' + (row.error || 'unknown error'), 'error');
+        else if (row.status === 'IMPORTED') toast('Uploaded and imported into Jazz', 'ok');
+        else toast('Uploaded (not sent to Jazz)', 'ok');
+        form.reset();
+        await loadMediaUploads();
+    } catch (err) {
+        toast(err.message, 'error');
+    }
+}
+
 // ---------- Tabs ----------
 const tabLoaders = {
     dayBuilder: { title: 'Day Builder', load: initDayBuilder },
     carts: { title: 'Carts', load: loadCartsTab },
     clocks: { title: 'Clocks', load: loadClocksTab },
     library: { title: 'LibreTime Library', load: loadLibraryTab },
+    media: { title: 'Audio Uploads', load: loadMediaUploads },
     customers: { title: 'Customers', load: loadCustomers },
     orders: { title: 'Orders & Spots', load: loadOrders },
     stations: { title: 'Station & day parts', load: loadStationsTab },
@@ -2611,7 +2820,7 @@ function clockSlotRowHtml(s, i) {
         <div class="clock-slot-row-main">
         <span class="clock-slot-num">${i + 1}.</span>
         <select name="kind">
-            ${['MUSIC_CART','COMMERCIAL_CART','TRACK','SPOT','NOTE'].map(x =>
+            ${['MUSIC_CART','COMMERCIAL_CART','TRACK','SPOT','VOICETRACK','NOTE'].map(x =>
                 `<option value="${x}" ${x === k ? 'selected' : ''}>${x.replace('_',' ').toLowerCase()}</option>`).join('')}
         </select>
         <span class="clock-cart-bind-wrap" style="display:${showCartBind ? 'inline-flex' : 'none'};flex-wrap:wrap;gap:6px;align-items:center;margin-left:4px">

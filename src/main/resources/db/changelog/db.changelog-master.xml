@@ -15,5 +15,8 @@
     <include file="db/changelog/changes/v2-008-schedule-day-clock-segments.xml"/>
     <include file="db/changelog/changes/v2-009-clock-slot-cart-category.xml"/>
     <include file="db/changelog/changes/v2-010-spot-status-cart-freshness.xml"/>
+    <include file="db/changelog/changes/v2-011-rumble-production-schema.xml"/>
+    <include file="db/changelog/changes/v2-012-media-uploads.xml"/>
+    <include file="db/changelog/changes/v2-013-voicetrack-markers.xml"/>
 
 </databaseChangeLog>

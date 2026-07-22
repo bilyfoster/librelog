@@ -25,7 +25,8 @@ public class ScheduleController {
     public record ItemDto(String id, Long showInstanceId, int slotIndex, String kind,
                          String spotId, Long librtimeFileId, Instant scheduledAt,
                          Integer lengthSeconds, int position,
-                         String cartId, String cartCategory, String resolvedMemberId, String label) {
+                         String cartId, String cartCategory, String resolvedMemberId, String label,
+                         Integer segueOffsetSeconds, java.math.BigDecimal duckDb) {
         static ItemDto from(ScheduleItem i) {
             return new ItemDto(i.getId().toString(), i.getShowInstanceId(), i.getSlotIndex(),
                     i.getKind(), i.getSpotId() == null ? null : i.getSpotId().toString(),
@@ -33,7 +34,7 @@ public class ScheduleController {
                     i.getCartId() == null ? null : i.getCartId().toString(),
                     i.getCartCategory(),
                     i.getResolvedMemberId() == null ? null : i.getResolvedMemberId().toString(),
-                    i.getLabel());
+                    i.getLabel(), i.getSegueOffsetSeconds(), i.getDuckDb());
         }
     }
 
@@ -63,7 +64,8 @@ public class ScheduleController {
 
     public record ItemRequest(Long showInstanceId, int slotIndex, String kind,
                               String spotId, Long librtimeFileId, Instant scheduledAt,
-                              Integer lengthSeconds, String cartId, String cartCategory, String label) {}
+                              Integer lengthSeconds, String cartId, String cartCategory, String label,
+                              Integer segueOffsetSeconds, java.math.BigDecimal duckDb) {}
 
     public record SaveRequest(Long expectedVersion, List<ItemRequest> items) {}
 
@@ -139,6 +141,8 @@ public class ScheduleController {
                     .cartId(r.cartId() == null || r.cartId().isBlank() ? null : UUID.fromString(r.cartId().trim()))
                     .cartCategory(r.cartCategory() == null || r.cartCategory().isBlank() ? null : r.cartCategory().trim())
                     .label(r.label())
+                    .segueOffsetSeconds(r.segueOffsetSeconds())
+                    .duckDb(r.duckDb())
                     .build()).toList();
             var view = schedule.save(dayId, user.getId(), req.expectedVersion(), newItems);
             return ResponseEntity.ok(toDto(view, user.getId()));
@@ -160,6 +164,9 @@ public class ScheduleController {
             body.put("notes", r.notes());
             return ResponseEntity.ok(body);
         } catch (ScheduleService.ConcurrencyException e) {
+            return ResponseEntity.status(409).body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            // Includes the playout safety-rail rejection (push target too close to air time).
             return ResponseEntity.status(409).body(Map.of("error", e.getMessage()));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(502).body(Map.of("error", e.getMessage()));

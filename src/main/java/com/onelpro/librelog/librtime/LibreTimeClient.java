@@ -177,6 +177,20 @@ public class LibreTimeClient {
     public JsonNode scheduleFileInInstance(long instanceId, long fileId, int position,
                                            Instant startsAt, Instant endsAt,
                                            int lengthSeconds) {
+        return scheduleFileInInstance(instanceId, fileId, position, startsAt, endsAt,
+                lengthSeconds, null, null);
+    }
+
+    /**
+     * Overload carrying the PRD §6.3 segue/duck markers. A positive
+     * {@code segueOffsetSeconds} becomes the tail crossfade ({@code fade_out});
+     * LibreTime's schedule has no duck-gain field, so {@code duckDb} is persisted in
+     * LibreLog only and not sent.
+     */
+    public JsonNode scheduleFileInInstance(long instanceId, long fileId, int position,
+                                           Instant startsAt, Instant endsAt,
+                                           int lengthSeconds,
+                                           Integer segueOffsetSeconds, java.math.BigDecimal duckDb) {
         java.util.LinkedHashMap<String, Object> body = new java.util.LinkedHashMap<>();
         body.put("instance", instanceId);
         body.put("file", fileId);
@@ -186,7 +200,8 @@ public class LibreTimeClient {
         body.put("cue_in", "00:00:00");
         body.put("cue_out", formatHms(Math.max(0, lengthSeconds)));
         body.put("fade_in", "00:00:00.500");
-        body.put("fade_out", "00:00:00.500");
+        body.put("fade_out", segueOffsetSeconds != null && segueOffsetSeconds > 0
+                ? formatHms(segueOffsetSeconds) : "00:00:00.500");
         body.put("broadcasted", 0);
         body.put("playout_status", 1);
         return web.post().uri("/api/v2/schedule")

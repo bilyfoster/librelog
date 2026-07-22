@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="v2-011-rumble-production-schema" author="librelog">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+
+CREATE TABLE rumble_client (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    contact_email VARCHAR(255) UNIQUE NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_rumble_client_active ON rumble_client(is_active);
+
+CREATE TABLE rumble_campaign (
+    id BIGSERIAL PRIMARY KEY,
+    client_id BIGINT NOT NULL REFERENCES rumble_client(id) ON DELETE RESTRICT,
+    name VARCHAR(255) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    target_plays_per_day INT NOT NULL DEFAULT 3,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_rumble_campaign_dates CHECK (end_date >= start_date),
+    CONSTRAINT chk_rumble_campaign_target CHECK (target_plays_per_day > 0)
+);
+CREATE INDEX idx_rumble_campaign_dates ON rumble_campaign(start_date, end_date);
+
+CREATE TABLE rumble_campaign_daypart (
+    campaign_id BIGINT NOT NULL REFERENCES rumble_campaign(id) ON DELETE CASCADE,
+    daypart VARCHAR(40) NOT NULL,
+    PRIMARY KEY (campaign_id, daypart),
+    CONSTRAINT chk_rumble_campaign_daypart CHECK (daypart IN ('MORNING_DRIVE', 'MIDDAY', 'AFTERNOON_DRIVE', 'EVENING', 'OVERNIGHT'))
+);
+
+CREATE TABLE rumble_media_asset (
+    id BIGSERIAL PRIMARY KEY,
+    campaign_id BIGINT REFERENCES rumble_campaign(id) ON DELETE SET NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(512) NOT NULL,
+    duration_seconds INT NOT NULL,
+    artist_tag VARCHAR(255) NOT NULL,
+    title_tag VARCHAR(255) NOT NULL,
+    jazz_track_id INT UNIQUE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_rumble_asset_duration CHECK (duration_seconds > 0)
+);
+
+CREATE TABLE rumble_format_clock (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE rumble_format_clock_item (
+    id BIGSERIAL PRIMARY KEY,
+    clock_id BIGINT NOT NULL REFERENCES rumble_format_clock(id) ON DELETE CASCADE,
+    minute_offset INT NOT NULL,
+    item_type VARCHAR(40) NOT NULL,
+    CONSTRAINT chk_rumble_clock_minute CHECK (minute_offset >= 0 AND minute_offset < 60),
+    CONSTRAINT chk_rumble_clock_item_type CHECK (item_type IN ('MUSIC_HEAVY', 'MUSIC_LIGHT', 'UNDERWRITING', 'STATION_ID', 'INTERVIEW', 'VOICETRACK_SLOT'))
+);
+CREATE INDEX idx_rumble_clock_item_lookup ON rumble_format_clock_item(clock_id, minute_offset);
+
+CREATE TABLE rumble_schedule_grid (
+    id BIGSERIAL PRIMARY KEY,
+    scheduled_date DATE NOT NULL,
+    hour_of_day INT NOT NULL,
+    clock_id BIGINT NOT NULL REFERENCES rumble_format_clock(id),
+    CONSTRAINT chk_rumble_grid_hour CHECK (hour_of_day >= 0 AND hour_of_day < 24),
+    CONSTRAINT unique_rumble_grid_date_hour UNIQUE (scheduled_date, hour_of_day)
+);
+
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

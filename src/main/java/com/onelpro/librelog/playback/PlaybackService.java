@@ -2,6 +2,8 @@ package com.onelpro.librelog.playback;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.onelpro.librelog.customers.Customer;
+import com.onelpro.librelog.customers.CustomerRepository;
 import com.onelpro.librelog.librtime.LibreTimeService;
 import com.onelpro.librelog.orders.Order;
 import com.onelpro.librelog.orders.OrderRepository;
@@ -42,6 +44,7 @@ public class PlaybackService {
     private final ScheduleItemRepository items;
     private final OrderRepository orders;
     private final SpotRepository spots;
+    private final CustomerRepository customers;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Transactional
@@ -146,9 +149,7 @@ public class PlaybackService {
             return new OrderReconciliation(orderId.toString(), o.getName(), 0, 0, 0, List.of());
         }
 
-        var allItems = items.findAll().stream()
-                .filter(i -> i.getSpotId() != null && spotIds.contains(i.getSpotId()))
-                .toList();
+        var allItems = items.findBySpotIdIn(spotIds);
         var itemIds = allItems.stream().map(ScheduleItem::getId).toList();
         var reconciliations = itemIds.isEmpty() ? List.<Reconciliation>of()
                 : recons.findByScheduleItemIdIn(itemIds);
@@ -174,6 +175,66 @@ public class PlaybackService {
 
         return new OrderReconciliation(orderId.toString(), o.getName(),
                 scheduledCount, matched, missed, rows);
+    }
+
+    /**
+     * Per-order fulfillment for one station+date (PRD §7.3 make-up reporting).
+     * Ordered = scheduled items referencing airable spots of orders active on the date;
+     * played = items whose reconciliation row is MATCHED; everything else is a missed
+     * (make-up candidate), reported with its spot label.
+     */
+    public List<FulfillmentRow> fulfillment(UUID stationId, LocalDate date) {
+        ScheduleDay day = days.findByStationIdAndDate(stationId, date).orElse(null);
+        if (day == null) return List.of();
+        var dayItems = items.findByScheduleDayIdOrderByPositionAsc(day.getId()).stream()
+                .filter(i -> i.getSpotId() != null)
+                .toList();
+        if (dayItems.isEmpty()) return List.of();
+
+        var itemIds = dayItems.stream().map(ScheduleItem::getId).toList();
+        Map<UUID, Reconciliation> byItem = new HashMap<>();
+        for (Reconciliation r : recons.findByScheduleItemIdIn(itemIds)) byItem.put(r.getScheduleItemId(), r);
+
+        var spotIds = dayItems.stream().map(ScheduleItem::getSpotId).distinct().toList();
+        Map<UUID, Spot> spotById = new HashMap<>();
+        for (Spot s : spots.findAllById(spotIds)) spotById.put(s.getId(), s);
+
+        var orderIds = spotById.values().stream().map(Spot::getOrderId).distinct().toList();
+        Map<UUID, Order> orderById = new HashMap<>();
+        for (Order o : orders.findAllById(orderIds)) orderById.put(o.getId(), o);
+        var customerIds = orderById.values().stream().map(Order::getCustomerId).distinct().toList();
+        Map<UUID, String> customerNames = new HashMap<>();
+        for (Customer c : customers.findAllById(customerIds)) customerNames.put(c.getId(), c.getName());
+
+        Map<UUID, FulfillmentAcc> byOrder = new LinkedHashMap<>();
+        for (ScheduleItem it : dayItems) {
+            Spot s = spotById.get(it.getSpotId());
+            if (!Spot.isAirable(s)) continue;
+            Order o = orderById.get(s.getOrderId());
+            if (o == null || o.getStartDate().isAfter(date)) continue;
+            if (o.getEndDate() != null && o.getEndDate().isBefore(date)) continue;
+            FulfillmentAcc acc = byOrder.computeIfAbsent(o.getId(), k -> new FulfillmentAcc());
+            acc.ordered++;
+            Reconciliation r = byItem.get(it.getId());
+            if (r != null && "MATCHED".equals(r.getStatus())) acc.played++;
+            else acc.missedLabels.add(s.getLabel());
+        }
+
+        return byOrder.entrySet().stream()
+                .map(e -> {
+                    Order o = orderById.get(e.getKey());
+                    FulfillmentAcc a = e.getValue();
+                    return new FulfillmentRow(e.getKey().toString(), o.getName(),
+                            customerNames.get(o.getCustomerId()),
+                            a.ordered, a.played, a.missedLabels.size(), List.copyOf(a.missedLabels));
+                })
+                .toList();
+    }
+
+    private static final class FulfillmentAcc {
+        int ordered;
+        int played;
+        final List<String> missedLabels = new ArrayList<>();
     }
 
     private static Instant parseTime(JsonNode n) {
@@ -225,4 +286,7 @@ public class PlaybackService {
                                       List<OrderReconciliationRow> rows) {}
     public record OrderReconciliationRow(String scheduleItemId, String spotLabel,
                                          Instant scheduledAt, String status) {}
+    public record FulfillmentRow(String orderId, String orderName, String customerName,
+                                 int ordered, int played, int missed,
+                                 List<String> missedSpotLabels) {}
 }

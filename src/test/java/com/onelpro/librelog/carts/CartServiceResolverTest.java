@@ -170,6 +170,82 @@ class CartServiceResolverTest {
         assertThat(resolver().resolve(commercialCart(), now, null).member()).isEqualTo(m); // preview (lenient)
     }
 
+    @Test
+    void prdFloor_musicArtistSeparationIs90MinutesEvenWithLenientPolicy() {
+        CartMember a = music(0, "Artist A", "Song A", 1, now);
+        CartMember b = music(1, "Artist B", "Song B", 2, now);
+        when(members.findByCartIdOrderByPositionAsc(cartId)).thenReturn(List.of(a, b));
+        // Zero per-cart policy: the PRD floor alone must block the same artist for 90 min.
+        when(history.recentForStation(any(), any())).thenReturn(List.of(
+                CartPlayHistory.builder().id(UUID.randomUUID()).stationId(stationId).cartId(cartId)
+                        .artist("Artist A").title("Song A-old").playedAt(now.minus(Duration.ofMinutes(30))).build()));
+
+        CartService.Resolution res = resolver().resolve(musicCart(Cart.STRATEGY_ROTATION, null), now, null);
+        assertThat(res.member()).isEqualTo(b);
+    }
+
+    @Test
+    void prdFloor_musicSongSeparationIs240MinutesEvenWithLenientPolicy() {
+        CartMember a = music(0, "Artist A", "Same Song", 1, now);
+        CartMember b = music(1, "Artist B", "Other Song", 2, now);
+        when(members.findByCartIdOrderByPositionAsc(cartId)).thenReturn(List.of(a, b));
+        when(history.recentForStation(any(), any())).thenReturn(List.of(
+                CartPlayHistory.builder().id(UUID.randomUUID()).stationId(stationId).cartId(cartId)
+                        .artist("Artist C").title("Same Song").playedAt(now.minus(Duration.ofHours(3))).build()));
+
+        CartService.Resolution res = resolver().resolve(musicCart(Cart.STRATEGY_ROTATION, null), now, null);
+        assertThat(res.member()).isEqualTo(b); // 3h < 240-min floor
+    }
+
+    @Test
+    void prdFloor_doesNotApplyToNonMusicCategories() {
+        // NEWS carts repeat the same title hourly by design; the PRD floor is music-only.
+        CartMember a = music(0, "Station", "Hourly News", 1, now);
+        when(members.findByCartIdOrderByPositionAsc(cartId)).thenReturn(List.of(a));
+        when(history.recentForStation(any(), any())).thenReturn(List.of(
+                CartPlayHistory.builder().id(UUID.randomUUID()).stationId(stationId).cartId(cartId)
+                        .artist("Station").title("Hourly News").playedAt(now.minus(Duration.ofMinutes(60))).build()));
+
+        Cart newsCart = Cart.builder().id(cartId).stationId(stationId).name("News").kind("MUSIC")
+                .category("NEWS").source("MANUAL").rotationPointer(0)
+                .selectionStrategy(Cart.STRATEGY_ROTATION).build();
+        CartService.Resolution res = resolver().resolve(newsCart, now, null);
+        assertThat(res.member()).isEqualTo(a);
+    }
+
+    @Test
+    void clutter_fallbackSkipsSponsorMatchingAdjacentSlot() {
+        UUID acmeSpot = UUID.randomUUID();
+        UUID betaSpot = UUID.randomUUID();
+        CartMember acme = spotMember(0, acmeSpot);
+        acme.setSponsor("Acme");
+        CartMember beta = spotMember(1, betaSpot);
+        beta.setSponsor("Beta");
+        when(members.findByCartIdOrderByPositionAsc(cartId)).thenReturn(List.of(acme, beta));
+        when(spots.findById(acmeSpot)).thenReturn(Optional.of(spot(acmeSpot, Spot.STATUS_APPROVED, "ANY_TIME", null)));
+        when(spots.findById(betaSpot)).thenReturn(Optional.of(spot(betaSpot, Spot.STATUS_APPROVED, "ANY_TIME", null)));
+        // 20-min sponsor policy with both sponsors recently played: every member violates,
+        // forcing the fallback path.
+        when(policies.findById(cartId)).thenReturn(Optional.of(
+                SeparationPolicy.builder().cartId(cartId).minMinutesSameSponsor(20).build()));
+        when(history.recentForStation(any(), any())).thenReturn(List.of(
+                CartPlayHistory.builder().id(UUID.randomUUID()).stationId(stationId).cartId(cartId)
+                        .sponsor("Acme").playedAt(now.minus(Duration.ofMinutes(2))).build(),
+                CartPlayHistory.builder().id(UUID.randomUUID()).stationId(stationId).cartId(cartId)
+                        .sponsor("Beta").playedAt(now.minus(Duration.ofMinutes(5))).build()));
+
+        CartService.Resolver r = resolver();
+        // First slot: every member violates the sponsor window, so the fallback fires.
+        CartService.Resolution first = r.resolve(commercialCart(), now, null);
+        assertThat(first.member()).isNotNull();
+        assertThat(first.note()).contains("Separation violated");
+
+        // Second slot 30s later: fallback must skip the sponsor of the adjacent (pending) slot.
+        CartService.Resolution second = r.resolve(commercialCart(), now.plusSeconds(30), null);
+        assertThat(second.member()).isNotNull();
+        assertThat(second.member().getSponsor()).isNotEqualTo(first.member().getSponsor());
+    }
+
     private Spot spot(UUID id, String status, String rotationKind, Long targetShowId) {
         return Spot.builder().id(id).orderId(UUID.randomUUID()).label("Spot").lengthSeconds(30)
                 .status(status).rotationKind(rotationKind).targetShowId(targetShowId).build();

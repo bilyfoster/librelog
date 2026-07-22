@@ -13,6 +13,10 @@ spring:
         jdbc.time_zone: UTC
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 200MB
 
 server:
   port: ${SERVER_PORT:8080}
@@ -41,6 +45,15 @@ librelog:
     seed-name: ${ADMIN_SEED_NAME:Admin}
   encryption:
     key: ${ENCRYPTION_KEY:change-me-change-me-32bytes-please}
+  jazz:
+    host: ${JAZZ_SFTP_HOST:}
+    user: ${JAZZ_SFTP_USER:rumble_bridge}
+    port: ${JAZZ_SFTP_PORT:22}
+    key-path: ${JAZZ_SFTP_KEY_PATH:}
+    import-path: ${JAZZ_IMPORT_PATH:/srv/libretime/rumble_import}
+    import-trigger: ${JAZZ_IMPORT_TRIGGER:/usr/local/bin/rumble_import_trigger.sh}
+  reconciliation:
+    cron: ${LIBRELOG_RECONCILIATION_CRON:0 30 3 * * *}
 
 logging:
   level:

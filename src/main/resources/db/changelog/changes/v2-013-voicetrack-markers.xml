@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="v2-013-voicetrack-markers" author="librelog">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+
+ALTER TABLE schedule_item ADD COLUMN segue_offset_seconds INT;
+ALTER TABLE schedule_item ADD COLUMN duck_db DECIMAL(4,1);
+
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

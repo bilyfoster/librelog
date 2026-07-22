@@ -25,7 +25,7 @@ public class ClockTemplateSlot {
     @Column(nullable = false)
     private int position;
 
-    /** MUSIC_CART | COMMERCIAL_CART | TRACK | SPOT | NOTE */
+    /** MUSIC_CART | COMMERCIAL_CART | TRACK | SPOT | VOICETRACK | NOTE */
     @Column(nullable = false)
     private String kind;
 

@@ -18,9 +18,21 @@ and is read-only.
   voicetracks, so stale audio never airs). Spots flagged for a specific show only air
   inside that show.
 - Build a day's schedule against existing LibreTime show templates, save as a draft, and
-  push it to LibreTime.
+  push it to LibreTime. Push is blocked for today/past days — logs go out at least a day
+  ahead so active playout buffers are never rewritten.
+- Music burnout rules per the Rumble PRD: 90-minute artist / 240-minute song separation
+  floors on music carts (per-cart policies can only be stricter), plus clutter control so
+  the same sponsor never lands in adjacent slots when an alternative exists.
+- Upload audio (spots, promos, voice tracks) from the dashboard: ffmpeg loudnorm
+  (-14 LUFS / -2.0 dBFS TP) to MP3 44.1kHz 192k CBR stereo, then SFTP to the Jazz
+  (LibreTime) drop zone with an automatic library import trigger.
+- Browser voice tracking: VOICETRACK clock slots show as empty VT slots in the day
+  builder; record a take in the browser (with segue/duck markers) and it is transcoded,
+  handed to Jazz, and attached to the slot.
 - Per-day editor lock with a 15-minute TTL so two users can't clobber each other.
-- Pull as-run playback history from LibreTime and reconcile by order.
+- Pull as-run playback history from LibreTime and reconcile by order. A nightly job
+  (03:30, configurable) imports yesterday's log per station and the dashboard shows
+  per-order fulfillment (played X of Y) with make-up spots owed.
 
 For the full plan and rationale see the project plan on the `mvp` branch.
 
@@ -60,6 +72,13 @@ on first login.
 | `ADMIN_SEED_PASSWORD` | `admin123` | Change immediately |
 | `ENCRYPTION_KEY` | `change-me-...` | Used to AES-GCM encrypt LibreTime API keys at rest |
 | `SERVER_PORT` | `8080` | |
+| `JAZZ_SFTP_HOST` | _(empty)_ | Jazz/LibreTime host for audio handoff; empty = local-only uploads |
+| `JAZZ_SFTP_USER` | `rumble_bridge` | |
+| `JAZZ_SFTP_PORT` | `22` | |
+| `JAZZ_SFTP_KEY_PATH` | _(empty)_ | Private key mounted into the container — never bake it into the image |
+| `JAZZ_IMPORT_PATH` | `/srv/libretime/rumble_import` | Drop zone on Jazz |
+| `JAZZ_IMPORT_TRIGGER` | `/usr/local/bin/rumble_import_trigger.sh` | Runs on Jazz after upload |
+| `LIBRELOG_RECONCILIATION_CRON` | `0 30 3 * * *` | Nightly as-run import + make-up summary |
 
 ## Layout
 
@@ -76,7 +95,11 @@ src/main/java/com/onelpro/librelog/
   customers/     Customer CRUD
   orders/        Order + Spot CRUDs
   schedule/      Day Builder, schedule items, day locking, push
-  playback/      Playback log import, reconciliation
+  playback/      Playback log import, reconciliation, nightly job, fulfillment
+  rumble/        Rumble PRD services: audio transcode, Jazz SFTP handoff,
+                 media uploads, voice tracks, rotation constants
+                 (the rumble/domain entities are unused PRD scaffolding — the
+                 live model is the v2 schema above)
 src/main/resources/
   application.yml
   db/changelog/  Liquibase initial schema

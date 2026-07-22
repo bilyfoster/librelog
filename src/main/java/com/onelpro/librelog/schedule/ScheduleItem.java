@@ -56,6 +56,14 @@ public class ScheduleItem {
     @Column(name = "resolved_member_id")
     private UUID resolvedMemberId;
 
+    /** Overlap/crossfade marker (PRD §6.3): seconds the next element may start early. */
+    @Column(name = "segue_offset_seconds")
+    private Integer segueOffsetSeconds;
+
+    /** Duck marker (PRD §6.3): gain reduction applied under this voice track. */
+    @Column(name = "duck_db")
+    private java.math.BigDecimal duckDb;
+
     private String label;
 
     @PrePersist

@@ -32,6 +32,14 @@ services:
       - ADMIN_SEED_PASSWORD=${ADMIN_SEED_PASSWORD:-admin123}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-please-change-me-32-bytes-please-c}
       - SERVER_PORT=8080
+      - JAZZ_SFTP_HOST=${JAZZ_SFTP_HOST:-}
+      - JAZZ_SFTP_USER=${JAZZ_SFTP_USER:-rumble_bridge}
+      - JAZZ_SFTP_KEY_PATH=${JAZZ_SFTP_KEY_PATH:-}
+      - JAZZ_SFTP_PORT=${JAZZ_SFTP_PORT:-22}
+      - JAZZ_IMPORT_PATH=${JAZZ_IMPORT_PATH:-/srv/libretime/rumble_import}
+      - JAZZ_IMPORT_TRIGGER=${JAZZ_IMPORT_TRIGGER:-/usr/local/bin/rumble_import_trigger.sh}
+    volumes:
+      - transcode_data:/var/librelog/transcode
     depends_on:
       db:
         condition: service_healthy
@@ -57,6 +65,7 @@ services:
 
 volumes:
   postgres_data:
+  transcode_data:
 
 networks:
   librelog-network:

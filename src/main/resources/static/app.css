@@ -553,6 +553,8 @@ dialog#modal .modal-actions { padding: 0; margin-top: 16px; }
 .status-ok { color: var(--ok); }
 .status-bad { color: var(--danger); }
 
+.preview-violation { color: var(--danger); font-weight: 600; }
+
 /* =====================================================================
    Responsive: tablet
    ===================================================================== */

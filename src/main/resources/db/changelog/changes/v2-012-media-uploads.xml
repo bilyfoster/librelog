@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="v2-012-media-uploads" author="librelog">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+
+CREATE TABLE media_upload (
+    id UUID PRIMARY KEY,
+    station_id UUID NOT NULL REFERENCES station(id) ON DELETE CASCADE,
+    original_file_name VARCHAR(255) NOT NULL,
+    final_file_name VARCHAR(255),
+    duration_seconds INT,
+    artist_tag VARCHAR(255),
+    title_tag VARCHAR(255),
+    status VARCHAR(20) NOT NULL DEFAULT 'UPLOADED',
+    error TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_media_upload_status CHECK (status IN ('UPLOADED', 'TRANSFERRED', 'IMPORTED', 'FAILED'))
+);
+CREATE INDEX idx_media_upload_station_created ON media_upload(station_id, created_at);
+
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

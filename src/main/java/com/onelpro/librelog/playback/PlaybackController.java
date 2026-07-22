@@ -43,4 +43,14 @@ public class PlaybackController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    @GetMapping("/api/playback/fulfillment")
+    public ResponseEntity<?> fulfillment(@RequestParam("stationId") UUID stationId,
+                                         @RequestParam("date") String date) {
+        try {
+            return ResponseEntity.ok(service.fulfillment(stationId, LocalDate.parse(date)));
+        } catch (Exception e) {
+            return ResponseEntity.status(502).body(Map.of("error", e.getMessage()));
+        }
+    }
 }

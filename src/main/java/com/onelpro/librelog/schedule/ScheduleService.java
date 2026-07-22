@@ -14,6 +14,7 @@ import com.onelpro.librelog.librtime.LibreTimeClient;
 import com.onelpro.librelog.librtime.LibreTimeService;
 import com.onelpro.librelog.orders.Spot;
 import com.onelpro.librelog.orders.SpotRepository;
+import com.onelpro.librelog.rumble.service.JazzHandoffService;
 import com.onelpro.librelog.station.StationRepository;
 import com.onelpro.librelog.time.TimeWindowUtil;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +56,7 @@ public class ScheduleService {
     private final ClockTemplateRepository clockTemplates;
     private final ScheduleDayClockSegmentRepository clockSegments;
     private final SpotRepository spots;
+    private final JazzHandoffService jazzHandoff;
 
     /**
      * Loaded day view. {@code lockedByOtherUser} is true when the day is currently
@@ -241,6 +243,9 @@ public class ScheduleService {
         if ("PUSHED".equals(day.getStatus())) {
             throw new ConcurrencyException("Day already pushed");
         }
+        // Playout safety rail (PRD §7): never rewrite the active or next playout day.
+        // Logs must be committed at least 24 hours ahead of air time.
+        jazzHandoff.assertSafeHandoffDate(day.getDate());
         var lock = activeLock(dayId).orElse(null);
         if (lock == null || !lock.getUserId().equals(userId)) {
             throw new ConcurrencyException("Acquire the day lock before pushing");
@@ -341,7 +346,8 @@ public class ScheduleService {
                     continue;
                 }
                 try {
-                    client.scheduleFileInInstance(instanceId, fileId, position++, rowStart, rowEnd, len);
+                    client.scheduleFileInInstance(instanceId, fileId, position++, rowStart, rowEnd, len,
+                            it.getSegueOffsetSeconds(), it.getDuckDb());
                     rowsWritten++;
                     // Persist the actual air time (and the resolved file/length) so that
                     // playback reconciliation can later match this row by file id + time.
@@ -640,6 +646,16 @@ public class ScheduleService {
                         .label(s.getLabel() != null ? s.getLabel() : cart.getName())
                         .position(position).build();
             }
+            case "VOICETRACK" -> {
+                // Empty voice-track slot: no file until a take is recorded (Phase 4),
+                // at which point librtimeFileId is set and push treats it like a track.
+                return ScheduleItem.builder()
+                        .scheduleDayId(dayId).showInstanceId(instanceId).slotIndex(slotIndex)
+                        .kind("VOICETRACK")
+                        .lengthSeconds(s.getDefaultLengthSeconds() != null ? s.getDefaultLengthSeconds() : 30)
+                        .label(s.getLabel() != null ? s.getLabel() : "Voice track")
+                        .position(position).build();
+            }
             case "TRACK" -> {
                 if (s.getLibrtimeFileId() == null) return null;
                 return ScheduleItem.builder()
@@ -723,7 +739,16 @@ public class ScheduleService {
     }
 
     public record PreviewItem(String scheduleItemId, String kind, String cartName,
-                              Long librtimeFileId, String label, String note) {}
+                              Long librtimeFileId, String label, String note, boolean violation) {
+        PreviewItem(String scheduleItemId, String kind, String cartName,
+                    Long librtimeFileId, String label, String note) {
+            this(scheduleItemId, kind, cartName, librtimeFileId, label, note, isViolation(note));
+        }
+
+        private static boolean isViolation(String note) {
+            return note != null && (note.contains("Separation violated") || note.contains("clutter"));
+        }
+    }
 
     private static Long resolveFileId(CartMember m) {
         return m.getLibrtimeFileId();

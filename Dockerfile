@@ -6,6 +6,7 @@ COPY src ./src
 RUN mvn -DskipTests -q package
 
 FROM eclipse-temurin:21-jre-alpine
+RUN apk add --no-cache ffmpeg
 WORKDIR /app
 COPY --from=builder /build/target/librelog.jar app.jar
 EXPOSE 8080

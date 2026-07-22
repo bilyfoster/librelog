@@ -5,6 +5,7 @@ import com.onelpro.librelog.librtime.LibreTimeClient;
 import com.onelpro.librelog.librtime.LibreTimeService;
 import com.onelpro.librelog.orders.Spot;
 import com.onelpro.librelog.orders.SpotRepository;
+import com.onelpro.librelog.rumble.service.RotationSchedulerEngine;
 import com.onelpro.librelog.station.DayPart;
 import com.onelpro.librelog.station.DayPartRepository;
 import com.onelpro.librelog.station.StationRepository;
@@ -112,7 +113,9 @@ public class CartService {
     public static SeparationPolicy defaultPolicyFor(UUID cartId, String category) {
         SeparationPolicy.SeparationPolicyBuilder b = SeparationPolicy.builder().cartId(cartId);
         switch (category) {
-            case "MUSIC":              b.minMinutesSameArtist(15).minMinutesSameTitle(180); break;
+            // PRD (SCH-03): 90-min artist / 240-min song separation for the music format.
+            case "MUSIC":              b.minMinutesSameArtist((int) RotationSchedulerEngine.ARTIST_SEPARATION.toMinutes())
+                                         .minMinutesSameTitle((int) RotationSchedulerEngine.SONG_SEPARATION.toMinutes()); break;
             case "IMAGING":            b.minMinutesSameTitle(10); break;
             case "CONTENT":            b.minMinutesSameTitle(60); break;
             case "NEWS":               b.minMinutesSameTitle(120).minMinutesSameCart(30); break;
@@ -415,12 +418,25 @@ public class CartService {
             }
             String note = null;
             if (picked == null) {
+                // Safety valve: air something rather than leave dead air, but still avoid
+                // clutter — never put the same sponsor back-to-back in a break if any
+                // other eligible member exists.
+                CartMember firstEligible = null;
                 for (CartMember candidate : ordered) {
-                    if (eligibleAtStationTime(candidate, slotTime, currentShowId)) {
-                        picked = candidate;
-                        note = "Separation violated for cart \"" + cart.getName()
-                                + "\" — no member satisfied policy";
-                        break;
+                    if (!eligibleAtStationTime(candidate, slotTime, currentShowId)) continue;
+                    if (firstEligible == null) firstEligible = candidate;
+                    if (createsClutter(candidate)) continue;
+                    picked = candidate;
+                    note = "Separation violated for cart \"" + cart.getName()
+                            + "\" — no member satisfied policy";
+                    break;
+                }
+                if (picked == null && firstEligible != null) {
+                    picked = firstEligible;
+                    note = "Separation violated for cart \"" + cart.getName()
+                            + "\" — no member satisfied policy";
+                    if (createsClutter(picked)) {
+                        note += "; clutter: same sponsor as the adjacent slot";
                     }
                 }
             }
@@ -507,12 +523,24 @@ public class CartService {
             return TimeWindowUtil.isInstantWithin(st, en, stationZone, slotTime);
         }
 
+        /** True when picking {@code m} would place the same sponsor in two adjacent slots. */
+        private boolean createsClutter(CartMember m) {
+            if (m.getSponsor() == null || pending.isEmpty()) return false;
+            CartPlayHistory last = pending.get(pending.size() - 1);
+            return equalsIgnoreCase(last.getSponsor(), m.getSponsor());
+        }
+
         private boolean passesSeparation(CartMember m, Cart cart, SeparationPolicy p, Instant slotTime) {
             if (within(p.getMinMinutesSameCart(), slotTime,
                     h -> Objects.equals(h.getCartId(), cart.getId()))) return false;
-            if (m.getArtist() != null && within(p.getMinMinutesSameArtist(), slotTime,
+            // PRD (SCH-03) burnout floors for the music format: 90-min artist, 240-min song.
+            // Per-cart policy can only make these stricter, never looser.
+            boolean musicFormat = "MUSIC".equals(cart.getKind()) && "MUSIC".equals(cart.getCategory());
+            int artistFloor = musicFormat ? (int) RotationSchedulerEngine.ARTIST_SEPARATION.toMinutes() : 0;
+            int titleFloor = musicFormat ? (int) RotationSchedulerEngine.SONG_SEPARATION.toMinutes() : 0;
+            if (m.getArtist() != null && within(Math.max(p.getMinMinutesSameArtist(), artistFloor), slotTime,
                     h -> equalsIgnoreCase(h.getArtist(), m.getArtist()))) return false;
-            if (m.getTitle() != null && within(p.getMinMinutesSameTitle(), slotTime,
+            if (m.getTitle() != null && within(Math.max(p.getMinMinutesSameTitle(), titleFloor), slotTime,
                     h -> equalsIgnoreCase(h.getTitle(), m.getTitle()))) return false;
             if (m.getSponsor() != null && within(p.getMinMinutesSameSponsor(), slotTime,
                     h -> equalsIgnoreCase(h.getSponsor(), m.getSponsor()))) return false;
