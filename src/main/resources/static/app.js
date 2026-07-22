@@ -35,6 +35,7 @@ const CATEGORY_LABELS = {
     MUSIC: 'Music',
     IMAGING: 'Imaging (IDs / jingles / sweepers)',
     CONTENT: 'Content / segments',
+    INTERVIEW: 'Interviews',
     NEWS: 'News',
     WEATHER: 'Weather',
     PROMO: 'Promo',
@@ -2373,7 +2374,7 @@ async function renderCartDetail(cartId) {
                 ${isOrder ? '<span class="cart-kind order">order-backed</span>' : ''}
             </h3>
             <span class="grow"></span>
-            <button class="link" data-cart-rename="${cart.id}">Rename</button>
+            <button class="link" data-cart-rename="${cart.id}">Edit</button>
             <button class="link danger" data-cart-delete="${cart.id}">Delete</button>
         </div>
         <p class="muted small">${escapeHtml(cart.description || '')}</p>
@@ -2563,14 +2564,25 @@ function cartCreateModal() {
 }
 
 function cartRenameModal(cart) {
+    const cats = catListForKind(cart.kind === 'COMMERCIAL' ? 'COMMERCIAL_CART' : 'MUSIC_CART');
+    const catOpts = cats.map(c =>
+        `<option value="${escapeAttr(c)}" ${cart.category === c ? 'selected' : ''}>${escapeHtml(categoryLabel(c))}</option>`).join('');
     const html = `
         <label>Name <input name="name" value="${escapeAttr(cart.name)}" required /></label>
+        <label>Category
+            <select name="category">${catOpts}</select>
+        </label>
+        <p class="muted small">Cart type (library vs. spot) can't change once members exist — category can.</p>
         <label>Description <textarea name="description">${escapeHtml(cart.description || '')}</textarea></label>
     `;
-    openModal('Rename cart', html, async () => {
+    openModal('Edit cart', html, async () => {
         const fd = new FormData(document.getElementById('modalForm'));
         try {
-            await API.put(`/api/carts/${cart.id}`, { name: fd.get('name'), description: fd.get('description') });
+            await API.put(`/api/carts/${cart.id}`, {
+                name: fd.get('name'),
+                category: fd.get('category'),
+                description: fd.get('description'),
+            });
             await loadCartsTab(); toast('Saved', 'ok'); return true;
         } catch (e) { toast(e.message, 'error'); return false; }
     });

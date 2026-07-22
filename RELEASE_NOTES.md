@@ -1,5 +1,16 @@
 # Release notes
 
+## v2.2.1 — editable cart categories + INTERVIEW category
+
+- **Cart category is now editable** after creation (cart → Edit). The category is
+  validated against the cart's type: library carts (music/content) accept library
+  categories, spot carts accept commercial categories. Members and separation policy
+  are untouched. Cart *kind* (library vs. spot) remains immutable — members are
+  validated against it.
+- **New library category `INTERVIEW`** (240-min same-title default separation) so
+  interviews can rotate separately from generic CONTENT.
+- No DB migration. Version 2.2.0 → 2.2.1.
+
 ## v2.2.0 — Rumble: safety rails, audio handoff, burnout rules, voice tracking, make-ups
 
 First Rumble (PRD) release: the playout safety rails, the audio processing + SFTP

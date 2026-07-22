@@ -46,7 +46,7 @@ public class CartController {
                                 String selectionStrategy, Integer maxAgeHours) {}
 
     public record UpdateRequest(String name, String description,
-                                String selectionStrategy, Integer maxAgeHours) {}
+                                String selectionStrategy, Integer maxAgeHours, String category) {}
 
     public record MemberRequest(Integer position, Integer weight,
                                 Long librtimeFileId, String spotId,
@@ -94,7 +94,7 @@ public class CartController {
     public ResponseEntity<?> update(@PathVariable UUID cartId, @RequestBody UpdateRequest req) {
         try {
             Cart c = carts.update(cartId, req.name(), req.description(),
-                    req.selectionStrategy(), req.maxAgeHours());
+                    req.selectionStrategy(), req.maxAgeHours(), req.category());
             return ResponseEntity.ok(toDto(c, carts.membersOf(c.getId()).size(), carts.policyFor(c.getId())));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

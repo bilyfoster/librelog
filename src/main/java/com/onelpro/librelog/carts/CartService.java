@@ -64,7 +64,7 @@ public class CartService {
 
     /** Categories whose audio is sourced from the LibreTime library. */
     public static final Set<String> LIBRARY_CATEGORIES = Set.of(
-            "MUSIC", "IMAGING", "CONTENT", "NEWS", "WEATHER", "PROMO", "VOICETRACK");
+            "MUSIC", "IMAGING", "CONTENT", "INTERVIEW", "NEWS", "WEATHER", "PROMO", "VOICETRACK");
 
     /** Categories whose audio is sourced from the spot/order pool. */
     public static final Set<String> COMMERCIAL_CATEGORIES = Set.of("COMMERCIAL", "SPONSORED_FEATURE");
@@ -118,6 +118,7 @@ public class CartService {
                                          .minMinutesSameTitle((int) RotationSchedulerEngine.SONG_SEPARATION.toMinutes()); break;
             case "IMAGING":            b.minMinutesSameTitle(10); break;
             case "CONTENT":            b.minMinutesSameTitle(60); break;
+            case "INTERVIEW":          b.minMinutesSameTitle(240); break;
             case "NEWS":               b.minMinutesSameTitle(120).minMinutesSameCart(30); break;
             case "WEATHER":            b.minMinutesSameTitle(20); break;
             case "PROMO":              b.minMinutesSameTitle(30).minMinutesSameProduct(15); break;
@@ -131,7 +132,7 @@ public class CartService {
 
     @Transactional
     public Cart update(UUID cartId, String name, String description,
-                       String selectionStrategy, Integer maxAgeHours) {
+                       String selectionStrategy, Integer maxAgeHours, String category) {
         Cart c = carts.findById(cartId).orElseThrow(() -> new IllegalArgumentException("Cart not found"));
         if (name != null && !name.equals(c.getName())) {
             carts.findByStationIdAndName(c.getStationId(), name).ifPresent(other -> {
@@ -144,6 +145,16 @@ public class CartService {
         if (selectionStrategy != null) c.setSelectionStrategy(normalizeStrategy(selectionStrategy));
         // maxAgeHours: a negative value clears the freshness window; >=1 sets it; null leaves it.
         if (maxAgeHours != null) c.setMaxAgeHours(maxAgeHours < 0 ? null : normalizeMaxAge(maxAgeHours));
+        // Category is editable (kind is not — members are validated against it). The new
+        // category must be valid for the cart's kind; members and policy are left alone.
+        if (category != null && !category.equals(c.getCategory())) {
+            Set<String> allowed = "MUSIC".equals(c.getKind()) ? LIBRARY_CATEGORIES : COMMERCIAL_CATEGORIES;
+            if (!allowed.contains(category)) {
+                throw new IllegalArgumentException("category " + category
+                        + " is not allowed for " + ("MUSIC".equals(c.getKind()) ? "library (MUSIC)" : "spot (COMMERCIAL)") + " carts");
+            }
+            c.setCategory(category);
+        }
         return carts.save(c);
     }
 
