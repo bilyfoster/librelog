@@ -46,8 +46,15 @@ fi
 
 echo
 echo "Checking what https://log.gayphx.com is serving..."
-PUBLIC_VERSION="$(curl -fs --max-time 10 https://log.gayphx.com/api/version 2>/dev/null \
-    | sed -n 's/.*"version":"\([^"]*\)".*/\1/p' || true)"
+# Retry for ~40s: right after a recreate, Traefik can take a few seconds to
+# re-register the container, and a single immediate curl false-negatives.
+PUBLIC_VERSION=""
+for i in $(seq 1 10); do
+    PUBLIC_VERSION="$(curl -fs --max-time 5 https://log.gayphx.com/api/version 2>/dev/null \
+        | sed -n 's/.*"version":"\([^"]*\)".*/\1/p' || true)"
+    if [ -n "$PUBLIC_VERSION" ]; then break; fi
+    sleep 4
+done
 if [ -z "$PUBLIC_VERSION" ]; then
     echo "Could not reach https://log.gayphx.com — if this host IS the production server," >&2
     echo "check Traefik; otherwise the public site is unaffected by this deploy." >&2
