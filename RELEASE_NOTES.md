@@ -1,5 +1,17 @@
 # Release notes
 
+## v2.5.0 — clock editor: timing feedback + reorder
+
+Frontend-only quality pass on the clock slot editor. No DB or API changes.
+
+- **Estimated start offset per row** (`@3:30`) computed from default lengths and fill
+  targets, live as you type. TO_END rows show `→end`.
+- **Est. runtime total** next to Save slots, with a red warning when the clock sums past
+  60:00 (push would drop the overflow).
+- **Reorder** slots with ↑/↓ buttons (save order = display order, as before).
+- Fixed: the remove (x) button on rows added after opening the editor was dead (handler
+  was bound only at render); remove/reorder are now delegated.
+
 ## v2.4.0 — weekly clock assignment grid
 
 The standing format lives at the station now: a **weekly grid** (weekday × station-local

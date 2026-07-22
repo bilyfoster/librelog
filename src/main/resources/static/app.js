@@ -2840,10 +2840,12 @@ function renderClockDetail(clock) {
 
         <div class="row" style="margin-top:8px">
             <button class="secondary" id="clockAddSlotBtn">+ Add slot</button>
+            <span id="clockRuntimeTotal" class="muted small"></span>
             <span class="grow"></span>
             <button id="clockSaveSlotsBtn">Save slots</button>
         </div>
     `;
+    updateClockEditorTiming();
     document.querySelector('[data-clock-rename]').addEventListener('click', () => clockRenameModal(clock));
     document.querySelector('[data-clock-delete]').addEventListener('click', async () => {
         if (!confirm(`Delete clock "${clock.name}"?`)) return;
@@ -2856,7 +2858,29 @@ function renderClockDetail(clock) {
         editor.insertAdjacentHTML('beforeend', clockSlotRowHtml({ kind: 'MUSIC_CART' }, i));
         const rows = editor.querySelectorAll('.clock-slot-row');
         syncCartBindRow(rows[rows.length - 1]);
+        updateClockEditorTiming();
     });
+    // Remove + reorder are delegated so rows added after render work too.
+    document.getElementById('clockSlotsEditor').addEventListener('click', (e) => {
+        const rm = e.target.closest('[data-remove-clock-slot]');
+        if (rm) {
+            rm.closest('.clock-slot-row').remove();
+            updateClockEditorTiming();
+            return;
+        }
+        const mv = e.target.closest('[data-move-slot]');
+        if (mv) {
+            const row = mv.closest('.clock-slot-row');
+            if (mv.dataset.moveSlot === 'up' && row.previousElementSibling) {
+                row.previousElementSibling.before(row);
+            } else if (mv.dataset.moveSlot === 'down' && row.nextElementSibling) {
+                row.nextElementSibling.after(row);
+            }
+            updateClockEditorTiming();
+        }
+    });
+    document.getElementById('clockSlotsEditor').addEventListener('input', () => updateClockEditorTiming());
+    document.getElementById('clockSlotsEditor').addEventListener('change', () => updateClockEditorTiming());
     document.getElementById('clockSaveSlotsBtn').addEventListener('click', async () => {
         const rows = document.querySelectorAll('.clock-slot-row');
         const payload = [];
@@ -2907,9 +2931,58 @@ function renderClockDetail(clock) {
             await loadClocksTab();
         } catch (e) { toast(e.message, 'error'); }
     });
-    document.querySelectorAll('.clock-slot-row [data-remove-clock-slot]').forEach(b =>
-        b.addEventListener('click', () => b.closest('.clock-slot-row').remove()));
     document.querySelectorAll('.clock-slot-row').forEach(syncCartBindRow);
+}
+
+/** Effective seconds a slot row contributes to the hour, given its kind/length/fill. */
+function slotEffectiveSeconds(row) {
+    const kind = row.querySelector('[name="kind"]').value;
+    const lenRaw = parseInt(row.querySelector('[name="defaultLengthSeconds"]')?.value, 10);
+    // Mirrors backend defaults: 30s for commercial/spot/note/voicetrack, 180s for music/track.
+    const unit = lenRaw > 0 ? lenRaw
+        : (kind === 'MUSIC_CART' || kind === 'TRACK' ? 180 : 30);
+    const fm = row.querySelector('[name="fillMode"]')?.value || '';
+    if (fm === 'COUNT') {
+        const n = parseInt(row.querySelector('[name="fillTargetCount"]')?.value, 10) || 1;
+        return { seconds: Math.min(50, Math.max(1, n)) * unit, toEnd: false };
+    }
+    if (fm === 'TIME') {
+        const t = parseInt(row.querySelector('[name="fillTargetSeconds"]')?.value, 10) || unit;
+        return { seconds: Math.ceil(t / unit) * unit, toEnd: false };
+    }
+    if (fm === 'TO_END') return { seconds: 0, toEnd: true };
+    return { seconds: unit, toEnd: false };
+}
+
+function fmtClockOffset(totalSeconds) {
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return m + ':' + String(s).padStart(2, '0');
+}
+
+/** Renumber rows, stamp each row's estimated start offset, and update the runtime total. */
+function updateClockEditorTiming() {
+    const rows = document.querySelectorAll('#clockSlotsEditor .clock-slot-row');
+    let cursor = 0;
+    let hasToEnd = false;
+    rows.forEach((row, i) => {
+        const num = row.querySelector('.clock-slot-num');
+        if (num) num.textContent = (i + 1) + '.';
+        const off = row.querySelector('.clock-slot-offset');
+        const eff = slotEffectiveSeconds(row);
+        if (off) off.textContent = '@' + fmtClockOffset(cursor) + (eff.toEnd ? '→end' : '');
+        cursor += eff.seconds;
+        if (eff.toEnd) hasToEnd = true;
+    });
+    const total = document.getElementById('clockRuntimeTotal');
+    if (total) {
+        if (!rows.length) { total.textContent = ''; return; }
+        let text = 'Est. runtime ' + fmtClockOffset(cursor);
+        if (hasToEnd) text += ' + music fill to end of show';
+        if (cursor > 3600) text += ' — over an hour; push drops slots past the show end';
+        total.textContent = text;
+        total.style.color = cursor > 3600 ? 'var(--danger)' : '';
+    }
 }
 
 function clockSlotRowHtml(s, i) {
@@ -2920,6 +2993,7 @@ function clockSlotRowHtml(s, i) {
     return `<div class="clock-slot-row">
         <div class="clock-slot-row-main">
         <span class="clock-slot-num">${i + 1}.</span>
+        <span class="clock-slot-offset muted small" title="Estimated start within the hour (from default lengths)">@0:00</span>
         <select name="kind">
             ${['MUSIC_CART','COMMERCIAL_CART','TRACK','SPOT','VOICETRACK','NOTE'].map(x =>
                 `<option value="${x}" ${x === k ? 'selected' : ''}>${x.replace('_',' ').toLowerCase()}</option>`).join('')}
@@ -2948,6 +3022,8 @@ function clockSlotRowHtml(s, i) {
                value="${s.fillTargetCount ?? ''}" ${s.fillMode === 'COUNT' ? '' : 'disabled'} />
         <input name="fillTargetSeconds" type="number" min="30" max="3600" placeholder="fill s" style="width:64px"
                value="${s.fillTargetSeconds ?? ''}" ${s.fillMode === 'TIME' ? '' : 'disabled'} />
+        <button class="link" data-move-slot="up" title="Move up">&#8593;</button>
+        <button class="link" data-move-slot="down" title="Move down">&#8595;</button>
         <button class="link" data-remove-clock-slot>x</button>
         </div>
     </div>`;
