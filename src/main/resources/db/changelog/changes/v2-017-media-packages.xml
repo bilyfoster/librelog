@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="v2-017-media-packages" author="librelog">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+
+-- Multi-part media packages (long-form interviews/features aired in segments around
+-- breaks). A part is a *window*: either its own file (externally edited parts, cues
+-- null) or a cue_in/cue_out window into a shared single file (break points, no slicing).
+CREATE TABLE IF NOT EXISTS media_package (
+    id UUID PRIMARY KEY,
+    station_id UUID NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    series VARCHAR(120),
+    status VARCHAR(12) NOT NULL DEFAULT 'DRAFT',
+    notes TEXT,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_media_package_station ON media_package(station_id, status);
+
+CREATE TABLE IF NOT EXISTS media_package_part (
+    id UUID PRIMARY KEY,
+    package_id UUID NOT NULL,
+    sequence INTEGER NOT NULL,
+    librtime_file_id BIGINT NOT NULL,
+    cue_in_seconds INTEGER,
+    cue_out_seconds INTEGER,
+    length_seconds INTEGER NOT NULL,
+    title VARCHAR(200)
+);
+CREATE INDEX IF NOT EXISTS idx_media_package_part_pkg ON media_package_part(package_id, sequence);
+
+-- FEATURE slots reference a part by sequence; the package is assigned per day+show.
+ALTER TABLE clock_template_slot ADD COLUMN IF NOT EXISTS feature_sequence INTEGER;
+ALTER TABLE schedule_item ADD COLUMN IF NOT EXISTS feature_sequence INTEGER;
+
+CREATE TABLE IF NOT EXISTS feature_assignment (
+    schedule_day_id UUID NOT NULL,
+    show_instance_id BIGINT NOT NULL,
+    package_id UUID NOT NULL,
+    PRIMARY KEY (schedule_day_id, show_instance_id)
+);
+
+        ]]></sql>
+    </changeSet>
+</databaseChangeLog>

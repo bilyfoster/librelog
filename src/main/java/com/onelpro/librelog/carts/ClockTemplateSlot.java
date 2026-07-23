@@ -76,6 +76,10 @@ public class ClockTemplateSlot {
     @Column(name = "anchor_policy")
     private String anchorPolicy;
 
+    /** For kind=FEATURE: which part (1-based) of the day's assigned package airs here. */
+    @Column(name = "feature_sequence")
+    private Integer featureSequence;
+
     @PrePersist
     void prePersist() {
         if (id == null) id = UUID.randomUUID();

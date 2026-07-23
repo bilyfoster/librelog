@@ -58,6 +58,9 @@ public class ScheduleService {
     private final ClockGridRowRepository gridRows;
     private final SpotRepository spots;
     private final JazzHandoffService jazzHandoff;
+    private final FeatureAssignmentRepository featureAssignments;
+    private final com.onelpro.librelog.media.MediaPackageRepository mediaPackages;
+    private final com.onelpro.librelog.media.MediaPackagePartRepository mediaPackageParts;
 
     /**
      * Loaded day view. {@code lockedByOtherUser} is true when the day is currently
@@ -65,7 +68,8 @@ public class ScheduleService {
      */
     public record DayView(ScheduleDay day, List<ScheduleItem> items,
                           DayLock lock, AppUser lockHolder, boolean lockedByOtherUser,
-                          List<ScheduleDayClockSegment> clockSegments) {}
+                          List<ScheduleDayClockSegment> clockSegments,
+                          List<FeatureAssignment> featureAssignments) {}
 
     /** One row in the per-day clock schedule (station-local window → clock template). */
     public record ClockSegmentInput(int localStartMinutes, int localEndMinutes, UUID clockTemplateId) {}
@@ -88,7 +92,52 @@ public class ScheduleService {
         AppUser holder = lock != null ? users.findById(lock.getUserId()).orElse(null) : null;
         boolean lockedByOther = lock != null && !lock.getUserId().equals(requestingUserId);
         var segs = clockSegments.findByScheduleDayIdOrderByPositionAsc(day.getId());
-        return new DayView(day, itemList, lock, holder, lockedByOther, segs);
+        var features = featureAssignments.findByScheduleDayId(day.getId());
+        return new DayView(day, itemList, lock, holder, lockedByOther, segs, features);
+    }
+
+    /** Assign a media package to one show instance on this day (explicit, per-day). */
+    @Transactional
+    public DayView assignFeature(UUID dayId, long showInstanceId, UUID packageId, UUID userId) {
+        ScheduleDay day = days.findById(dayId)
+                .orElseThrow(() -> new IllegalArgumentException("Schedule day not found"));
+        if ("PUSHED".equals(day.getStatus())) {
+            throw new ConcurrencyException("Day already pushed and read-only. Reopen as admin to edit.");
+        }
+        var lock = activeLock(dayId).orElse(null);
+        if (lock == null || !lock.getUserId().equals(userId)) {
+            throw new ConcurrencyException("Acquire the day lock before assigning a feature");
+        }
+        var pkg = mediaPackages.findById(packageId)
+                .orElseThrow(() -> new IllegalArgumentException("Package not found"));
+        if (!pkg.getStationId().equals(day.getStationId())) {
+            throw new IllegalArgumentException("Package belongs to a different station");
+        }
+        if (com.onelpro.librelog.media.MediaPackage.STATUS_DRAFT.equals(pkg.getStatus())) {
+            throw new IllegalArgumentException("Package \"" + pkg.getName()
+                    + "\" is still DRAFT — mark it Ready first");
+        }
+        featureAssignments.save(FeatureAssignment.builder()
+                .scheduleDayId(dayId).showInstanceId(showInstanceId).packageId(packageId).build());
+        lock.setExpiresAt(Instant.now().plus(LOCK_TTL));
+        locks.save(lock);
+        return load(day.getStationId(), day.getDate(), userId);
+    }
+
+    @Transactional
+    public DayView unassignFeature(UUID dayId, long showInstanceId, UUID userId) {
+        ScheduleDay day = days.findById(dayId)
+                .orElseThrow(() -> new IllegalArgumentException("Schedule day not found"));
+        if ("PUSHED".equals(day.getStatus())) {
+            throw new ConcurrencyException("Day already pushed and read-only. Reopen as admin to edit.");
+        }
+        var lock = activeLock(dayId).orElse(null);
+        if (lock == null || !lock.getUserId().equals(userId)) {
+            throw new ConcurrencyException("Acquire the day lock before changing features");
+        }
+        featureAssignments.findByScheduleDayIdAndShowInstanceId(dayId, showInstanceId)
+                .ifPresent(featureAssignments::delete);
+        return load(day.getStationId(), day.getDate(), userId);
     }
 
     @Transactional
@@ -307,7 +356,7 @@ public class ScheduleService {
             // then write the planned rows. See ClockSegmentPlanner.
             ClockSegmentPlanner.Plan plan = ClockSegmentPlanner.plan(
                     e.getValue(), instanceStart, instanceEnd,
-                    plannerSource(resolver, day, currentShowId));
+                    plannerSource(resolver, day, currentShowId, instanceId));
             skipReasons.addAll(plan.notes());
             rowsSkipped += plan.skipped();
             rowsResolved += plan.resolved();
@@ -317,7 +366,7 @@ public class ScheduleService {
                 try {
                     client.scheduleFileInInstance(instanceId, row.unit().fileId(), position++,
                             row.startsAt(), row.endsAt(), row.cueOutSeconds(),
-                            row.segueOffsetSeconds(), row.duckDb());
+                            row.segueOffsetSeconds(), row.duckDb(), row.unit().cueInSeconds());
                     rowsWritten++;
                 } catch (Exception ex) {
                     throw new IllegalStateException("Push to LibreTime failed for show instance "
@@ -351,6 +400,15 @@ public class ScheduleService {
                 // An approved spot that lands in a push is now trafficked (on air).
                 markSpotTrafficked(row.unit().spotId());
             }
+            // A READY package whose show just pushed is now on the air schedule.
+            featureAssignments.findByScheduleDayIdAndShowInstanceId(dayId, instanceId)
+                    .flatMap(fa -> mediaPackages.findById(fa.getPackageId()))
+                    .ifPresent(p -> {
+                        if (com.onelpro.librelog.media.MediaPackage.STATUS_READY.equals(p.getStatus())) {
+                            p.setStatus(com.onelpro.librelog.media.MediaPackage.STATUS_AIRED);
+                            mediaPackages.save(p);
+                        }
+                    });
             instancesTouched++;
         }
 
@@ -724,11 +782,15 @@ public class ScheduleService {
      * (music, sweepers); spots and fixed non-music are never cut.
      */
     private ClockSegmentPlanner.UnitSource plannerSource(CartService.Resolver resolver,
-                                                         ScheduleDay day, Long currentShowId) {
+                                                         ScheduleDay day, Long currentShowId,
+                                                         long showInstanceId) {
         Cart padCart = resolvePadCart(day.getStationId());
         return new ClockSegmentPlanner.UnitSource() {
             @Override
             public ClockSegmentPlanner.Resolved resolveItem(ScheduleItem it, Instant at) {
+                if ("FEATURE".equals(it.getKind())) {
+                    return resolveFeaturePart(day, showInstanceId, it);
+                }
                 CartPickResult pick = pickCartMemberForItem(it, day, resolver, at, currentShowId);
                 if (pick.member() == null) {
                     return ClockSegmentPlanner.Resolved.fail(
@@ -765,6 +827,36 @@ public class ScheduleService {
                         "Pad — " + padCart.getName(), null, true));
             }
         };
+    }
+
+    /**
+     * Resolve a FEATURE slot to the assigned package's part window: the file plus a
+     * cue_in/cue_out window (single-file break points) or the whole part file.
+     */
+    private ClockSegmentPlanner.Resolved resolveFeaturePart(ScheduleDay day, long showInstanceId,
+                                                            ScheduleItem it) {
+        int seq = it.getFeatureSequence() == null ? 1 : it.getFeatureSequence();
+        var fa = featureAssignments
+                .findByScheduleDayIdAndShowInstanceId(day.getId(), showInstanceId).orElse(null);
+        if (fa == null) {
+            return ClockSegmentPlanner.Resolved.fail("Feature part " + seq
+                    + ": no package assigned to this show (Day Builder → Assign feature)");
+        }
+        var parts = mediaPackageParts.findByPackageIdOrderBySequenceAsc(fa.getPackageId());
+        var part = parts.stream().filter(p -> p.getSequence() == seq).findFirst().orElse(null);
+        if (part == null) {
+            return ClockSegmentPlanner.Resolved.fail("Feature part " + seq
+                    + " not found in the assigned package (" + parts.size() + " part(s))");
+        }
+        int len = part.getLengthSeconds() > 0 ? part.getLengthSeconds() : 60;
+        String label = part.getTitle() != null ? part.getTitle()
+                : mediaPackages.findById(fa.getPackageId())
+                        .map(p -> p.getName() + " — part " + seq)
+                        .orElse("Feature part " + seq);
+        // Features are never trimmable — the never-cut rule.
+        return ClockSegmentPlanner.Resolved.of(new ClockSegmentPlanner.Unit(
+                part.getLibrtimeFileId(), len, null, null, null, label, null, false,
+                part.getCueInSeconds()));
     }
 
     /** The station's configured pad cart, falling back to its first IMAGING cart. */
@@ -833,6 +925,15 @@ public class ScheduleService {
                         .fillMode(toEnd ? "TO_END" : null)
                         .label(s.getLabel() != null ? s.getLabel()
                                 : (toEnd ? ("Fill " + cart.getName() + " to end of show") : cart.getName()))
+                        .position(position).build();
+            }
+            case "FEATURE" -> {
+                if (s.getFeatureSequence() == null) return null;
+                return ScheduleItem.builder()
+                        .scheduleDayId(dayId).showInstanceId(instanceId).slotIndex(slotIndex)
+                        .kind("FEATURE").featureSequence(s.getFeatureSequence())
+                        .lengthSeconds(s.getDefaultLengthSeconds() != null ? s.getDefaultLengthSeconds() : 600)
+                        .label(s.getLabel() != null ? s.getLabel() : ("Feature part " + s.getFeatureSequence()))
                         .position(position).build();
             }
             case "VOICETRACK" -> {
@@ -919,7 +1020,7 @@ public class ScheduleService {
             if (instanceStart == null) instanceStart = Instant.now(); // indicative fallback
 
             var plan = ClockSegmentPlanner.plan(e.getValue(), instanceStart, instanceEnd,
-                    plannerSource(resolver, day, showId));
+                    plannerSource(resolver, day, showId, e.getKey()));
             notes.addAll(plan.notes());
             for (var row : plan.rows()) {
                 String label = row.unit().label() != null ? row.unit().label()

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
 <meta name="theme-color" content="#0f172a" />
 <title>LibreLog</title>
-<link rel="stylesheet" href="/app.css?v=20260722i" />
+<link rel="stylesheet" href="/app.css?v=20260722j" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.css" crossorigin="anonymous" />
 <script>
     // Apply the persisted theme as early as possible to avoid a flash.
@@ -285,6 +285,22 @@
                 <thead><tr><th>Name</th><th>Artist / Title</th><th>Length</th><th>Status</th><th>Error</th><th>Created</th></tr></thead>
                 <tbody id="mediaUploadsBody"></tbody>
             </table>
+
+            <div class="form-card" id="mediaPackagesCard" style="max-width:none;margin-top:18px">
+                <div class="row" style="flex-wrap:wrap;gap:8px;align-items:center">
+                    <h3 style="margin:0">Feature packages <span id="mediaPackagesCount" class="muted small"></span></h3>
+                    <span class="grow"></span>
+                    <button type="button" id="packageNewBtn">New package</button>
+                </div>
+                <p class="muted small" style="margin:10px 0 0 0">
+                    A package is a long-form interview/feature aired in parts around breaks. Upload
+                    <strong>one file</strong> and enter <strong>break points</strong> (no slicing — parts play as
+                    cue windows into the same file), or list separately edited part files. Mark it
+                    <strong>Ready</strong>, then assign it to a show in Day Builder; FEATURE slots in the clock
+                    pick up part 1/2/3 automatically and the hour back-times around their real lengths.
+                </p>
+                <div id="mediaPackagesList" class="muted" style="margin-top:12px">Loading…</div>
+            </div>
         </section>
 
         <!-- Customers -->
@@ -409,6 +425,6 @@
 <div id="toast" class="toast hidden"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.js.iife.min.js" crossorigin="anonymous"></script>
-<script src="/app.js?v=20260722i"></script>
+<script src="/app.js?v=20260722j"></script>
 </body>
 </html>

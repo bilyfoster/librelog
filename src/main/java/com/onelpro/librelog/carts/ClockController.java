@@ -21,7 +21,7 @@ public class ClockController {
                           String cartId, String cartCategory, Long librtimeFileId, String spotId,
                           String label, Integer defaultLengthSeconds,
                           String fillMode, Integer fillTargetSeconds, Integer fillTargetCount,
-                          Integer anchorOffsetSeconds, String anchorPolicy) {
+                          Integer anchorOffsetSeconds, String anchorPolicy, Integer featureSequence) {
         static SlotDto from(ClockTemplateSlot s) {
             return new SlotDto(s.getId() == null ? null : s.getId().toString(),
                     s.getPosition(), s.getKind(),
@@ -31,7 +31,7 @@ public class ClockController {
                     s.getSpotId() == null ? null : s.getSpotId().toString(),
                     s.getLabel(), s.getDefaultLengthSeconds(),
                     s.getFillMode(), s.getFillTargetSeconds(), s.getFillTargetCount(),
-                    s.getAnchorOffsetSeconds(), s.getAnchorPolicy());
+                    s.getAnchorOffsetSeconds(), s.getAnchorPolicy(), s.getFeatureSequence());
         }
     }
 
@@ -40,7 +40,7 @@ public class ClockController {
     public record SlotRequest(String kind, String cartId, String cartCategory, Long librtimeFileId, String spotId,
                               String label, Integer defaultLengthSeconds,
                               String fillMode, Integer fillTargetSeconds, Integer fillTargetCount,
-                              Integer anchorOffsetSeconds, String anchorPolicy) {
+                              Integer anchorOffsetSeconds, String anchorPolicy, Integer featureSequence) {
         ClockTemplateSlot toEntity() {
             return ClockTemplateSlot.builder()
                     .kind(kind)
@@ -55,6 +55,7 @@ public class ClockController {
                     .fillTargetCount(fillTargetCount)
                     .anchorOffsetSeconds(anchorOffsetSeconds)
                     .anchorPolicy(trimOrNull(anchorPolicy))
+                    .featureSequence(featureSequence)
                     .build();
         }
 

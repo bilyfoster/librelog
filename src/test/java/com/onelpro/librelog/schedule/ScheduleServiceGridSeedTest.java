@@ -55,7 +55,10 @@ class ScheduleServiceGridSeedTest {
                 clockSegments,
                 gridRows,
                 mock(SpotRepository.class),
-                new JazzHandoffService());
+                new JazzHandoffService(),
+                mock(FeatureAssignmentRepository.class),
+                mock(com.onelpro.librelog.media.MediaPackageRepository.class),
+                mock(com.onelpro.librelog.media.MediaPackagePartRepository.class));
         when(days.save(any())).thenAnswer(inv -> {
             ScheduleDay d = inv.getArgument(0);
             if (d.getId() == null) d.setId(UUID.randomUUID());

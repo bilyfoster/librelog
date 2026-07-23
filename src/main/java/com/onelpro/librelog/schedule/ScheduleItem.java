@@ -93,6 +93,10 @@ public class ScheduleItem {
     @Column(name = "fill_group")
     private UUID fillGroup;
 
+    /** For kind=FEATURE: which part (1-based) of the day's assigned package airs here. */
+    @Column(name = "feature_sequence")
+    private Integer featureSequence;
+
     private String label;
 
     @PrePersist

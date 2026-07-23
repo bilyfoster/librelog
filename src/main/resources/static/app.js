@@ -947,6 +947,7 @@ async function initDayBuilder() {
     }
     const dateInput = document.getElementById('dayBuilderDate');
     if (!dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
+    if (!state.mediaPackages?.length) await loadMediaPackages(); // names for 🎙 badges
     await loadDay();
 }
 
@@ -1068,19 +1069,37 @@ function renderDay() {
             ? `<div class="empty-state"><strong>No LibreTime show instances</strong>Schedule shows in LibreTime for this date, or check the LibreTime connection.</div>`
             : '<div class="empty-state">Pick a station first.</div>';
     } else {
-        document.getElementById('dayBuilderShows').innerHTML = state.showInstances.map(s => `
+        const featureFor = (instanceId) => (d.featureAssignments || []).find(f => f.showInstanceId === instanceId);
+        const pkgName = (pid) => (state.mediaPackages || []).find(p => p.id === pid)?.name || 'package';
+        document.getElementById('dayBuilderShows').innerHTML = state.showInstances.map(s => {
+            const fa = featureFor(s.id);
+            return `
             <div class="show-block" data-show-id="${s.id}">
                 <div class="show-name">${escapeHtml(s.showName)}</div>
                 <div class="show-time">${formatTime(s.startsAt)} &rarr; ${formatTime(s.endsAt)}</div>
                 <div class="show-actions">
                     <button class="link" data-add-slot="${s.id}">+ Add empty slot</button>
                     <button class="link" data-apply-clock="${s.id}">Apply clock</button>
+                    ${fa
+                        ? `<span class="muted small">🎙 ${escapeHtml(pkgName(fa.packageId))}</span> <button class="link" data-unassign-feature="${s.id}" title="Remove the assigned feature package">✕</button>`
+                        : `<button class="link" data-assign-feature="${s.id}" title="Assign a multi-part feature package to this show">🎙 Feature…</button>`}
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
         document.querySelectorAll('[data-add-slot]').forEach(b =>
             b.addEventListener('click', () => addPlaceholderSlot(parseInt(b.dataset.addSlot))));
         document.querySelectorAll('[data-apply-clock]').forEach(b =>
             b.addEventListener('click', () => applyClockToShow(parseInt(b.dataset.applyClock))));
+        document.querySelectorAll('[data-assign-feature]').forEach(b =>
+            b.addEventListener('click', () => assignFeatureToShow(parseInt(b.dataset.assignFeature))));
+        document.querySelectorAll('[data-unassign-feature]').forEach(b =>
+            b.addEventListener('click', async () => {
+                try {
+                    state.day = await API.del(`/api/days/${state.day.id}/instances/${b.dataset.unassignFeature}/feature`);
+                    renderDay();
+                    toast('Feature unassigned', 'ok');
+                } catch (e) { toast(e.message, 'error'); }
+            }));
     }
 
     // Slots, grouped by show instance
@@ -1374,6 +1393,33 @@ function describePolicy(p) {
     if (p.sameSponsor) parts.push('sponsor ' + p.sameSponsor + 'm');
     if (p.sameProduct) parts.push('product ' + p.sameProduct + 'm');
     return parts.length ? parts.join(', ') : 'none';
+}
+
+async function assignFeatureToShow(showInstanceId) {
+    if (!state.day || !state.day.lock || !state.day.lock.self) {
+        toast('Acquire the day lock first ("Edit this day").', 'error');
+        return;
+    }
+    await loadMediaPackages();
+    const ready = (state.mediaPackages || []).filter(p => p.status !== 'DRAFT');
+    if (!ready.length) {
+        toast('No Ready packages — create one under Audio Uploads → Feature packages.', 'info');
+        return;
+    }
+    const choice = await pickFromList('Assign a feature package', ready.map(p => ({
+        id: p.id,
+        title: p.name + (p.series ? ' — ' + p.series : ''),
+        meta: p.parts.length + ' part(s) · ' + p.parts.map(x => fmtAnchor(x.lengthSeconds)).join(' + ') + ' · ' + p.status,
+        _data: p,
+    })));
+    if (!choice) return;
+    try {
+        state.day = await API.put(
+            `/api/days/${state.day.id}/instances/${showInstanceId}/feature`,
+            { packageId: choice._data.id });
+        toast('Feature assigned — its parts fill the FEATURE slots at push.', 'ok');
+        renderDay();
+    } catch (e) { toast(e.message, 'error'); }
 }
 
 async function applyClockToShow(showInstanceId) {
@@ -1670,6 +1716,7 @@ async function saveDay() {
                 anchorOffsetSeconds: it.anchorOffsetSeconds ?? null,
                 anchorPolicy: it.anchorPolicy ?? null,
                 fillGroup: it.fillGroup ?? null,
+                featureSequence: it.featureSequence ?? null,
             })),
         });
         state.day = r;
@@ -1977,6 +2024,140 @@ async function loadMediaUploads() {
     if (!state.currentStationId) return;
     state.mediaUploads = await API.get('/api/media/uploads?stationId=' + state.currentStationId);
     renderMediaUploads();
+    await loadMediaPackages();
+    renderMediaPackages();
+}
+
+// ---------- Feature packages (multi-part interviews) ----------
+async function loadMediaPackages() {
+    if (!state.currentStationId) { state.mediaPackages = []; return; }
+    try { state.mediaPackages = await API.get(`/api/stations/${state.currentStationId}/packages`); }
+    catch (e) { state.mediaPackages = []; toast('Packages load failed: ' + e.message, 'error'); }
+}
+
+function renderMediaPackages() {
+    const el = document.getElementById('mediaPackagesList');
+    const count = document.getElementById('mediaPackagesCount');
+    if (!el) return;
+    const list = state.mediaPackages || [];
+    if (count) count.textContent = list.length ? '(' + list.length + ')' : '';
+    if (!list.length) {
+        el.innerHTML = '<div class="muted">No packages yet — click <strong>New package</strong>, then add its parts (one file + break points, or separate part files).</div>';
+        return;
+    }
+    el.innerHTML = list.map(p => `
+        <div class="row" style="flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px" data-pkg-id="${p.id}">
+            <strong>${escapeHtml(p.name)}</strong>
+            ${p.series ? `<span class="muted small">${escapeHtml(p.series)}</span>` : ''}
+            <span class="badge ${p.status === 'READY' ? 'status-approved' : (p.status === 'AIRED' ? 'status-trafficked' : 'status-draft')}">${escapeHtml(p.status)}</span>
+            <span class="muted small">${p.parts.length} part${p.parts.length === 1 ? '' : 's'}${p.parts.length ? ' · ' + p.parts.map(x => fmtAnchor(x.lengthSeconds)).join(' + ') : ''}</span>
+            <span class="grow"></span>
+            <button class="link" data-pkg-parts="${p.id}">Edit parts</button>
+            ${p.status === 'DRAFT'
+                ? `<button class="link" data-pkg-ready="${p.id}">Mark Ready</button>`
+                : (p.status === 'READY' ? `<button class="link" data-pkg-draft="${p.id}">Back to Draft</button>` : '')}
+            <button class="link danger" data-pkg-delete="${p.id}">Delete</button>
+        </div>`).join('');
+    el.querySelectorAll('[data-pkg-parts]').forEach(b =>
+        b.addEventListener('click', () => packagePartsModal(state.mediaPackages.find(p => p.id === b.dataset.pkgParts))));
+    el.querySelectorAll('[data-pkg-ready]').forEach(b =>
+        b.addEventListener('click', () => setPackageStatus(b.dataset.pkgReady, 'READY')));
+    el.querySelectorAll('[data-pkg-draft]').forEach(b =>
+        b.addEventListener('click', () => setPackageStatus(b.dataset.pkgDraft, 'DRAFT')));
+    el.querySelectorAll('[data-pkg-delete]').forEach(b =>
+        b.addEventListener('click', async () => {
+            const p = state.mediaPackages.find(x => x.id === b.dataset.pkgDelete);
+            if (!confirm(`Delete package "${p?.name}"?`)) return;
+            try { await API.del('/api/packages/' + b.dataset.pkgDelete); await loadMediaPackages(); renderMediaPackages(); }
+            catch (e) { toast(e.message, 'error'); }
+        }));
+}
+
+async function setPackageStatus(id, status) {
+    const p = (state.mediaPackages || []).find(x => x.id === id);
+    if (!p) return;
+    try {
+        await API.put('/api/packages/' + id, { name: p.name, series: p.series, notes: p.notes, status });
+        await loadMediaPackages(); renderMediaPackages();
+        toast(status === 'READY' ? 'Package is Ready — assign it in Day Builder' : 'Back to Draft', 'ok');
+    } catch (e) { toast(e.message, 'error'); }
+}
+
+function packageNewModal() {
+    openModal('New feature package', `
+        <label>Name <input name="name" required placeholder="e.g. Mayor interview 7/25" /></label>
+        <label>Series (optional) <input name="series" placeholder="e.g. City Hall Weekly" /></label>
+        <label>Notes <textarea name="notes"></textarea></label>
+    `, async (form) => {
+        const body = formToJson(form);
+        await API.post(`/api/stations/${state.currentStationId}/packages`, body);
+        toast('Package created — now add its parts', 'ok');
+        await loadMediaPackages(); renderMediaPackages();
+    });
+}
+
+/**
+ * Parts editor. Break-points mode: one file + total length + break points → cue
+ * windows (no slicing). Files mode: one line per pre-cut part: "fileId mm:ss title".
+ */
+function packagePartsModal(pkg) {
+    if (!pkg) return;
+    const cueMode = !pkg.parts.length || pkg.parts.every(x => x.cueInSeconds != null);
+    const sharedFile = cueMode && pkg.parts.length ? pkg.parts[0].librtimeFileId : '';
+    const totalLen = cueMode && pkg.parts.length ? pkg.parts[pkg.parts.length - 1].cueOutSeconds : '';
+    const breaks = cueMode && pkg.parts.length > 1
+        ? pkg.parts.slice(0, -1).map(x => fmtAnchor(x.cueOutSeconds)).join(', ') : '';
+    const fileLines = !cueMode
+        ? pkg.parts.map(x => `${x.librtimeFileId} ${fmtAnchor(x.lengthSeconds)}${x.title ? ' ' + x.title : ''}`).join('\n') : '';
+    openModal(`Parts — ${pkg.name}`, `
+        <label>Mode
+            <select name="mode">
+                <option value="breaks" ${cueMode ? 'selected' : ''}>One file + break points (no slicing)</option>
+                <option value="files" ${!cueMode ? 'selected' : ''}>Separate part files</option>
+            </select>
+        </label>
+        <div id="pkgBreaksMode" style="display:${cueMode ? '' : 'none'}">
+            <label>LibreTime file id <input name="fileId" type="number" value="${escapeAttr(String(sharedFile || ''))}" placeholder="find it under LibreTime Library" /></label>
+            <label>Total length (mm:ss) <input name="totalLen" value="${totalLen !== '' ? escapeAttr(fmtAnchor(totalLen)) : ''}" placeholder="33:00" /></label>
+            <label>Break points (mm:ss, comma-separated) <input name="breaks" value="${escapeAttr(breaks)}" placeholder="12:00, 23:00" /></label>
+            <p class="muted small">Two break points make three parts: 0→12:00, 12:00→23:00, 23:00→end. Parts air as cue windows into the same file.</p>
+        </div>
+        <div id="pkgFilesMode" style="display:${cueMode ? 'none' : ''}">
+            <label>One part per line: <code>fileId length(mm:ss) title?</code>
+                <textarea name="fileLines" rows="4" placeholder="1234 12:00 The Hook\n1235 11:00 Deep Dive\n1236 10:00 Wrap-up">${escapeHtml(fileLines)}</textarea>
+            </label>
+        </div>
+    `, async (form) => {
+        const fd = new FormData(form);
+        let parts = [];
+        if (fd.get('mode') === 'breaks') {
+            const fileId = parseInt(fd.get('fileId'), 10);
+            const total = parseAnchor(fd.get('totalLen'));
+            if (!fileId || total == null) throw new Error('File id and total length are required');
+            const cuts = String(fd.get('breaks') || '').split(',').map(s => parseAnchor(s)).filter(x => x != null);
+            const points = [0, ...cuts, total];
+            for (let i = 0; i < points.length - 1; i++) {
+                if (points[i + 1] <= points[i]) throw new Error('Break points must increase and stay under the total length');
+                parts.push({ librtimeFileId: fileId, cueInSeconds: points[i], cueOutSeconds: points[i + 1], title: 'Part ' + (i + 1) });
+            }
+        } else {
+            for (const line of String(fd.get('fileLines') || '').split('\n')) {
+                const t = line.trim();
+                if (!t) continue;
+                const m = t.match(/^(\d+)\s+(\d{1,3}:[0-5]\d)\s*(.*)$/);
+                if (!m) throw new Error('Bad part line: "' + t + '" (expected: fileId mm:ss title?)');
+                parts.push({ librtimeFileId: parseInt(m[1], 10), lengthSeconds: parseAnchor(m[2]), title: m[3] || null });
+            }
+            if (!parts.length) throw new Error('Add at least one part line');
+        }
+        await API.put('/api/packages/' + pkg.id + '/parts', parts);
+        toast('Parts saved', 'ok');
+        await loadMediaPackages(); renderMediaPackages();
+    });
+    document.querySelector('#modalBody [name="mode"]').addEventListener('change', (e) => {
+        document.getElementById('pkgBreaksMode').style.display = e.target.value === 'breaks' ? '' : 'none';
+        document.getElementById('pkgFilesMode').style.display = e.target.value === 'files' ? '' : 'none';
+    });
 }
 
 function renderMediaUploads() {
@@ -2916,8 +3097,10 @@ function renderClockDetail(clock) {
             } else if (st === 'AD_PLACEHOLDER') {
                 kind = 'COMMERCIAL_CART'; // no binding -> becomes an ad placeholder when applied
             } else {
-                kind = st; // TRACK | SPOT | VOICETRACK | NOTE
+                kind = st; // TRACK | SPOT | VOICETRACK | FEATURE | NOTE
             }
+            const featSeqRaw = r.querySelector('[name="featureSequence"]')?.value;
+            const featureSequence = kind === 'FEATURE' ? (parseInt(featSeqRaw, 10) || 1) : null;
             const isCartish = st === 'cart' || st.startsWith('cat:');
             const fillMode = isCartish ? (r.querySelector('[name="fillMode"]')?.value || null) : null;
             const fillCount = r.querySelector('[name="fillTargetCount"]')?.value;
@@ -2944,6 +3127,7 @@ function renderClockDetail(clock) {
                 anchorPolicy: anchorSec != null
                     ? (r.querySelector('[name="anchorHard"]')?.checked ? 'HARD' : 'SOFT')
                     : null,
+                featureSequence,
             });
         }
         try {
@@ -2968,6 +3152,9 @@ function slotEffectiveSeconds(row) {
         musicish = !cart || cart.kind !== 'COMMERCIAL';
     } else {
         musicish = st === 'TRACK';
+    }
+    if (st === 'FEATURE') {
+        return { seconds: lenRaw > 0 ? lenRaw : 600, toEnd: false };
     }
     const unit = lenRaw > 0 ? lenRaw : (musicish ? 180 : 30);
     const fm = row.querySelector('[name="fillMode"]')?.value || '';
@@ -3049,7 +3236,7 @@ function parseAnchor(v) {
  */
 function clockSlotTypeOf(s) {
     const k = s.kind || 'MUSIC_CART';
-    if (k === 'TRACK' || k === 'SPOT' || k === 'VOICETRACK' || k === 'NOTE') return k;
+    if (k === 'TRACK' || k === 'SPOT' || k === 'VOICETRACK' || k === 'NOTE' || k === 'FEATURE') return k;
     if (s.cartCategory) return 'cat:' + s.cartCategory;
     if (s.cartId) return 'cart';
     return k === 'COMMERCIAL_CART' ? 'AD_PLACEHOLDER' : 'cart';
@@ -3084,6 +3271,7 @@ function clockSlotTypeOptionsHtml(selected) {
             ${opt('TRACK', 'Fixed track (file id)')}
             ${opt('SPOT', 'Specific spot (uuid)')}
             ${opt('VOICETRACK', 'Voice track (record per day)')}
+            ${opt('FEATURE', 'Feature part (interview segment)')}
             ${opt('AD_PLACEHOLDER', 'Ad slot placeholder')}
             ${opt('NOTE', 'Note / filler')}
         </optgroup>`;
@@ -3106,6 +3294,8 @@ function clockSlotRowHtml(s, i) {
         </select>
         <input name="librtimeFileId" type="number" placeholder="file id" value="${s.librtimeFileId ?? ''}" ${st === 'TRACK' ? '' : 'disabled'} style="display:${st === 'TRACK' ? '' : 'none'}" />
         <input name="spotId" placeholder="spot uuid" value="${s.spotId ?? ''}" ${st === 'SPOT' ? '' : 'disabled'} style="display:${st === 'SPOT' ? '' : 'none'}" />
+        <input name="featureSequence" type="number" min="1" max="20" placeholder="part #" style="width:64px;display:${st === 'FEATURE' ? '' : 'none'}"
+               value="${s.featureSequence ?? ''}" ${st === 'FEATURE' ? '' : 'disabled'} title="Which part of the assigned package airs here (1, 2, 3…)" />
         <input name="label" placeholder="label" value="${escapeAttr(s.label || '')}" />
         <input name="defaultLengthSeconds" type="number" placeholder="len s" value="${s.defaultLengthSeconds ?? ''}" />
         <select name="fillMode" title="Single unit, or fill a block" ${isCartish ? '' : 'disabled'}>
@@ -3146,6 +3336,7 @@ document.addEventListener('change', (e) => {
         show('[name="cartId"]', st === 'cart');
         show('[name="librtimeFileId"]', st === 'TRACK');
         show('[name="spotId"]', st === 'SPOT');
+        show('[name="featureSequence"]', st === 'FEATURE');
         const isCartish = st === 'cart' || st.startsWith('cat:');
         const fm = row.querySelector('[name="fillMode"]');
         if (fm) {
@@ -3514,6 +3705,8 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dayBuilderPullPlayback').addEventListener('click', pullPlayback);
     const previewBtn = document.getElementById('dayBuilderPreviewBtn');
     if (previewBtn) previewBtn.addEventListener('click', previewPush);
+    // Feature packages
+    document.getElementById('packageNewBtn')?.addEventListener('click', packageNewModal);
     // Weekly clock grid
     document.getElementById('clockGridAddBtn')?.addEventListener('click', () => {
         if (!state.clocks.length) { toast('Create a clock first — the grid maps hours to clocks.', 'info'); return; }

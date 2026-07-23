@@ -166,6 +166,43 @@ class ClockSegmentPlannerTest {
     }
 
     @Test
+    void featurePartsAirAsCueWindowsOfOneFile() {
+        // Interview parts 1..2 as cue windows into file 777; back-timing pads the tail.
+        var featureSource = new ClockSegmentPlanner.UnitSource() {
+            @Override
+            public ClockSegmentPlanner.Resolved resolveItem(ScheduleItem it, Instant at) {
+                int seq = it.getFeatureSequence();
+                int[] cueIn = {0, 720};
+                int[] len = {720, 660};
+                return ClockSegmentPlanner.Resolved.of(new ClockSegmentPlanner.Unit(
+                        777L, len[seq - 1], null, null, null, "Part " + seq, null, false,
+                        cueIn[seq - 1]));
+            }
+            @Override
+            public ClockSegmentPlanner.Resolved resolvePad(Instant at) {
+                return ClockSegmentPlanner.Resolved.of(new ClockSegmentPlanner.Unit(
+                        900L, 30, null, null, null, "Sweep", null, true));
+            }
+        };
+        ScheduleItem p1 = ScheduleItem.builder().id(UUID.randomUUID()).scheduleDayId(UUID.randomUUID())
+                .kind("FEATURE").featureSequence(1).build();
+        ScheduleItem p2 = ScheduleItem.builder().id(UUID.randomUUID()).scheduleDayId(UUID.randomUUID())
+                .kind("FEATURE").featureSequence(2).build();
+        var plan = ClockSegmentPlanner.plan(List.of(p1, p2),
+                start, start.plusSeconds(1440), featureSource);
+        var rows = plan.rows();
+        // Two feature windows + 60s of pads to reach the instance end.
+        assertThat(rows.get(0).unit().fileId()).isEqualTo(777L);
+        assertThat(rows.get(0).unit().cueInSeconds()).isEqualTo(0);
+        assertThat(rows.get(0).cueOutSeconds()).isEqualTo(720);
+        assertThat(rows.get(1).unit().cueInSeconds()).isEqualTo(720);
+        assertThat(rows.get(1).startsAt()).isEqualTo(start.plusSeconds(720));
+        long total = rows.stream().mapToLong(ClockSegmentPlanner.PlannedRow::cueOutSeconds).sum();
+        assertThat(total).isEqualTo(1440); // padded exactly to the end
+        assertThat(rows.get(rows.size() - 1).isPad()).isTrue();
+    }
+
+    @Test
     void deadAirGapShiftsFollowingRowsWhenNoPadExists() {
         var padlessSource = new ClockSegmentPlanner.UnitSource() {
             @Override

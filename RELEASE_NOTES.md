@@ -1,5 +1,41 @@
 # Release notes
 
+## v2.8.0 — multi-part feature packages (interviews as break points, no slicing)
+
+Long-form interviews air in parts around breaks — from **one uploaded file with break
+points** (parts play as `cue_in`/`cue_out` windows into the same file) or from
+separately edited part files. One DB migration (auto-applied), additive APIs.
+
+### What's new
+
+- **Feature packages** (Audio Uploads → Feature packages): create a package, add parts
+  either as *one file + break points* ("12:00, 23:00" → three cue windows) or as
+  *separate part files*. DRAFT → **READY** (assignable) → AIRED (set by push).
+- **FEATURE clock slots**: "Feature part (interview segment)" in the slot picker with a
+  part number. Build a Specialty Interview Hour once: teaser, part 1, break, part 2,
+  break, part 3, music, pad.
+- **Per-day assignment**: each show block in Day Builder gets a 🎙 button — assign a
+  READY package to that show; unassigned FEATURE slots are flagged at preview/push and
+  skipped with a clear note. Push flips the package to AIRED.
+- **Back-timing absorbs part-length variance** (Phase A): if part 2 runs 11:23 instead
+  of 11:00, the end-of-hour music/pad shrinks automatically — the top of the hour still
+  lands exactly.
+- Features are **never trimmed** (the never-cut rule).
+
+### Schema / API
+
+- Migration `v2-017`: `media_package`, `media_package_part` (cue windows), 
+  `feature_assignment`, `feature_sequence` on clock slots + schedule items.
+- New endpoints: `GET/POST /api/stations/{id}/packages`, `PUT/DELETE /api/packages/{id}`,
+  `PUT /api/packages/{id}/parts`, `PUT/DELETE /api/days/{dayId}/instances/{iid}/feature`.
+  `DayDto` gains `featureAssignments`.
+- `scheduleFileInInstance` now supports non-zero `cue_in` (validate on the first real
+  push that the Jazz build honors API-set cue_in — the multi-file mode is the fallback).
+
+### Tests
+
+- Planner: feature parts as cue windows of one file + pad-to-end (77 tests total).
+
 ## v2.7.0 — hot-clock timing engine: anchors, back-timing, avail caps
 
 Push is now **plan-then-write** per show instance, run by a new segment planner

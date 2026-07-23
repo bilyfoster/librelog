@@ -191,14 +191,28 @@ public class LibreTimeClient {
                                            Instant startsAt, Instant endsAt,
                                            int lengthSeconds,
                                            Integer segueOffsetSeconds, java.math.BigDecimal duckDb) {
+        return scheduleFileInInstance(instanceId, fileId, position, startsAt, endsAt,
+                lengthSeconds, segueOffsetSeconds, duckDb, null);
+    }
+
+    /**
+     * Overload with a cue-in window: plays {@code [cueInSeconds, cueInSeconds+lengthSeconds)}
+     * of the file. Used for multi-part features aired as break points in a single file.
+     */
+    public JsonNode scheduleFileInInstance(long instanceId, long fileId, int position,
+                                           Instant startsAt, Instant endsAt,
+                                           int lengthSeconds,
+                                           Integer segueOffsetSeconds, java.math.BigDecimal duckDb,
+                                           Integer cueInSeconds) {
+        int cueIn = cueInSeconds == null ? 0 : Math.max(0, cueInSeconds);
         java.util.LinkedHashMap<String, Object> body = new java.util.LinkedHashMap<>();
         body.put("instance", instanceId);
         body.put("file", fileId);
         body.put("position", position);
         body.put("starts_at", startsAt.toString());
         body.put("ends_at", endsAt.toString());
-        body.put("cue_in", "00:00:00");
-        body.put("cue_out", formatHms(Math.max(0, lengthSeconds)));
+        body.put("cue_in", formatHms(cueIn));
+        body.put("cue_out", formatHms(cueIn + Math.max(0, lengthSeconds)));
         body.put("fade_in", "00:00:00.500");
         body.put("fade_out", segueOffsetSeconds != null && segueOffsetSeconds > 0
                 ? formatHms(segueOffsetSeconds) : "00:00:00.500");

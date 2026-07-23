@@ -28,7 +28,8 @@ public class ScheduleController {
                          String cartId, String cartCategory, String resolvedMemberId, String label,
                          Integer segueOffsetSeconds, java.math.BigDecimal duckDb,
                          String fillMode, Integer fillTargetSeconds, Integer fillTargetCount,
-                         Integer anchorOffsetSeconds, String anchorPolicy, String fillGroup) {
+                         Integer anchorOffsetSeconds, String anchorPolicy, String fillGroup,
+                         Integer featureSequence) {
         static ItemDto from(ScheduleItem i) {
             return new ItemDto(i.getId().toString(), i.getShowInstanceId(), i.getSlotIndex(),
                     i.getKind(), i.getSpotId() == null ? null : i.getSpotId().toString(),
@@ -39,7 +40,8 @@ public class ScheduleController {
                     i.getLabel(), i.getSegueOffsetSeconds(), i.getDuckDb(),
                     i.getFillMode(), i.getFillTargetSeconds(), i.getFillTargetCount(),
                     i.getAnchorOffsetSeconds(), i.getAnchorPolicy(),
-                    i.getFillGroup() == null ? null : i.getFillGroup().toString());
+                    i.getFillGroup() == null ? null : i.getFillGroup().toString(),
+                    i.getFeatureSequence());
         }
     }
 
@@ -53,10 +55,17 @@ public class ScheduleController {
         }
     }
 
+    public record FeatureAssignDto(long showInstanceId, String packageId) {
+        static FeatureAssignDto from(FeatureAssignment fa) {
+            return new FeatureAssignDto(fa.getShowInstanceId(), fa.getPackageId().toString());
+        }
+    }
+
     public record DayDto(String id, String stationId, LocalDate date, String status,
                          Instant pushedAt, String pushedBy, Long version,
                          LockDto lock, List<ItemDto> items,
                          List<ClockSegmentDto> clockSegments,
+                         List<FeatureAssignDto> featureAssignments,
                          boolean readOnly) {}
 
     public record ClockSegmentRequest(@NotNull Integer localStartMinutes,
@@ -72,7 +81,8 @@ public class ScheduleController {
                               Integer lengthSeconds, String cartId, String cartCategory, String label,
                               Integer segueOffsetSeconds, java.math.BigDecimal duckDb,
                               String fillMode, Integer fillTargetSeconds, Integer fillTargetCount,
-                              Integer anchorOffsetSeconds, String anchorPolicy, String fillGroup) {}
+                              Integer anchorOffsetSeconds, String anchorPolicy, String fillGroup,
+                              Integer featureSequence) {}
 
     public record SaveRequest(Long expectedVersion, List<ItemRequest> items) {}
 
@@ -156,6 +166,7 @@ public class ScheduleController {
                     .anchorOffsetSeconds(r.anchorOffsetSeconds())
                     .anchorPolicy(r.anchorPolicy() == null || r.anchorPolicy().isBlank() ? null : r.anchorPolicy().trim().toUpperCase())
                     .fillGroup(r.fillGroup() == null || r.fillGroup().isBlank() ? null : UUID.fromString(r.fillGroup().trim()))
+                    .featureSequence(r.featureSequence())
                     .build()).toList();
             var view = schedule.save(dayId, user.getId(), req.expectedVersion(), newItems);
             return ResponseEntity.ok(toDto(view, user.getId()));
@@ -326,6 +337,38 @@ public class ScheduleController {
                 lockDto,
                 v.items().stream().map(ItemDto::from).toList(),
                 v.clockSegments().stream().map(ClockSegmentDto::from).toList(),
+                v.featureAssignments().stream().map(FeatureAssignDto::from).toList(),
                 readOnly);
+    }
+
+    public record FeatureAssignRequest(@NotBlank String packageId) {}
+
+    /** Assign a media package to one show instance on this day. */
+    @PutMapping("/api/days/{dayId}/instances/{instanceId}/feature")
+    public ResponseEntity<?> assignFeature(@PathVariable UUID dayId, @PathVariable long instanceId,
+                                           @Valid @RequestBody FeatureAssignRequest req,
+                                           @AuthenticationPrincipal AppUser user) {
+        try {
+            var view = schedule.assignFeature(dayId, instanceId,
+                    UUID.fromString(req.packageId().trim()), user.getId());
+            return ResponseEntity.ok(toDto(view, user.getId()));
+        } catch (ScheduleService.ConcurrencyException e) {
+            return ResponseEntity.status(409).body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/api/days/{dayId}/instances/{instanceId}/feature")
+    public ResponseEntity<?> unassignFeature(@PathVariable UUID dayId, @PathVariable long instanceId,
+                                             @AuthenticationPrincipal AppUser user) {
+        try {
+            var view = schedule.unassignFeature(dayId, instanceId, user.getId());
+            return ResponseEntity.ok(toDto(view, user.getId()));
+        } catch (ScheduleService.ConcurrencyException e) {
+            return ResponseEntity.status(409).body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }

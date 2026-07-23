@@ -35,9 +35,19 @@ public final class ClockSegmentPlanner {
 
     private ClockSegmentPlanner() {}
 
-    /** One resolved piece of audio the planner can place. */
+    /**
+     * One resolved piece of audio the planner can place. {@code cueInSeconds} > 0 plays
+     * a window of the file starting there (feature parts as break points — no slicing);
+     * {@code lengthSeconds} is always the *played* duration.
+     */
     public record Unit(Long fileId, int lengthSeconds, UUID cartId, UUID memberId,
-                       UUID spotId, String label, String note, boolean trimmable) {}
+                       UUID spotId, String label, String note, boolean trimmable,
+                       Integer cueInSeconds) {
+        public Unit(Long fileId, int lengthSeconds, UUID cartId, UUID memberId,
+                    UUID spotId, String label, String note, boolean trimmable) {
+            this(fileId, lengthSeconds, cartId, memberId, spotId, label, note, trimmable, null);
+        }
+    }
 
     /** Supplies resolved audio on demand — production wraps the cart resolver. */
     public interface UnitSource {
@@ -275,8 +285,9 @@ public final class ClockSegmentPlanner {
     private static RowBuf rowForItem(ScheduleItem it, Instant at, UnitSource source,
                                      List<String> notes, int[] skipped, int[] resolved,
                                      Map<UUID, Integer> groupSeconds) {
-        boolean cartish = "MUSIC_CART".equals(it.getKind()) || "COMMERCIAL_CART".equals(it.getKind());
-        if (it.getLibrtimeFileId() != null) {
+        boolean cartish = "MUSIC_CART".equals(it.getKind()) || "COMMERCIAL_CART".equals(it.getKind())
+                || "FEATURE".equals(it.getKind());
+        if (it.getLibrtimeFileId() != null && !"FEATURE".equals(it.getKind())) {
             int len = it.getLengthSeconds() != null && it.getLengthSeconds() > 0 ? it.getLengthSeconds() : 30;
             boolean trimmable = "TRACK".equals(it.getKind()) || "MUSIC_CART".equals(it.getKind());
             return new RowBuf(it, new Unit(it.getLibrtimeFileId(), len, it.getCartId(),

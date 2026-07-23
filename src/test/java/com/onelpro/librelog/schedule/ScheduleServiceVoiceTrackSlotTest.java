@@ -58,7 +58,10 @@ class ScheduleServiceVoiceTrackSlotTest {
                 clockSegments,
                 mock(ClockGridRowRepository.class),
                 mock(SpotRepository.class),
-                new JazzHandoffService());
+                new JazzHandoffService(),
+                mock(FeatureAssignmentRepository.class),
+                mock(com.onelpro.librelog.media.MediaPackageRepository.class),
+                mock(com.onelpro.librelog.media.MediaPackagePartRepository.class));
     }
 
     @Test

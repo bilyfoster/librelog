@@ -21,5 +21,6 @@
     <include file="db/changelog/changes/v2-014-fill-blocks.xml"/>
     <include file="db/changelog/changes/v2-015-clock-grid.xml"/>
     <include file="db/changelog/changes/v2-016-anchors-backtiming.xml"/>
+    <include file="db/changelog/changes/v2-017-media-packages.xml"/>
 
 </databaseChangeLog>

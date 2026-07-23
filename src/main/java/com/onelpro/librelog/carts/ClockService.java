@@ -101,6 +101,15 @@ public class ClockService {
             throw new IllegalArgumentException("anchorPolicy without an anchor time (slot "
                     + (s.getPosition() + 1) + ")");
         }
+        if ("FEATURE".equals(s.getKind())) {
+            if (s.getFeatureSequence() == null || s.getFeatureSequence() < 1 || s.getFeatureSequence() > 20) {
+                throw new IllegalArgumentException("Feature slots need a part number 1–20 (slot "
+                        + (s.getPosition() + 1) + ")");
+            }
+        } else if (s.getFeatureSequence() != null) {
+            throw new IllegalArgumentException("Part numbers only apply to feature slots (slot "
+                    + (s.getPosition() + 1) + ")");
+        }
         if (!"MUSIC_CART".equals(s.getKind()) && !"COMMERCIAL_CART".equals(s.getKind())) {
             if (s.getCartId() != null || s.getCartCategory() != null) {
                 throw new IllegalArgumentException("Only music/commercial cart slots may reference a cart or category");
