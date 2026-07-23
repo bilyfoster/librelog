@@ -29,6 +29,13 @@ public class Station {
     @Column(name = "time_zone", nullable = false)
     private String timeZone;
 
+    /**
+     * Sweeper/imaging cart used to pad gaps and back-time hours (anchors, top-of-hour).
+     * Null = fall back to any IMAGING-category cart on the station.
+     */
+    @Column(name = "pad_cart_id")
+    private UUID padCartId;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

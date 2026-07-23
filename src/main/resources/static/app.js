@@ -260,16 +260,32 @@ async function deleteStation(id) {
     } catch (e) { toast(e.message, 'error'); }
 }
 
-function stationModal(existing) {
+async function stationModal(existing) {
     const selectedTimeZone = existing?.timeZone || 'America/Phoenix';
     const timeZoneOptions = COMMON_TIME_ZONES.map(tz =>
         `<option value="${tz}" ${selectedTimeZone === tz ? 'selected' : ''}>${tz}</option>`).join('');
+    // Pad cart picker (existing stations only): sweeper source for gap filling/back-timing.
+    let padCartField = '';
+    if (existing) {
+        let carts = [];
+        try { carts = await API.get(`/api/stations/${existing.id}/carts`); } catch (e) { /* optional */ }
+        const opts = carts.filter(c => c.kind === 'MUSIC').map(c =>
+            `<option value="${c.id}" ${existing.padCartId === c.id ? 'selected' : ''}>${escapeHtml(c.name)} (${escapeHtml((c.category || '').toLowerCase())})</option>`).join('');
+        padCartField = `
+        <label>Pad / sweeper cart <span class="muted small">(fills gaps &amp; back-times hours; blank = first imaging cart)</span>
+            <select name="padCartId">
+                <option value="" ${!existing.padCartId ? 'selected' : ''}>(auto — first imaging cart)</option>
+                ${opts}
+            </select>
+        </label>`;
+    }
     openModal(existing ? 'Edit station' : 'New station', `
         <label>Name <input name="name" required value="${escapeAttr(existing?.name)}" /></label>
         <label>Call letters <input name="callLetters" value="${escapeAttr(existing?.callLetters)}" /></label>
         <label>Time zone
             <select name="timeZone" required>${timeZoneOptions}</select>
         </label>
+        ${padCartField}
     `, async (form) => {
         const body = formToJson(form);
         if (existing) await API.put('/api/stations/' + existing.id, body);
@@ -1502,21 +1518,41 @@ function renderClockScheduleEditor() {
 async function previewPush() {
     if (!state.day) return;
     try {
-        const rows = await API.get(`/api/days/${state.day.id}/preview`);
-        const lines = rows.map((r, i) => {
-            const head = `${i + 1}. ${r.kind}`;
-            const what = r.cartName
-                ? `cart "${r.cartName}" → ${r.label || ('file #' + (r.librtimeFileId || '?'))}`
-                : (r.label || ('file #' + (r.librtimeFileId || '?')));
-            const text = head + ' — ' + what + (r.note ? ` ⚠ ${r.note}` : '');
-            return r.violation
+        const r = await API.get(`/api/days/${state.day.id}/preview`);
+        const rows = Array.isArray(r) ? r : (r.items || []);
+        const notes = Array.isArray(r) ? [] : (r.notes || []);
+        const tz = currentStationTimeZone();
+        const fmtAt = (iso) => {
+            if (!iso) return '        ';
+            try {
+                return new Date(iso).toLocaleTimeString('en-US',
+                    { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: tz });
+            } catch (e) { return '        '; }
+        };
+        const lines = rows.map((row, i) => {
+            const at = fmtAt(row.plannedAt);
+            const len = row.lengthSeconds ? ` (${Math.floor(row.lengthSeconds / 60)}:${String(row.lengthSeconds % 60).padStart(2, '0')})` : '';
+            const what = row.cartName
+                ? `cart "${row.cartName}" → ${row.label || ('file #' + (row.librtimeFileId || '?'))}`
+                : (row.label || ('file #' + (row.librtimeFileId || '?')));
+            const text = `${at}  ${row.kind === 'PAD' ? '· pad' : row.kind}` + ' — ' + what + len
+                + (row.note ? ` ⚠ ${row.note}` : '');
+            return row.violation
                 ? `<span class="preview-violation">${escapeHtml(text)}</span>`
                 : escapeHtml(text);
         });
-        const html = '<pre style="max-height:55vh;overflow:auto;white-space:pre-wrap">'
-            + lines.join('\n') + '</pre>';
-        openModal('Preview push (dry run)', html, () => true);
+        const noteBlock = notes.length
+            ? '<hr /><div class="muted small"><strong>Timing notes</strong><br>' + notes.map(escapeHtml).join('<br>') + '</div>'
+            : '';
+        const html = '<pre style="max-height:50vh;overflow:auto;white-space:pre-wrap">'
+            + lines.join('\n') + '</pre>' + noteBlock;
+        openModal('Preview push (dry run — planned air times)', html, () => true);
     } catch (e) { toast(e.message, 'error'); }
+}
+
+function currentStationTimeZone() {
+    const st = (state.stations || []).find(s => s.id === state.currentStationId);
+    return st?.timeZone || 'UTC';
 }
 
 function removeSlot(idx) {
@@ -1631,6 +1667,9 @@ async function saveDay() {
                 fillMode: it.fillMode ?? null,
                 fillTargetSeconds: it.fillTargetSeconds ?? null,
                 fillTargetCount: it.fillTargetCount ?? null,
+                anchorOffsetSeconds: it.anchorOffsetSeconds ?? null,
+                anchorPolicy: it.anchorPolicy ?? null,
+                fillGroup: it.fillGroup ?? null,
             })),
         });
         state.day = r;
@@ -2883,6 +2922,12 @@ function renderClockDetail(clock) {
             const fillMode = isCartish ? (r.querySelector('[name="fillMode"]')?.value || null) : null;
             const fillCount = r.querySelector('[name="fillTargetCount"]')?.value;
             const fillSecs = r.querySelector('[name="fillTargetSeconds"]')?.value;
+            const anchorRaw = r.querySelector('[name="anchorAt"]')?.value;
+            const anchorSec = parseAnchor(anchorRaw);
+            if (anchorRaw && anchorRaw.trim() && anchorSec === null) {
+                toast(`Row ${payload.length + 1}: anchor must look like "18:00" (mm:ss).`, 'error');
+                return;
+            }
             payload.push({
                 kind,
                 cartId,
@@ -2893,7 +2938,12 @@ function renderClockDetail(clock) {
                 defaultLengthSeconds: len ? parseInt(len) : null,
                 fillMode: fillMode || null,
                 fillTargetCount: fillMode === 'COUNT' && fillCount ? parseInt(fillCount) : null,
-                fillTargetSeconds: fillMode === 'TIME' && fillSecs ? parseInt(fillSecs) : null,
+                // TIME uses seconds as its target; COUNT may carry it as an avail cap.
+                fillTargetSeconds: (fillMode === 'TIME' || fillMode === 'COUNT') && fillSecs ? parseInt(fillSecs) : null,
+                anchorOffsetSeconds: anchorSec,
+                anchorPolicy: anchorSec != null
+                    ? (r.querySelector('[name="anchorHard"]')?.checked ? 'HARD' : 'SOFT')
+                    : null,
             });
         }
         try {
@@ -2949,7 +2999,22 @@ function updateClockEditorTiming() {
         if (num) num.textContent = (i + 1) + '.';
         const off = row.querySelector('.clock-slot-offset');
         const eff = slotEffectiveSeconds(row);
-        if (off) off.textContent = '@' + fmtClockOffset(cursor) + (eff.toEnd ? '→end' : '');
+        // Anchored rows reset the cursor to their fixed offset; flag when the floating
+        // content before them would overshoot the anchor.
+        const anchor = parseAnchor(row.querySelector('[name="anchorAt"]')?.value);
+        let overshoot = false;
+        if (anchor != null) {
+            overshoot = cursor > anchor;
+            cursor = Math.max(cursor, anchor);
+        }
+        if (off) {
+            off.textContent = '@' + fmtClockOffset(cursor) + (eff.toEnd ? '→end' : '')
+                + (anchor != null ? ' ⚓' : '');
+            off.style.color = overshoot ? 'var(--danger)' : '';
+            off.title = overshoot
+                ? 'Content before this anchor runs past it — it will be trimmed (hard) or start late (soft)'
+                : 'Estimated start within the hour (from default lengths)';
+        }
         cursor += eff.seconds;
         if (eff.toEnd) hasToEnd = true;
     });
@@ -2962,6 +3027,19 @@ function updateClockEditorTiming() {
         total.textContent = text;
         total.style.color = cursor > 3600 ? 'var(--danger)' : '';
     }
+}
+
+/** "3:30" or "0:00" for an anchor offset in seconds. */
+function fmtAnchor(sec) {
+    return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+}
+
+/** Parse "mm:ss" or "mm" into seconds; null when blank/invalid. */
+function parseAnchor(v) {
+    if (!v || !v.trim()) return null;
+    const m = v.trim().replace(/^@/, '').match(/^(\d{1,3})(?::([0-5]?\d))?$/);
+    if (!m) return null;
+    return parseInt(m[1], 10) * 60 + (m[2] ? parseInt(m[2], 10) : 0);
 }
 
 /**
@@ -3018,6 +3096,10 @@ function clockSlotRowHtml(s, i) {
         <div class="clock-slot-row-main">
         <span class="clock-slot-num">${i + 1}.</span>
         <span class="clock-slot-offset muted small" title="Estimated start within the hour (from default lengths)">@0:00</span>
+        <input name="anchorAt" placeholder="@mm:ss" title="Anchor: start this many minutes into the show (blank = floats)" style="width:64px"
+               value="${s.anchorOffsetSeconds != null ? escapeAttr(fmtAnchor(s.anchorOffsetSeconds)) : ''}" />
+        <label class="inline small" title="Hard = trim preceding music to hit this time exactly; unchecked = start late and flag">
+            <input type="checkbox" name="anchorHard" ${s.anchorPolicy === 'HARD' ? 'checked' : ''} />hard</label>
         <select name="slotType" title="What plays here">${clockSlotTypeOptionsHtml(st)}</select>
         <select name="cartId" style="display:${st === 'cart' ? '' : 'none'}">
             <option value="">(pick cart)</option>${clockAllCartOptionsHtml(s.cartId)}
@@ -3035,7 +3117,7 @@ function clockSlotRowHtml(s, i) {
         <input name="fillTargetCount" type="number" min="1" max="50" placeholder="#" style="width:52px"
                value="${s.fillTargetCount ?? ''}" ${s.fillMode === 'COUNT' ? '' : 'disabled'} />
         <input name="fillTargetSeconds" type="number" min="30" max="3600" placeholder="fill s" style="width:64px"
-               value="${s.fillTargetSeconds ?? ''}" ${s.fillMode === 'TIME' ? '' : 'disabled'} />
+               value="${s.fillTargetSeconds ?? ''}" ${s.fillMode === 'TIME' || s.fillMode === 'COUNT' ? '' : 'disabled'} />
         <button class="link" data-move-slot="up" title="Move up">&#8593;</button>
         <button class="link" data-move-slot="down" title="Move down">&#8595;</button>
         <button class="link" data-remove-clock-slot>x</button>
@@ -3050,7 +3132,8 @@ document.addEventListener('change', (e) => {
         const cnt = row.querySelector('[name="fillTargetCount"]');
         const sec = row.querySelector('[name="fillTargetSeconds"]');
         if (cnt) cnt.disabled = fm !== 'COUNT';
-        if (sec) sec.disabled = fm !== 'TIME';
+        // Seconds: the TIME target, or an optional total cap on a COUNT avail.
+        if (sec) sec.disabled = fm !== 'TIME' && fm !== 'COUNT';
         return;
     }
     if (e.target.matches('.clock-slot-row [name="slotType"]')) {

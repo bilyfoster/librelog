@@ -1,5 +1,50 @@
 # Release notes
 
+## v2.7.0 — hot-clock timing engine: anchors, back-timing, avail caps
+
+Push is now **plan-then-write** per show instance, run by a new segment planner
+(`ClockSegmentPlanner`). One DB migration (auto-applied), additive APIs, and two
+behavior refinements to know about.
+
+### ⚠️ Heads-up
+
+1. **Every hour is now back-timed.** The last music/pad unit before a hard boundary
+   (the top of the hour, or a HARD anchor) is trimmed via LibreTime `cue_out` (floor
+   20s) so the boundary lands exactly. Non-music content (spots, interviews) is
+   **never cut** — overruns are flagged in push notes instead. `TO_END` fills now end
+   exactly at the instance end (previously the last song could run past it).
+2. **Preview no longer nudges rotation.** Preview used to persist rotation-pointer
+   advances; it now runs a dry-run resolver (realistic sequence, nothing saved).
+
+### What's new
+
+- **Anchors**: any clock slot can be pinned `@mm:ss` from the show start (legal ID at
+  0:00, break A at 18:00), SOFT (start late + flag) or HARD (trim preceding music to
+  land exactly). Editor shows an ⚓ and flags floating content that overshoots an anchor.
+  Anchors must be strictly increasing; validated server-side.
+- **Pad/sweeper source**: per-station pad cart (Station form; fallback = first IMAGING
+  cart) fills underruns before anchors and small gaps at the end of the hour
+  (≤90s; bigger underruns are flagged as clock problems, not padded).
+- **Avail caps**: a COUNT fill can also carry a total-seconds cap ("max 3 spots /
+  120s"); expanded units share a `fill_group` and the cap is enforced across the
+  group at push (15s grace).
+- **Preview shows the plan**: planned air times (station-local), trims, pads, anchor
+  misses and timing notes — the same math push will apply. Response shape is now
+  `{items, notes}` with `plannedAt`/`lengthSeconds` per row.
+
+### Schema / API
+
+- Migration `v2-016`: `anchor_offset_seconds` + `anchor_policy` on
+  `clock_template_slot` and `schedule_item`; `fill_group` on `schedule_item`;
+  `pad_cart_id` on `station`.
+- Slot/item DTOs and station DTO carry the new fields (additive).
+
+### Tests
+
+- `ClockSegmentPlannerTest` (9 tests): hard-anchor trim, soft-late flag, pad-to-anchor,
+  tiny-gap early start, avail seconds cap, TO_END exact top-of-hour, never-trim rule,
+  dead-air shift. 76 tests total.
+
 ## v2.6.0 — category-first clock slot picker
 
 Frontend-only redesign of the clock slot editor. No DB or API changes — the same

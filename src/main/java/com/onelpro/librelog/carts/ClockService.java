@@ -68,6 +68,16 @@ public class ClockService {
                                 + (i + 1) + " is not last)");
             }
         }
+        // Anchors must move forward through the hour.
+        Integer lastAnchor = null;
+        for (ClockTemplateSlot s : saved) {
+            if (s.getAnchorOffsetSeconds() == null) continue;
+            if (lastAnchor != null && s.getAnchorOffsetSeconds() <= lastAnchor) {
+                throw new IllegalArgumentException("Anchors must be strictly increasing: slot "
+                        + (s.getPosition() + 1) + " is anchored at or before an earlier anchor");
+            }
+            lastAnchor = s.getAnchorOffsetSeconds();
+        }
         return saved;
     }
 
@@ -76,6 +86,21 @@ public class ClockService {
         s.setCartCategory(cat == null || cat.isEmpty() ? null : cat);
         String fm = s.getFillMode() == null ? null : s.getFillMode().trim().toUpperCase();
         s.setFillMode(fm == null || fm.isEmpty() ? null : fm);
+        String ap = s.getAnchorPolicy() == null ? null : s.getAnchorPolicy().trim().toUpperCase();
+        s.setAnchorPolicy(ap == null || ap.isEmpty() ? null : ap);
+        if (s.getAnchorPolicy() != null && !"SOFT".equals(s.getAnchorPolicy()) && !"HARD".equals(s.getAnchorPolicy())) {
+            throw new IllegalArgumentException("anchorPolicy must be SOFT or HARD (slot " + (s.getPosition() + 1) + ")");
+        }
+        if (s.getAnchorOffsetSeconds() != null) {
+            if (s.getAnchorOffsetSeconds() < 0 || s.getAnchorOffsetSeconds() > 2 * 3600) {
+                throw new IllegalArgumentException("Anchor must be 0–120 minutes into the show (slot "
+                        + (s.getPosition() + 1) + ")");
+            }
+            if (s.getAnchorPolicy() == null) s.setAnchorPolicy("SOFT");
+        } else if (s.getAnchorPolicy() != null) {
+            throw new IllegalArgumentException("anchorPolicy without an anchor time (slot "
+                    + (s.getPosition() + 1) + ")");
+        }
         if (!"MUSIC_CART".equals(s.getKind()) && !"COMMERCIAL_CART".equals(s.getKind())) {
             if (s.getCartId() != null || s.getCartCategory() != null) {
                 throw new IllegalArgumentException("Only music/commercial cart slots may reference a cart or category");
@@ -91,6 +116,12 @@ public class ClockService {
                 case "COUNT" -> {
                     if (s.getFillTargetCount() == null || s.getFillTargetCount() < 1 || s.getFillTargetCount() > 50) {
                         throw new IllegalArgumentException("Fill count must be 1–50 units (slot "
+                                + (s.getPosition() + 1) + ")");
+                    }
+                    // Optional total-seconds cap for the avail ("max 3 spots / 120s").
+                    if (s.getFillTargetSeconds() != null
+                            && (s.getFillTargetSeconds() < 30 || s.getFillTargetSeconds() > 3600)) {
+                        throw new IllegalArgumentException("Avail seconds cap must be 30–3600 (slot "
                                 + (s.getPosition() + 1) + ")");
                     }
                 }

@@ -375,9 +375,12 @@ public class CartService {
         private final Map<UUID, Spot> spotCache = new HashMap<>();
         private final Map<UUID, DayPart> dayPartCache = new HashMap<>();
 
-        Resolver(UUID stationId, ZoneId stationZone, Duration lookback) {
+        private final boolean dryRun;
+
+        Resolver(UUID stationId, ZoneId stationZone, Duration lookback, boolean dryRun) {
             this.stationId = stationId;
             this.stationZone = stationZone != null ? stationZone : ZoneOffset.UTC;
+            this.dryRun = dryRun;
             this.recent = new ArrayList<>(history.recentForStation(stationId,
                     Instant.now().minus(lookback)));
         }
@@ -457,10 +460,12 @@ public class CartService {
             }
 
             // Rotation advances the pointer; NEWEST_FIRST always re-sorts so it doesn't.
+            // Dry runs (preview) advance the in-memory pointer for a realistic sequence
+            // but never persist it.
             if (!newest) {
                 int chosenIdx = usable.indexOf(picked);
                 cart.setRotationPointer((chosenIdx + 1) % usable.size());
-                carts.save(cart);
+                if (!dryRun) carts.save(cart);
             }
 
             CartPlayHistory h = CartPlayHistory.builder()
@@ -612,7 +617,12 @@ public class CartService {
     }
 
     public Resolver newResolver(UUID stationId, Duration lookback) {
-        return new Resolver(stationId, zoneForStation(stationId), lookback);
+        return new Resolver(stationId, zoneForStation(stationId), lookback, false);
+    }
+
+    /** Resolver that never persists rotation pointers — for previews/dry runs. */
+    public Resolver newDryRunResolver(UUID stationId, Duration lookback) {
+        return new Resolver(stationId, zoneForStation(stationId), lookback, true);
     }
 
     @Transactional

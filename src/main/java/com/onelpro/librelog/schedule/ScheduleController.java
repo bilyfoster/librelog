@@ -27,7 +27,8 @@ public class ScheduleController {
                          Integer lengthSeconds, int position,
                          String cartId, String cartCategory, String resolvedMemberId, String label,
                          Integer segueOffsetSeconds, java.math.BigDecimal duckDb,
-                         String fillMode, Integer fillTargetSeconds, Integer fillTargetCount) {
+                         String fillMode, Integer fillTargetSeconds, Integer fillTargetCount,
+                         Integer anchorOffsetSeconds, String anchorPolicy, String fillGroup) {
         static ItemDto from(ScheduleItem i) {
             return new ItemDto(i.getId().toString(), i.getShowInstanceId(), i.getSlotIndex(),
                     i.getKind(), i.getSpotId() == null ? null : i.getSpotId().toString(),
@@ -36,7 +37,9 @@ public class ScheduleController {
                     i.getCartCategory(),
                     i.getResolvedMemberId() == null ? null : i.getResolvedMemberId().toString(),
                     i.getLabel(), i.getSegueOffsetSeconds(), i.getDuckDb(),
-                    i.getFillMode(), i.getFillTargetSeconds(), i.getFillTargetCount());
+                    i.getFillMode(), i.getFillTargetSeconds(), i.getFillTargetCount(),
+                    i.getAnchorOffsetSeconds(), i.getAnchorPolicy(),
+                    i.getFillGroup() == null ? null : i.getFillGroup().toString());
         }
     }
 
@@ -68,7 +71,8 @@ public class ScheduleController {
                               String spotId, Long librtimeFileId, Instant scheduledAt,
                               Integer lengthSeconds, String cartId, String cartCategory, String label,
                               Integer segueOffsetSeconds, java.math.BigDecimal duckDb,
-                              String fillMode, Integer fillTargetSeconds, Integer fillTargetCount) {}
+                              String fillMode, Integer fillTargetSeconds, Integer fillTargetCount,
+                              Integer anchorOffsetSeconds, String anchorPolicy, String fillGroup) {}
 
     public record SaveRequest(Long expectedVersion, List<ItemRequest> items) {}
 
@@ -149,6 +153,9 @@ public class ScheduleController {
                     .fillMode(r.fillMode() == null || r.fillMode().isBlank() ? null : r.fillMode().trim().toUpperCase())
                     .fillTargetSeconds(r.fillTargetSeconds())
                     .fillTargetCount(r.fillTargetCount())
+                    .anchorOffsetSeconds(r.anchorOffsetSeconds())
+                    .anchorPolicy(r.anchorPolicy() == null || r.anchorPolicy().isBlank() ? null : r.anchorPolicy().trim().toUpperCase())
+                    .fillGroup(r.fillGroup() == null || r.fillGroup().isBlank() ? null : UUID.fromString(r.fillGroup().trim()))
                     .build()).toList();
             var view = schedule.save(dayId, user.getId(), req.expectedVersion(), newItems);
             return ResponseEntity.ok(toDto(view, user.getId()));

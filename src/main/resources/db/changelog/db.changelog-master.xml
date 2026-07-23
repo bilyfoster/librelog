@@ -20,5 +20,6 @@
     <include file="db/changelog/changes/v2-013-voicetrack-markers.xml"/>
     <include file="db/changelog/changes/v2-014-fill-blocks.xml"/>
     <include file="db/changelog/changes/v2-015-clock-grid.xml"/>
+    <include file="db/changelog/changes/v2-016-anchors-backtiming.xml"/>
 
 </databaseChangeLog>

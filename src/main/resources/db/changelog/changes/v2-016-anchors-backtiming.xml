@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="v2-016-anchors-backtiming" author="librelog">
+        <sql splitStatements="true" stripComments="true"><![CDATA[
+
+-- Hot-clock anchors: a slot may be pinned to an offset from the show instance start
+-- (e.g. legal ID at 0:00, break A at 18:00). Policy: SOFT = start late and flag;
+-- HARD = trim preceding music/pad audio (cue_out) so the anchor lands exactly.
+ALTER TABLE clock_template_slot ADD COLUMN IF NOT EXISTS anchor_offset_seconds INTEGER;
+ALTER TABLE clock_template_slot ADD COLUMN IF NOT EXISTS anchor_policy VARCHAR(8);
+ALTER TABLE schedule_item ADD COLUMN IF NOT EXISTS anchor_offset_seconds INTEGER;
+ALTER TABLE schedule_item ADD COLUMN IF NOT EXISTS anchor_policy VARCHAR(8);
+
+-- Avail groups: units expanded from one fill block share a group id + optional
+-- total-seconds cap, so a "max 3 spots / 120s" avail stops at whichever comes first.
+ALTER TABLE schedule_item ADD COLUMN IF NOT EXISTS fill_group UUID;
+
+-- Station pad source: sweeper/imaging cart used for gap filling and back-timing.
+ALTER TABLE station ADD COLUMN IF NOT EXISTS pad_cart_id UUID;
+
+        ]]></sql>
+    </changeSet>
+</databaseChangeLog>

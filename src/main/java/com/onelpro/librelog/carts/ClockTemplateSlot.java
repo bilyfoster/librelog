@@ -65,6 +65,17 @@ public class ClockTemplateSlot {
     @Column(name = "fill_target_count")
     private Integer fillTargetCount;
 
+    /**
+     * Hot-clock anchor: this slot should start this many seconds after the show
+     * instance starts (legal ID at 0, break A at 1080 = 18:00). Null = floats.
+     */
+    @Column(name = "anchor_offset_seconds")
+    private Integer anchorOffsetSeconds;
+
+    /** SOFT = start late and flag; HARD = trim preceding music/pad to land exactly. */
+    @Column(name = "anchor_policy")
+    private String anchorPolicy;
+
     @PrePersist
     void prePersist() {
         if (id == null) id = UUID.randomUUID();

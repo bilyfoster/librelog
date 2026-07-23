@@ -20,7 +20,8 @@ public class ClockController {
     public record SlotDto(String id, int position, String kind,
                           String cartId, String cartCategory, Long librtimeFileId, String spotId,
                           String label, Integer defaultLengthSeconds,
-                          String fillMode, Integer fillTargetSeconds, Integer fillTargetCount) {
+                          String fillMode, Integer fillTargetSeconds, Integer fillTargetCount,
+                          Integer anchorOffsetSeconds, String anchorPolicy) {
         static SlotDto from(ClockTemplateSlot s) {
             return new SlotDto(s.getId() == null ? null : s.getId().toString(),
                     s.getPosition(), s.getKind(),
@@ -29,7 +30,8 @@ public class ClockController {
                     s.getLibrtimeFileId(),
                     s.getSpotId() == null ? null : s.getSpotId().toString(),
                     s.getLabel(), s.getDefaultLengthSeconds(),
-                    s.getFillMode(), s.getFillTargetSeconds(), s.getFillTargetCount());
+                    s.getFillMode(), s.getFillTargetSeconds(), s.getFillTargetCount(),
+                    s.getAnchorOffsetSeconds(), s.getAnchorPolicy());
         }
     }
 
@@ -37,7 +39,8 @@ public class ClockController {
 
     public record SlotRequest(String kind, String cartId, String cartCategory, Long librtimeFileId, String spotId,
                               String label, Integer defaultLengthSeconds,
-                              String fillMode, Integer fillTargetSeconds, Integer fillTargetCount) {
+                              String fillMode, Integer fillTargetSeconds, Integer fillTargetCount,
+                              Integer anchorOffsetSeconds, String anchorPolicy) {
         ClockTemplateSlot toEntity() {
             return ClockTemplateSlot.builder()
                     .kind(kind)
@@ -50,6 +53,8 @@ public class ClockController {
                     .fillMode(trimOrNull(fillMode))
                     .fillTargetSeconds(fillTargetSeconds)
                     .fillTargetCount(fillTargetCount)
+                    .anchorOffsetSeconds(anchorOffsetSeconds)
+                    .anchorPolicy(trimOrNull(anchorPolicy))
                     .build();
         }
 

@@ -177,3 +177,31 @@ Parallel Workstreams (6–8 Weeks Estimated MVP)
   * SFTP transfer channels & SSH keys.  
   * Automated import execution scripts on Jazz.
 
+
+---
+
+## Format Clocks v2 — Hot-Clock Timing Engine (implemented v2.7.0)
+
+Clocks now support professional hot-clock semantics on the live v2 model (the
+`rumble_format_clock*` scaffolding tables remain unused):
+
+* **Anchors** — any slot may be pinned to `@mm:ss` from the show-instance start
+  (legal ID at 0:00, avail A at 18:00). `SOFT` anchors start late and flag;
+  `HARD` anchors trim the preceding music/pad via LibreTime `cue_out` (floor 20s,
+  smooth fade) so the anchor lands exactly.
+* **Back-timing** — every hour is fitted plan-then-write by the segment planner
+  (`ClockSegmentPlanner`): underruns are padded from the station's configured
+  **pad/sweeper cart** (fallback: first IMAGING cart), the final music/pad unit is
+  cue-out-trimmed so the instance ends exactly at the top of the hour; non-music
+  content (spots, interviews) is never cut — overruns are flagged instead.
+* **Commercial avails** — a fill block may carry both a unit count and a
+  total-seconds cap ("max 3 spots / 120s"); expanded units share a `fill_group`
+  and the cap is enforced across the group at push (15s grace).
+* **Preview = plan** — Preview push runs the same planner in dry-run (no writes,
+  no rotation-pointer persistence) and shows planned air times, trims, pads and
+  anchor misses.
+
+**Decision (recorded):** the in-browser Audio Slicer/Marker tool is deferred.
+Interviews are edited externally and uploaded as pre-cut parts; multi-part
+media packages (PT1/PT2/PT3 + per-day assignment in Day Builder) ship in v2.8.0.
+Revisit the slicer as its own PRD item once the package workflow proves out.

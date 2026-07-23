@@ -42,9 +42,6 @@ public class ScheduleService {
 
     public static final Duration LOCK_TTL = Duration.ofMinutes(15);
 
-    /** Safety cap on units a single TO_END fill may write (guards against runaway loops). */
-    static final int FILL_MAX_UNITS = 60;
-
     private static final String DEFAULT_ADVERTISER_CART_PLACEHOLDER = "Advertiser cart slot";
 
     private final ScheduleDayRepository days;
@@ -306,130 +303,53 @@ public class ScheduleService {
                         + instanceId + ": " + ex.getMessage(), ex);
             }
 
-            Instant cursor = instanceStart;
+            // Plan the whole instance (anchors, avail caps, fills, pads, back-timing),
+            // then write the planned rows. See ClockSegmentPlanner.
+            ClockSegmentPlanner.Plan plan = ClockSegmentPlanner.plan(
+                    e.getValue(), instanceStart, instanceEnd,
+                    plannerSource(resolver, day, currentShowId));
+            skipReasons.addAll(plan.notes());
+            rowsSkipped += plan.skipped();
+            rowsResolved += plan.resolved();
             int position = 0;
-            for (ScheduleItem it : e.getValue()) {
-                Long fileId = it.getLibrtimeFileId();
-                int len = it.getLengthSeconds() != null ? it.getLengthSeconds() : 0;
-
-                // TO_END fill: keep resolving music units until the show instance ends.
-                // Music-only by validation; units go straight to LibreTime (play history is
-                // recorded for separation, but no per-unit schedule items are created —
-                // filler music has no order to reconcile).
-                if (fileId == null && "TO_END".equals(it.getFillMode()) && "MUSIC_CART".equals(it.getKind())) {
-                    if (instanceEnd == null) {
-                        rowsSkipped++;
-                        skipReasons.add("Position " + it.getPosition() + ": instance " + instanceId
-                                + " has no end time; cannot fill to end");
-                        continue;
-                    }
-                    Instant blockStart = cursor;
-                    int units = 0;
-                    long filledSeconds = 0;
-                    while (cursor.isBefore(instanceEnd) && units < FILL_MAX_UNITS) {
-                        CartPickResult pick = pickCartMemberForItem(it, day, resolver, cursor, currentShowId);
-                        if (pick.member() == null) {
-                            skipReasons.add("Fill at position " + it.getPosition() + " stopped after "
-                                    + units + " unit(s): "
-                                    + (pick.note() != null ? pick.note() : "no eligible member"));
-                            break;
-                        }
-                        Long unitFile = resolveFileId(pick.member());
-                        if (unitFile == null) {
-                            skipReasons.add("Fill at position " + it.getPosition() + ": cart \""
-                                    + pick.cart().getName() + "\" picked member without a file; stopped");
-                            break;
-                        }
-                        int unitLen = pick.member().getLengthSeconds() != null && pick.member().getLengthSeconds() > 0
-                                ? pick.member().getLengthSeconds() : 180;
-                        Instant rowStart = cursor;
-                        Instant rowEnd = rowStart.plusSeconds(unitLen);
-                        try {
-                            client.scheduleFileInInstance(instanceId, unitFile, position++, rowStart, rowEnd,
-                                    unitLen, null, null);
-                        } catch (Exception ex) {
-                            throw new IllegalStateException("Push to LibreTime failed during fill for show instance "
-                                    + instanceId + " (file " + unitFile + "): " + ex.getMessage(), ex);
-                        }
-                        rowsWritten++;
-                        rowsResolved++;
-                        units++;
-                        filledSeconds += unitLen;
-                        if (pick.note() != null) skipReasons.add(pick.note());
-                        cursor = rowEnd;
-                    }
-                    // Bookkeeping on the marker so the day view shows when/how much was filled.
-                    it.setScheduledAt(blockStart);
-                    it.setLengthSeconds((int) Math.min(Integer.MAX_VALUE, filledSeconds));
-                    items.save(it);
-                    if (units > 0) {
-                        skipReasons.add("Filled " + units + " music unit(s) ("
-                                + (filledSeconds / 60) + "m" + (filledSeconds % 60) + "s) to end of instance "
-                                + instanceId);
-                    }
-                    continue;
-                }
-
-                // Cart slots: resolve to a concrete file/spot now, using the *intended*
-                // start time for separation lookups (specific cart or category pool).
-                if (fileId == null && ("MUSIC_CART".equals(it.getKind()) || "COMMERCIAL_CART".equals(it.getKind()))) {
-                    CartPickResult pick = pickCartMemberForItem(it, day, resolver, cursor, currentShowId);
-                    if (pick.member() == null) {
-                        rowsSkipped++;
-                        if (pick.note() != null) {
-                            skipReasons.add("Position " + it.getPosition() + ": " + pick.note());
-                        } else {
-                            skipReasons.add("Position " + it.getPosition() + ": no cart or category to resolve");
-                        }
-                        continue;
-                    }
-                    Cart cart = pick.cart();
-                    CartMember picked = pick.member();
-                    fileId = resolveFileId(picked);
-                    if (fileId == null) {
-                        rowsSkipped++;
-                        skipReasons.add("Cart \"" + cart.getName() + "\" picked member without a LibreTime file");
-                        continue;
-                    }
-                    if (len <= 0 && picked.getLengthSeconds() != null) len = picked.getLengthSeconds();
-                    rowsResolved++;
-                    if (pick.note() != null) skipReasons.add(pick.note());
-                    it.setCartId(cart.getId());
-                    it.setLibrtimeFileId(fileId);
-                    it.setResolvedMemberId(picked.getId());
-                    if (it.getLabel() == null) it.setLabel(displayLabelOf(cart, picked));
-                    items.save(it);
-                    // An approved spot that lands in a push is now trafficked (on air).
-                    markSpotTrafficked(picked.getSpotId());
-                }
-                if (fileId == null) continue;
-                if (len <= 0) len = 30; // fall-back so 0-length placeholders still get a row
-
-                Instant rowStart = cursor;
-                Instant rowEnd = rowStart.plusSeconds(len);
-                if (instanceEnd != null && rowStart.isAfter(instanceEnd.minusSeconds(1))) {
-                    rowsSkipped++;
-                    skipReasons.add("Instance " + instanceId + " is full; dropped slot at position " + it.getPosition());
-                    continue;
-                }
+            java.util.Set<UUID> fillMarkersSeen = new java.util.HashSet<>();
+            for (ClockSegmentPlanner.PlannedRow row : plan.rows()) {
                 try {
-                    client.scheduleFileInInstance(instanceId, fileId, position++, rowStart, rowEnd, len,
-                            it.getSegueOffsetSeconds(), it.getDuckDb());
+                    client.scheduleFileInInstance(instanceId, row.unit().fileId(), position++,
+                            row.startsAt(), row.endsAt(), row.cueOutSeconds(),
+                            row.segueOffsetSeconds(), row.duckDb());
                     rowsWritten++;
-                    // Persist the actual air time (and the resolved file/length) so that
-                    // playback reconciliation can later match this row by file id + time.
-                    // Without this, clock-built and cart/spot-resolved rows have a null
-                    // scheduledAt and reconcileDay() silently skips them.
-                    it.setScheduledAt(rowStart);
-                    it.setLibrtimeFileId(fileId);
-                    it.setLengthSeconds(len);
-                    items.save(it);
                 } catch (Exception ex) {
                     throw new IllegalStateException("Push to LibreTime failed for show instance "
-                            + instanceId + " (file " + fileId + ", position " + (position - 1)
-                            + "): " + ex.getMessage(), ex);
+                            + instanceId + " (file " + row.unit().fileId() + ", position "
+                            + (position - 1) + "): " + ex.getMessage(), ex);
                 }
-                cursor = rowEnd;
+                ScheduleItem it = row.item();
+                if (it != null) {
+                    if (row.isFillUnit()) {
+                        // TO_END marker bookkeeping: first unit stamps the start, the rest
+                        // accumulate; the marker keeps a null file id so a reopened day
+                        // re-fills fresh instead of replaying one unit.
+                        if (fillMarkersSeen.add(it.getId())) {
+                            it.setScheduledAt(row.startsAt());
+                            it.setLengthSeconds(row.cueOutSeconds());
+                        } else {
+                            it.setLengthSeconds((it.getLengthSeconds() == null ? 0 : it.getLengthSeconds())
+                                    + row.cueOutSeconds());
+                        }
+                    } else {
+                        // Persist air time + resolved audio so reconciliation can match.
+                        it.setScheduledAt(row.startsAt());
+                        it.setLibrtimeFileId(row.unit().fileId());
+                        it.setLengthSeconds(row.cueOutSeconds());
+                        if (row.unit().memberId() != null) it.setResolvedMemberId(row.unit().memberId());
+                        if (row.unit().cartId() != null) it.setCartId(row.unit().cartId());
+                        if (it.getLabel() == null) it.setLabel(row.unit().label());
+                    }
+                    items.save(it);
+                }
+                // An approved spot that lands in a push is now trafficked (on air).
+                markSpotTrafficked(row.unit().spotId());
             }
             instancesTouched++;
         }
@@ -714,13 +634,24 @@ public class ScheduleService {
             // COUNT/TIME fill blocks expand into concrete unit items here, so each unit
             // resolves independently at push (separation, approval, fair pool) and gets a
             // real schedule item for reconciliation. TO_END stays a single marker item
-            // resolved at push time.
+            // resolved at push time. Expanded siblings share a fill group so an optional
+            // seconds cap ("max 3 spots / 120s") is enforced across the whole avail, and
+            // only the first unit carries the slot's anchor — the rest float behind it.
             int units = fillUnitCount(s);
+            UUID group = units > 1 ? UUID.randomUUID() : null;
             for (int u = 0; u < units; u++) {
                 ScheduleItem it = clockSlotToScheduleItem(s, day.getId(), showInstanceId, slotIndex++, position++);
                 if (it == null) break;
-                if (units > 1 && it.getLabel() != null) {
-                    it.setLabel(it.getLabel() + " " + (u + 1) + "/" + units);
+                it.setAnchorOffsetSeconds(s.getAnchorOffsetSeconds());
+                it.setAnchorPolicy(s.getAnchorPolicy());
+                if (units > 1) {
+                    if (it.getLabel() != null) it.setLabel(it.getLabel() + " " + (u + 1) + "/" + units);
+                    it.setFillGroup(group);
+                    it.setFillTargetSeconds(s.getFillTargetSeconds());
+                    if (u > 0) {
+                        it.setAnchorOffsetSeconds(null);
+                        it.setAnchorPolicy(null);
+                    }
                 }
                 items.save(it);
             }
@@ -785,6 +716,66 @@ public class ScheduleService {
                     "No cart in category \"" + it.getCartCategory() + "\" had an eligible member at this time");
         }
         return new CartPickResult(null, null, null);
+    }
+
+    /**
+     * Adapts the cart resolver (and the station's pad source) to the planner's
+     * {@link ClockSegmentPlanner.UnitSource}. Trimmable = library-sourced audio
+     * (music, sweepers); spots and fixed non-music are never cut.
+     */
+    private ClockSegmentPlanner.UnitSource plannerSource(CartService.Resolver resolver,
+                                                         ScheduleDay day, Long currentShowId) {
+        Cart padCart = resolvePadCart(day.getStationId());
+        return new ClockSegmentPlanner.UnitSource() {
+            @Override
+            public ClockSegmentPlanner.Resolved resolveItem(ScheduleItem it, Instant at) {
+                CartPickResult pick = pickCartMemberForItem(it, day, resolver, at, currentShowId);
+                if (pick.member() == null) {
+                    return ClockSegmentPlanner.Resolved.fail(
+                            pick.note() != null ? pick.note() : "no cart or category to resolve");
+                }
+                CartMember m = pick.member();
+                Long fid = m.getLibrtimeFileId();
+                if (fid == null) {
+                    return ClockSegmentPlanner.Resolved.fail("Cart \"" + pick.cart().getName()
+                            + "\" picked member without a LibreTime file");
+                }
+                boolean music = "MUSIC".equals(pick.cart().getKind());
+                int len = m.getLengthSeconds() != null && m.getLengthSeconds() > 0
+                        ? m.getLengthSeconds() : (music ? 180 : 30);
+                return ClockSegmentPlanner.Resolved.of(new ClockSegmentPlanner.Unit(
+                        fid, len, pick.cart().getId(), m.getId(), m.getSpotId(),
+                        displayLabelOf(pick.cart(), m), pick.note(), music));
+            }
+
+            @Override
+            public ClockSegmentPlanner.Resolved resolvePad(Instant at) {
+                if (padCart == null) {
+                    return ClockSegmentPlanner.Resolved.fail(null);
+                }
+                var res = resolver.resolve(padCart, at, currentShowId);
+                if (res.member() == null || res.member().getLibrtimeFileId() == null) {
+                    return ClockSegmentPlanner.Resolved.fail(res.note());
+                }
+                CartMember m = res.member();
+                int len = m.getLengthSeconds() != null && m.getLengthSeconds() > 0
+                        ? m.getLengthSeconds() : 10;
+                return ClockSegmentPlanner.Resolved.of(new ClockSegmentPlanner.Unit(
+                        m.getLibrtimeFileId(), len, padCart.getId(), m.getId(), m.getSpotId(),
+                        "Pad — " + padCart.getName(), null, true));
+            }
+        };
+    }
+
+    /** The station's configured pad cart, falling back to its first IMAGING cart. */
+    private Cart resolvePadCart(UUID stationId) {
+        var st = stations.findById(stationId).orElse(null);
+        if (st != null && st.getPadCartId() != null) {
+            Cart c = cartRepo.findById(st.getPadCartId()).orElse(null);
+            if (c != null) return c;
+        }
+        var imaging = cartRepo.findByStationIdAndKindAndCategoryOrderByNameAsc(stationId, "MUSIC", "IMAGING");
+        return imaging.isEmpty() ? null : imaging.get(0);
     }
 
     /** Advance an APPROVED spot to TRAFFICKED once it has been pushed into a schedule. */
@@ -886,66 +877,85 @@ public class ScheduleService {
         }
     }
 
-    /** Dry-run resolution without writing to LibreTime; useful for "preview" UX. */
-    public List<PreviewItem> previewResolution(UUID dayId) {
-        var preview = new ArrayList<PreviewItem>();
+    public record PreviewResult(List<PreviewItem> items, List<String> notes) {}
+
+    /**
+     * Dry-run of the full segment planner per show instance: shows planned air times,
+     * trims, pads, anchor misses and avail caps exactly as push would apply them.
+     * Nothing is written and rotation pointers are not persisted.
+     */
+    public PreviewResult previewResolution(UUID dayId) {
         ScheduleDay day = days.findById(dayId)
                 .orElseThrow(() -> new IllegalArgumentException("Schedule day not found"));
-        CartService.Resolver resolver = cartService.newResolver(day.getStationId(), Duration.ofHours(48));
+        CartService.Resolver resolver = cartService.newDryRunResolver(day.getStationId(), Duration.ofHours(48));
+
+        var byShow = new LinkedHashMap<Long, List<ScheduleItem>>();
+        var unplaced = new ArrayList<ScheduleItem>();
         for (ScheduleItem it : items.findByScheduleDayIdOrderByPositionAsc(dayId)) {
-            if ("MUSIC_CART".equals(it.getKind()) || "COMMERCIAL_CART".equals(it.getKind())) {
-                CartPickResult pick = pickCartMemberForItem(it, day, resolver, Instant.now(), null);
-                if (pick.member() != null) {
-                    Cart cart = pick.cart();
-                    CartMember picked = pick.member();
-                    preview.add(new PreviewItem(it.getId().toString(), it.getKind(),
-                            cart.getName(),
-                            resolveFileId(picked),
-                            displayLabelOf(cart, picked),
-                            pick.note()));
-                } else {
-                    String pool = it.getCartCategory() != null
-                            ? ("category " + it.getCartCategory())
-                            : (it.getCartId() != null ? "cart" : "slot");
-                    preview.add(new PreviewItem(it.getId().toString(), it.getKind(), null,
-                            it.getLibrtimeFileId(), it.getLabel(),
-                            pick.note() != null ? pick.note() : ("Could not resolve " + pool)));
-                }
-                continue;
-            }
-            if (it.getCartId() == null) {
-                preview.add(new PreviewItem(it.getId().toString(), it.getKind(), null,
-                        it.getLibrtimeFileId(), it.getLabel(), null));
-                continue;
-            }
-            Cart cart = cartRepo.findById(it.getCartId()).orElse(null);
-            if (cart == null) {
-                preview.add(new PreviewItem(it.getId().toString(), it.getKind(),
-                        null, null, "(missing cart)", "Cart missing"));
-                continue;
-            }
-            // Use 'now' as the time anchor — preview is purely indicative.
-            var res = resolver.resolve(cart, Instant.now());
-            CartMember picked = res.member();
-            preview.add(new PreviewItem(it.getId().toString(), it.getKind(),
-                    cart.getName(),
-                    picked == null ? null : resolveFileId(picked),
-                    picked == null ? null : displayLabelOf(cart, picked),
-                    res.note()));
+            if (it.getShowInstanceId() == null) unplaced.add(it);
+            else byShow.computeIfAbsent(it.getShowInstanceId(), k -> new ArrayList<>()).add(it);
         }
-        return preview;
+
+        var notes = new ArrayList<String>();
+        var out = new ArrayList<PreviewItem>();
+        LibreTimeClient client = null;
+        try { client = libretime.clientFor(day.getStationId()); }
+        catch (Exception e) { notes.add("LibreTime unavailable — times are indicative: " + e.getMessage()); }
+
+        for (var e : byShow.entrySet()) {
+            Instant instanceStart = null;
+            Instant instanceEnd = null;
+            Long showId = null;
+            if (client != null) {
+                try {
+                    var inst = client.getShowInstance(e.getKey());
+                    instanceStart = parseInstantSafe(textField(inst, "starts_at"));
+                    instanceEnd = parseInstantSafe(textField(inst, "ends_at"));
+                    showId = numberField(inst, "show");
+                } catch (Exception ex) {
+                    notes.add("Instance " + e.getKey() + " could not be fetched: " + ex.getMessage());
+                }
+            }
+            if (instanceStart == null) instanceStart = Instant.now(); // indicative fallback
+
+            var plan = ClockSegmentPlanner.plan(e.getValue(), instanceStart, instanceEnd,
+                    plannerSource(resolver, day, showId));
+            notes.addAll(plan.notes());
+            for (var row : plan.rows()) {
+                String label = row.unit().label() != null ? row.unit().label()
+                        : (row.item() != null ? row.item().getLabel() : null);
+                String note = row.unit().note();
+                if (row.trimmed()) {
+                    note = (note == null ? "" : note + "; ")
+                            + "trimmed to " + ClockSegmentPlanner.mmss(row.cueOutSeconds());
+                }
+                out.add(new PreviewItem(
+                        row.item() == null ? null : row.item().getId().toString(),
+                        row.isPad() ? "PAD" : (row.item() != null ? row.item().getKind() : "MUSIC_CART"),
+                        null,
+                        row.unit().fileId(),
+                        label,
+                        note,
+                        isViolationNote(note),
+                        row.startsAt(),
+                        row.cueOutSeconds()));
+            }
+        }
+        for (ScheduleItem it : unplaced) {
+            out.add(new PreviewItem(it.getId().toString(), it.getKind(), null,
+                    it.getLibrtimeFileId(), it.getLabel(),
+                    "Not attached to a show instance — will not push", false,
+                    null, it.getLengthSeconds()));
+        }
+        return new PreviewResult(out, notes);
     }
 
     public record PreviewItem(String scheduleItemId, String kind, String cartName,
-                              Long librtimeFileId, String label, String note, boolean violation) {
-        PreviewItem(String scheduleItemId, String kind, String cartName,
-                    Long librtimeFileId, String label, String note) {
-            this(scheduleItemId, kind, cartName, librtimeFileId, label, note, isViolation(note));
-        }
+                              Long librtimeFileId, String label, String note, boolean violation,
+                              Instant plannedAt, Integer lengthSeconds) {}
 
-        private static boolean isViolation(String note) {
-            return note != null && (note.contains("Separation violated") || note.contains("clutter"));
-        }
+    private static boolean isViolationNote(String note) {
+        return note != null && (note.contains("Separation violated") || note.contains("clutter"));
     }
 
     private static Long resolveFileId(CartMember m) {

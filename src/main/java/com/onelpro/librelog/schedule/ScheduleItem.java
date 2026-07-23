@@ -78,6 +78,21 @@ public class ScheduleItem {
     @Column(name = "fill_target_count")
     private Integer fillTargetCount;
 
+    /** Hot-clock anchor: start offset (seconds) from the instance start. Null = floats. */
+    @Column(name = "anchor_offset_seconds")
+    private Integer anchorOffsetSeconds;
+
+    /** SOFT = start late and flag; HARD = trim preceding music/pad to land exactly. */
+    @Column(name = "anchor_policy")
+    private String anchorPolicy;
+
+    /**
+     * Units expanded from the same avail/fill block share a group id; the group's
+     * fill_target_seconds acts as a shared total-seconds cap at push time.
+     */
+    @Column(name = "fill_group")
+    private UUID fillGroup;
+
     private String label;
 
     @PrePersist

@@ -16,13 +16,16 @@ public class StationController {
 
     private final StationRepository stations;
 
-    public record StationDto(String id, String name, String callLetters, String timeZone) {
+    public record StationDto(String id, String name, String callLetters, String timeZone,
+                             String padCartId) {
         static StationDto from(Station s) {
-            return new StationDto(s.getId().toString(), s.getName(), s.getCallLetters(), s.getTimeZone());
+            return new StationDto(s.getId().toString(), s.getName(), s.getCallLetters(), s.getTimeZone(),
+                    s.getPadCartId() == null ? null : s.getPadCartId().toString());
         }
     }
 
-    public record StationRequest(@NotBlank String name, String callLetters, String timeZone) {}
+    public record StationRequest(@NotBlank String name, String callLetters, String timeZone,
+                                 String padCartId) {}
 
     @GetMapping
     public List<StationDto> list() {
@@ -52,6 +55,10 @@ public class StationController {
         s.setName(req.name());
         s.setCallLetters(req.callLetters());
         if (req.timeZone() != null) s.setTimeZone(req.timeZone());
+        // Pad cart: empty string clears, null leaves unchanged.
+        if (req.padCartId() != null) {
+            s.setPadCartId(req.padCartId().isBlank() ? null : UUID.fromString(req.padCartId().trim()));
+        }
         return ResponseEntity.ok(StationDto.from(stations.save(s)));
     }
 

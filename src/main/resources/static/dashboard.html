@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
 <meta name="theme-color" content="#0f172a" />
 <title>LibreLog</title>
-<link rel="stylesheet" href="/app.css?v=20260722h" />
+<link rel="stylesheet" href="/app.css?v=20260722i" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.css" crossorigin="anonymous" />
 <script>
     // Apply the persisted theme as early as possible to avoid a flash.
@@ -221,7 +221,8 @@
                             <li><strong>Ad slot placeholder / Note</strong> — unbound ad position or silent timing filler.</li>
                         </ul>
                     </li>
-                    <li>The <strong>fill</strong> dropdown turns a cart/category row into a block: <em>fill # units</em> or <em>fill seconds</em> for ad breaks, <em>to end (music)</em> as the last row to take you to the top of the hour.</li>
+                    <li>The <strong>fill</strong> dropdown turns a cart/category row into a block: <em>fill # units</em> (with an optional total-seconds cap for the avail) or <em>fill seconds</em> for ad breaks, <em>to end (music)</em> as the last row to take you to the top of the hour.</li>
+                    <li><strong>Anchors (@mm:ss)</strong> pin a row to a fixed time in the hour — legal ID at <code>0:00</code>, break A at <code>18:00</code>. At push, underruns are padded from the station's <em>pad/sweeper cart</em> and <strong>hard</strong> anchors trim the preceding music (cue-out) to land exactly; soft anchors start late and get flagged. The hour is always back-timed to end exactly at the top.</li>
                     <li>Optional: <strong>label</strong> and <strong>len s</strong> (default length in seconds) help timing before push.</li>
                     <li>Click <strong>Save slots</strong> — the template is not stored until you do.</li>
                 </ol>
@@ -408,6 +409,6 @@
 <div id="toast" class="toast hidden"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.js.iife.min.js" crossorigin="anonymous"></script>
-<script src="/app.js?v=20260722h"></script>
+<script src="/app.js?v=20260722i"></script>
 </body>
 </html>
