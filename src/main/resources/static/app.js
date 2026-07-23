@@ -2675,34 +2675,6 @@ function catListForKind(kind) {
         : (state.cartCategories.library || []);
 }
 
-function syncCartBindRow(row) {
-    if (!row) return;
-    const mode = row.querySelector('.cart-bind-mode');
-    const cid = row.querySelector('[name="cartId"]');
-    const cat = row.querySelector('[name="cartCategory"]');
-    if (!mode || !cid || !cat) return;
-    const catMode = mode.value === 'category';
-    cid.disabled = catMode;
-    cat.disabled = !catMode;
-    const kindSel = row.querySelector('[name="kind"]');
-    const k = kindSel ? kindSel.value : 'MUSIC_CART';
-    if (catMode) {
-        const sel = cat.value;
-        cat.innerHTML = catListForKind(k).map(c =>
-            `<option value="${escapeAttr(c)}" ${String(sel || '') === c ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('');
-    }
-}
-
-function clockCartOptionsHtml(kind, selectedId) {
-    const want = kind === 'COMMERCIAL_CART' ? 'COMMERCIAL' : 'MUSIC';
-    return (state.carts || []).filter(c => c.kind === want).map(c =>
-        `<option value="${c.id}" ${String(selectedId || '') === c.id ? 'selected' : ''}>${escapeHtml(c.name)} (${escapeHtml((c.category || '').toLowerCase())})</option>`).join('');
-}
-
-function clockCategoryOptionsHtml(kind, selectedCat) {
-    return catListForKind(kind).map(c =>
-        `<option value="${escapeAttr(c)}" ${String(selectedCat || '') === c ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('');
-}
 
 async function loadClocksTab() {
     await loadClocksForCurrentStation();
@@ -2855,9 +2827,7 @@ function renderClockDetail(clock) {
     document.getElementById('clockAddSlotBtn').addEventListener('click', () => {
         const editor = document.getElementById('clockSlotsEditor');
         const i = editor.querySelectorAll('.clock-slot-row').length;
-        editor.insertAdjacentHTML('beforeend', clockSlotRowHtml({ kind: 'MUSIC_CART' }, i));
-        const rows = editor.querySelectorAll('.clock-slot-row');
-        syncCartBindRow(rows[rows.length - 1]);
+        editor.insertAdjacentHTML('beforeend', clockSlotRowHtml({ kind: 'MUSIC_CART', cartCategory: 'MUSIC' }, i));
         updateClockEditorTiming();
     });
     // Remove + reorder are delegated so rows added after render work too.
@@ -2883,39 +2853,40 @@ function renderClockDetail(clock) {
     document.getElementById('clockSlotsEditor').addEventListener('change', () => updateClockEditorTiming());
     document.getElementById('clockSaveSlotsBtn').addEventListener('click', async () => {
         const rows = document.querySelectorAll('.clock-slot-row');
+        const libCats = state.cartCategories.library || [];
         const payload = [];
         for (const r of rows) {
-            const kind = r.querySelector('[name="kind"]').value;
+            const st = r.querySelector('[name="slotType"]').value;
             const lf = r.querySelector('[name="librtimeFileId"]').value;
             const spotId = r.querySelector('[name="spotId"]').value || null;
             const label = r.querySelector('[name="label"]').value || null;
             const len = r.querySelector('[name="defaultLengthSeconds"]').value;
-            const bindMode = r.querySelector('.cart-bind-mode')?.value || 'cart';
-            let cartId = null;
-            let cartCategory = null;
-            if (kind === 'MUSIC_CART' || kind === 'COMMERCIAL_CART') {
-                if (bindMode === 'category') {
-                    cartCategory = r.querySelector('[name="cartCategory"]')?.value || null;
-                    if (!cartCategory) {
-                        toast('Pick a cart category for every row in "Category @ push" mode.', 'error');
-                        return;
-                    }
-                } else {
-                    cartId = r.querySelector('[name="cartId"]')?.value || null;
-                    if (kind === 'MUSIC_CART' && !cartId) {
-                        toast('Music cart slots need a specific cart, or switch to Category @ push.', 'error');
-                        return;
-                    }
+            // Map the editorial slot type back onto the API's kind + binding.
+            let kind, cartId = null, cartCategory = null;
+            if (st.startsWith('cat:')) {
+                cartCategory = st.slice(4);
+                kind = libCats.includes(cartCategory) ? 'MUSIC_CART' : 'COMMERCIAL_CART';
+            } else if (st === 'cart') {
+                cartId = r.querySelector('[name="cartId"]')?.value || null;
+                if (!cartId) {
+                    toast('Pick a cart in every "Specific cart" row (or choose a category type instead).', 'error');
+                    return;
                 }
+                const cart = (state.carts || []).find(c => c.id === cartId);
+                kind = cart && cart.kind === 'COMMERCIAL' ? 'COMMERCIAL_CART' : 'MUSIC_CART';
+            } else if (st === 'AD_PLACEHOLDER') {
+                kind = 'COMMERCIAL_CART'; // no binding -> becomes an ad placeholder when applied
+            } else {
+                kind = st; // TRACK | SPOT | VOICETRACK | NOTE
             }
-            const isCartKind = kind === 'MUSIC_CART' || kind === 'COMMERCIAL_CART';
-            const fillMode = isCartKind ? (r.querySelector('[name="fillMode"]')?.value || null) : null;
+            const isCartish = st === 'cart' || st.startsWith('cat:');
+            const fillMode = isCartish ? (r.querySelector('[name="fillMode"]')?.value || null) : null;
             const fillCount = r.querySelector('[name="fillTargetCount"]')?.value;
             const fillSecs = r.querySelector('[name="fillTargetSeconds"]')?.value;
             payload.push({
                 kind,
-                cartId: isCartKind ? cartId : null,
-                cartCategory: isCartKind ? cartCategory : null,
+                cartId,
+                cartCategory,
                 librtimeFileId: kind === 'TRACK' && lf ? parseInt(lf) : null,
                 spotId: kind === 'SPOT' ? spotId : null,
                 label,
@@ -2931,16 +2902,24 @@ function renderClockDetail(clock) {
             await loadClocksTab();
         } catch (e) { toast(e.message, 'error'); }
     });
-    document.querySelectorAll('.clock-slot-row').forEach(syncCartBindRow);
 }
 
-/** Effective seconds a slot row contributes to the hour, given its kind/length/fill. */
+/** Effective seconds a slot row contributes to the hour, given its type/length/fill. */
 function slotEffectiveSeconds(row) {
-    const kind = row.querySelector('[name="kind"]').value;
+    const st = row.querySelector('[name="slotType"]').value;
     const lenRaw = parseInt(row.querySelector('[name="defaultLengthSeconds"]')?.value, 10);
-    // Mirrors backend defaults: 30s for commercial/spot/note/voicetrack, 180s for music/track.
-    const unit = lenRaw > 0 ? lenRaw
-        : (kind === 'MUSIC_CART' || kind === 'TRACK' ? 180 : 30);
+    // Mirrors backend defaults: 180s for library-sourced audio and fixed tracks,
+    // 30s for commercials, spots, placeholders, voice tracks and notes.
+    let musicish;
+    if (st.startsWith('cat:')) {
+        musicish = (state.cartCategories.library || []).includes(st.slice(4));
+    } else if (st === 'cart') {
+        const cart = (state.carts || []).find(c => c.id === row.querySelector('[name="cartId"]')?.value);
+        musicish = !cart || cart.kind !== 'COMMERCIAL';
+    } else {
+        musicish = st === 'TRACK';
+    }
+    const unit = lenRaw > 0 ? lenRaw : (musicish ? 180 : 30);
     const fm = row.querySelector('[name="fillMode"]')?.value || '';
     if (fm === 'COUNT') {
         const n = parseInt(row.querySelector('[name="fillTargetCount"]')?.value, 10) || 1;
@@ -2985,34 +2964,69 @@ function updateClockEditorTiming() {
     }
 }
 
-function clockSlotRowHtml(s, i) {
+/**
+ * The editorial "slot type" the editor shows, derived from the stored slot:
+ * "cat:NEWS" (category pool), "cart" (a specific cart), or TRACK / SPOT /
+ * VOICETRACK / AD_PLACEHOLDER / NOTE.
+ */
+function clockSlotTypeOf(s) {
     const k = s.kind || 'MUSIC_CART';
-    const useCat = !!(s.cartCategory && !s.cartId);
-    const bindMode = useCat ? 'category' : 'cart';
-    const showCartBind = k === 'MUSIC_CART' || k === 'COMMERCIAL_CART';
+    if (k === 'TRACK' || k === 'SPOT' || k === 'VOICETRACK' || k === 'NOTE') return k;
+    if (s.cartCategory) return 'cat:' + s.cartCategory;
+    if (s.cartId) return 'cart';
+    return k === 'COMMERCIAL_CART' ? 'AD_PLACEHOLDER' : 'cart';
+}
+
+/** All carts, grouped by editorial category, for the specific-cart picker. */
+function clockAllCartOptionsHtml(selectedId) {
+    const groups = {};
+    (state.carts || []).forEach(c => {
+        const g = categoryLabel(c.category) || (c.kind === 'COMMERCIAL' ? 'Commercial' : 'Library');
+        (groups[g] = groups[g] || []).push(c);
+    });
+    return Object.keys(groups).sort().map(g =>
+        `<optgroup label="${escapeAttr(g)}">` + groups[g].map(c =>
+            `<option value="${c.id}" ${String(selectedId || '') === c.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')
+        + '</optgroup>').join('');
+}
+
+function clockSlotTypeOptionsHtml(selected) {
+    const lib = (state.cartCategories.library || []).slice().sort();
+    const com = (state.cartCategories.commercial || []).slice().sort();
+    const opt = (v, label) => `<option value="${escapeAttr(v)}" ${selected === v ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+    return `
+        <optgroup label="Category — any matching cart, picked at push">
+            ${lib.map(c => opt('cat:' + c, categoryLabel(c))).join('')}
+            ${com.map(c => opt('cat:' + c, categoryLabel(c) + (c === 'COMMERCIAL' ? ' break' : ''))).join('')}
+        </optgroup>
+        <optgroup label="Specific cart">
+            ${opt('cart', 'Specific cart →')}
+        </optgroup>
+        <optgroup label="Fixed / other">
+            ${opt('TRACK', 'Fixed track (file id)')}
+            ${opt('SPOT', 'Specific spot (uuid)')}
+            ${opt('VOICETRACK', 'Voice track (record per day)')}
+            ${opt('AD_PLACEHOLDER', 'Ad slot placeholder')}
+            ${opt('NOTE', 'Note / filler')}
+        </optgroup>`;
+}
+
+function clockSlotRowHtml(s, i) {
+    const st = clockSlotTypeOf(s);
+    const isCartish = st === 'cart' || st.startsWith('cat:');
     return `<div class="clock-slot-row">
         <div class="clock-slot-row-main">
         <span class="clock-slot-num">${i + 1}.</span>
         <span class="clock-slot-offset muted small" title="Estimated start within the hour (from default lengths)">@0:00</span>
-        <select name="kind">
-            ${['MUSIC_CART','COMMERCIAL_CART','TRACK','SPOT','VOICETRACK','NOTE'].map(x =>
-                `<option value="${x}" ${x === k ? 'selected' : ''}>${x.replace('_',' ').toLowerCase()}</option>`).join('')}
+        <select name="slotType" title="What plays here">${clockSlotTypeOptionsHtml(st)}</select>
+        <select name="cartId" style="display:${st === 'cart' ? '' : 'none'}">
+            <option value="">(pick cart)</option>${clockAllCartOptionsHtml(s.cartId)}
         </select>
-        <span class="clock-cart-bind-wrap" style="display:${showCartBind ? 'inline-flex' : 'none'};flex-wrap:wrap;gap:6px;align-items:center;margin-left:4px">
-            <select class="cart-bind-mode" title="Named cart vs category pool">
-                <option value="cart" ${bindMode === 'cart' ? 'selected' : ''}>Specific cart</option>
-                <option value="category" ${bindMode === 'category' ? 'selected' : ''}>Category @ push</option>
-            </select>
-            <select name="cartId" ${bindMode === 'category' ? 'disabled' : ''}>
-                <option value="">(pick cart)</option>${clockCartOptionsHtml(k, s.cartId)}
-            </select>
-            <select name="cartCategory" ${bindMode === 'cart' ? 'disabled' : ''}>${clockCategoryOptionsHtml(k, s.cartCategory)}</select>
-        </span>
-        <input name="librtimeFileId" type="number" placeholder="file id" value="${s.librtimeFileId ?? ''}" ${k === 'TRACK' ? '' : 'disabled'} />
-        <input name="spotId" placeholder="spot uuid" value="${s.spotId ?? ''}" ${k === 'SPOT' ? '' : 'disabled'} />
+        <input name="librtimeFileId" type="number" placeholder="file id" value="${s.librtimeFileId ?? ''}" ${st === 'TRACK' ? '' : 'disabled'} style="display:${st === 'TRACK' ? '' : 'none'}" />
+        <input name="spotId" placeholder="spot uuid" value="${s.spotId ?? ''}" ${st === 'SPOT' ? '' : 'disabled'} style="display:${st === 'SPOT' ? '' : 'none'}" />
         <input name="label" placeholder="label" value="${escapeAttr(s.label || '')}" />
         <input name="defaultLengthSeconds" type="number" placeholder="len s" value="${s.defaultLengthSeconds ?? ''}" />
-        <select name="fillMode" title="Single unit, or fill a block" ${showCartBind ? '' : 'disabled'}>
+        <select name="fillMode" title="Single unit, or fill a block" ${isCartish ? '' : 'disabled'}>
             <option value="" ${!s.fillMode ? 'selected' : ''}>single</option>
             <option value="COUNT" ${s.fillMode === 'COUNT' ? 'selected' : ''}>fill # units</option>
             <option value="TIME" ${s.fillMode === 'TIME' ? 'selected' : ''}>fill seconds</option>
@@ -3039,34 +3053,26 @@ document.addEventListener('change', (e) => {
         if (sec) sec.disabled = fm !== 'TIME';
         return;
     }
-    if (e.target.matches('.clock-slot-row [name="kind"]')) {
+    if (e.target.matches('.clock-slot-row [name="slotType"]')) {
         const row = e.target.closest('.clock-slot-row');
-        const k = e.target.value;
-        row.querySelector('[name="librtimeFileId"]').disabled = k !== 'TRACK';
-        row.querySelector('[name="spotId"]').disabled = k !== 'SPOT';
-        const isCartKind = k === 'MUSIC_CART' || k === 'COMMERCIAL_CART';
+        const st = e.target.value;
+        const show = (sel, on) => {
+            const el = row.querySelector(sel);
+            if (el) { el.style.display = on ? '' : 'none'; el.disabled = !on; }
+        };
+        show('[name="cartId"]', st === 'cart');
+        show('[name="librtimeFileId"]', st === 'TRACK');
+        show('[name="spotId"]', st === 'SPOT');
+        const isCartish = st === 'cart' || st.startsWith('cat:');
         const fm = row.querySelector('[name="fillMode"]');
         if (fm) {
-            fm.disabled = !isCartKind;
-            if (!isCartKind) fm.value = '';
+            fm.disabled = !isCartish;
+            if (!isCartish) fm.value = '';
             const cnt = row.querySelector('[name="fillTargetCount"]');
             const sec = row.querySelector('[name="fillTargetSeconds"]');
-            if (cnt) cnt.disabled = !isCartKind || fm.value !== 'COUNT';
-            if (sec) sec.disabled = !isCartKind || fm.value !== 'TIME';
+            if (cnt) cnt.disabled = !isCartish || fm.value !== 'COUNT';
+            if (sec) sec.disabled = !isCartish || fm.value !== 'TIME';
         }
-        const wrap = row.querySelector('.clock-cart-bind-wrap');
-        if (wrap) {
-            wrap.style.display = (k === 'MUSIC_CART' || k === 'COMMERCIAL_CART') ? 'inline-flex' : 'none';
-        }
-        if (k === 'MUSIC_CART' || k === 'COMMERCIAL_CART') {
-            const cid = row.querySelector('[name="cartId"]');
-            const prevId = cid.value;
-            cid.innerHTML = '<option value="">(pick cart)</option>' + clockCartOptionsHtml(k, prevId);
-            syncCartBindRow(row);
-        }
-    }
-    if (e.target.matches('.clock-slot-row .cart-bind-mode')) {
-        syncCartBindRow(e.target.closest('.clock-slot-row'));
     }
 });
 

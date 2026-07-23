@@ -1,5 +1,21 @@
 # Release notes
 
+## v2.6.0 — category-first clock slot picker
+
+Frontend-only redesign of the clock slot editor. No DB or API changes — the same
+kind/cartId/cartCategory payload is produced underneath.
+
+- The slot row's first dropdown is now **"what plays here"**, listing the station's
+  actual editorial categories (Music, IDs & imaging, News, Interviews, Promo,
+  Commercial break, Sponsored feature, …) sourced from `/api/cart-categories`, plus
+  **Specific cart** (carts grouped by category), **Fixed track**, **Specific spot**,
+  **Voice track**, **Ad slot placeholder**, and **Note**.
+- Picking a category maps to the category-pool binding (least-recently-aired cart of
+  that category resolves at push); picking a specific cart derives the underlying kind
+  from the cart itself — users no longer need to know "music cart" means "library cart".
+- Runtime estimates now use the category/cart to choose the 180s-vs-30s default unit.
+- Clocks-tab help text rewritten to match.
+
 ## v2.5.1 — deploy script honesty
 
 `deploy-docker.sh` previously "succeeded" by curling the public URL's health endpoint —

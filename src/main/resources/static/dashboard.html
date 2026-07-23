@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
 <meta name="theme-color" content="#0f172a" />
 <title>LibreLog</title>
-<link rel="stylesheet" href="/app.css?v=20260722g" />
+<link rel="stylesheet" href="/app.css?v=20260722h" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.css" crossorigin="anonymous" />
 <script>
     // Apply the persisted theme as early as possible to avoid a flash.
@@ -211,15 +211,17 @@
                 <ol class="clocks-steps">
                     <li><strong>Select the clock</strong> in the list on the left (click its name).</li>
                     <li><strong>Add slot</strong> for each piece of content in order (first row = first thing in the hour).</li>
-                    <li>In each row, set <strong>kind</strong>:
+                    <li>In each row, choose <strong>what plays here</strong>:
                         <ul>
-                            <li><strong>music cart</strong> — pick a <em>library (music)</em> cart from the Carts tab; at push time one song/image is chosen from that cart.</li>
-                            <li><strong>commercial cart</strong> — pick a <em>commercial</em> cart (often tied to an order); at push time one spot is chosen.</li>
-                            <li><strong>track</strong> — always the same LibreTime file: enter its numeric <strong>file id</strong> (find it under LibreTime Library).</li>
-                            <li><strong>spot</strong> — one specific spot by UUID (from Orders; power-user).</li>
-                            <li><strong>note</strong> — placeholder / timing filler (optional label + length).</li>
+                            <li><strong>A category</strong> (Music, IDs &amp; imaging, News, Interviews, Promo, Commercial break, …) — at push time the least-recently-aired cart of that category supplies one pick, honoring rotation/newest-first, separation, and (for commercials) the approval gate.</li>
+                            <li><strong>Specific cart</strong> — always this one cart (e.g. "Bily Cart"); the cart still rotates its own members.</li>
+                            <li><strong>Fixed track</strong> — always the same LibreTime file: enter its numeric <strong>file id</strong> (find it under LibreTime Library).</li>
+                            <li><strong>Specific spot</strong> — one spot by UUID (power-user; usually let a commercial cart pick).</li>
+                            <li><strong>Voice track</strong> — an empty slot the host records per day in Day Builder.</li>
+                            <li><strong>Ad slot placeholder / Note</strong> — unbound ad position or silent timing filler.</li>
                         </ul>
                     </li>
+                    <li>The <strong>fill</strong> dropdown turns a cart/category row into a block: <em>fill # units</em> or <em>fill seconds</em> for ad breaks, <em>to end (music)</em> as the last row to take you to the top of the hour.</li>
                     <li>Optional: <strong>label</strong> and <strong>len s</strong> (default length in seconds) help timing before push.</li>
                     <li>Click <strong>Save slots</strong> — the template is not stored until you do.</li>
                 </ol>
@@ -406,6 +408,6 @@
 <div id="toast" class="toast hidden"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.js.iife.min.js" crossorigin="anonymous"></script>
-<script src="/app.js?v=20260722g"></script>
+<script src="/app.js?v=20260722h"></script>
 </body>
 </html>
